@@ -13,6 +13,12 @@ import { CandidateDashboard } from "./features/dashboard/CandidateDashboard";
 export default function App() {
   useKeepAwake();
 
+  useEffect(() => {
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+  }, []);
+
   const [showLogin, setShowLogin] = useState(false);
   const [showApply, setShowApply] = useState(false);
   const [applyAfterSignup, setApplyAfterSignup] = useState(false);
@@ -81,6 +87,14 @@ export default function App() {
   useEffect(() => {
     if (!showDashboard && !showLogin && !showApply && !showJobApplicationModal) {
       window.scrollTo({ top: 0, behavior: "instant" });
+      const t1 = setTimeout(() => window.scrollTo({ top: 0, behavior: "instant" }), 0);
+      const t2 = setTimeout(() => window.scrollTo({ top: 0, behavior: "instant" }), 50);
+      const t3 = setTimeout(() => window.scrollTo({ top: 0, behavior: "instant" }), 150);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+      };
     }
   }, [showDashboard, showLogin, showApply, showJobApplicationModal]);
 
