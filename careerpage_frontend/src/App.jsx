@@ -58,6 +58,7 @@ export default function App() {
 
   const handleOpenDashboard = () => {
     setDashboardInitialTab("dashboard");
+    setCameFromApply(false);
     setShowDashboard(true);
   };
 
