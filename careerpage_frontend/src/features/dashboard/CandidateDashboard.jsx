@@ -178,6 +178,15 @@ export function CandidateDashboard({
 
   const unreadCount = dashboardNotifications.filter((n) => !n.read).length;
 
+  // Lock body scroll while dashboard is open so the page behind cannot scroll
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
   useEffect(() => {
     if (activeTab === "notifications") {
       setDashboardNotifications((prev) =>
