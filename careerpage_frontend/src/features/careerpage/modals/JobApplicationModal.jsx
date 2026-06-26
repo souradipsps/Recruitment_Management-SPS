@@ -346,7 +346,6 @@ const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileDat
               </div>
 
               <button type="submit" className="jm-btn-submit">
-                <img src={logoImg} alt="" className="jm-btn-logo" />
                 Submit Application
               </button>
             </form>

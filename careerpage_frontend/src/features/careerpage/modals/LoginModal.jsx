@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Eye, EyeOff, Phone, Lock, X, User, Mail } from "lucide-react";
 import logoImg from "../../../assets/logo.png";
@@ -62,6 +62,30 @@ export function LoginModal({ onClose, initialTab = "login", onLoginSuccess, onSi
     onClose();
   };
 
+  const redirectTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimeoutRef.current) {
+        clearTimeout(redirectTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleProceedAfterSignup = () => {
+    if (redirectTimeoutRef.current) {
+      clearTimeout(redirectTimeoutRef.current);
+      redirectTimeoutRef.current = null;
+    }
+    setSignupSuccess(false);
+    if (onSignupSuccess) {
+      onSignupSuccess({ name: signup.name, lastName: signup.lastName, email: signup.email, phone: signup.phone });
+      onClose();
+    } else {
+      setTab("login");
+    }
+  };
+
   const handleSignup = (e) => {
     e.preventDefault();
     if (!signup.name || !signup.email || !signup.phone || !signup.password || !signup.confirm) { setSignupError("Please fill in all required fields."); return; }
@@ -72,11 +96,7 @@ export function LoginModal({ onClose, initialTab = "login", onLoginSuccess, onSi
     if (signup.password !== signup.confirm) { setSignupError("Passwords do not match."); return; }
     setSignupError("");
     setSignupSuccess(true);
-    setTimeout(() => {
-      setSignupSuccess(false);
-      if (onSignupSuccess) { onSignupSuccess({ name: signup.name, lastName: signup.lastName, email: signup.email, phone: signup.phone }); onClose(); }
-      else setTab("login");
-    }, 1500);
+    redirectTimeoutRef.current = setTimeout(handleProceedAfterSignup, 5000);
   };
 
   const handleSendOtp = (e) => {
@@ -214,10 +234,34 @@ export function LoginModal({ onClose, initialTab = "login", onLoginSuccess, onSi
 
               /* ── Signup tab ──────────────────────────────────────────── */
               signupSuccess ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="lm-signup-success">
-                  <div className="lm-signup-success-icon">✓</div>
-                  <div className="lm-signup-success-title">Account Created!</div>
-                  <div className="lm-signup-success-msg">Redirecting to login…</div>
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }} 
+                  animate={{ opacity: 1, scale: 1 }} 
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  className="lm-signup-success"
+                >
+                  <img src={logoImg} alt="South Point School Guwahati" className="lm-signup-success-logo" />
+                  <h3 className="lm-signup-success-title">Account Created Successfully!</h3>
+                  <div className="lm-signup-success-divider"></div>
+                  <p className="lm-signup-success-msg">
+                    Welcome to <strong>South Point School, Guwahati</strong>. 
+                    Your candidate portal account has been successfully created.
+                  </p>
+                  <div className="lm-signup-success-next-steps">
+                    <h4>What's Next?</h4>
+                    <ul>
+                      <li>Log in with your credentials to access the candidate dashboard.</li>
+                      <li>Complete your profile setup and upload your CV/Resume.</li>
+                      <li>Apply directly for any open vacancies or submit a general application.</li>
+                    </ul>
+                  </div>
+                  <div className="lm-signup-success-loader-wrap">
+                    <span className="lm-signup-success-spinner"></span>
+                    <span className="lm-signup-success-redirect-msg">Redirecting to login in a few seconds…</span>
+                  </div>
+                  <button type="button" onClick={handleProceedAfterSignup} className="lm-signup-success-close">
+                    Proceed to Login
+                  </button>
                 </motion.div>
               ) : (
                 <>

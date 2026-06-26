@@ -391,26 +391,128 @@
 
 /* ── Success state ───────────────────────────────────────────────────────── */
 .lm-signup-success {
-  text-align : center;
-  padding    : 20px 0;
+  padding         : 20px 10px;
+  text-align      : center;
+  background      : #ffffff;
+  display         : flex;
+  flex-direction  : column;
+  align-items     : center;
 }
 
-.lm-signup-success-icon {
-  font-size : 2rem;
+.lm-signup-success-logo {
+  height        : 95px;
+  width         : auto;
+  margin-bottom : 20px;
+  filter        : drop-shadow(0 4px 10px rgba(0, 0, 0, 0.06));
 }
 
 .lm-signup-success-title {
-  font-family   : 'Playfair Display', serif;
-  color         : var(--lm-maroon);
-  font-size     : 1.1rem;
-  font-weight   : 700;
-  margin-top    : 8px;
+  font-family : 'Playfair Display', serif;
+  color       : var(--lm-maroon);
+  font-size   : 1.35rem;
+  font-weight : 700;
+  margin      : 0 0 10px;
+}
+
+.lm-signup-success-divider {
+  width         : 40px;
+  height        : 3px;
+  background    : var(--lm-gold);
+  border-radius : 2px;
+  margin-bottom : 16px;
 }
 
 .lm-signup-success-msg {
-  color      : var(--lm-muted);
-  font-size  : 0.82rem;
-  margin-top : 4px;
+  color         : var(--lm-muted);
+  font-size     : 0.85rem;
+  line-height   : 1.6;
+  margin-bottom : 20px;
+  max-width     : 400px;
+}
+
+.lm-signup-success-next-steps {
+  width         : 100%;
+  background    : #fdf8f9;
+  border        : 1px solid rgba(114, 16, 42, 0.08);
+  border-radius : 8px;
+  padding       : 16px 18px;
+  margin-bottom : 20px;
+  text-align    : left;
+  box-sizing    : border-box;
+}
+
+.lm-signup-success-next-steps h4 {
+  font-size     : 0.8rem;
+  font-weight   : 700;
+  color         : var(--lm-maroon);
+  margin        : 0 0 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.lm-signup-success-next-steps ul {
+  margin       : 0;
+  padding-left : 18px;
+  list-style-type: disc;
+}
+
+.lm-signup-success-next-steps li {
+  font-size     : 0.78rem;
+  color         : #5a4c4c;
+  line-height   : 1.5;
+  margin-bottom : 5px;
+}
+
+.lm-signup-success-next-steps li:last-child {
+  margin-bottom : 0;
+}
+
+.lm-signup-success-loader-wrap {
+  display         : flex;
+  align-items     : center;
+  justify-content : center;
+  gap             : 8px;
+  margin-bottom   : 20px;
+}
+
+.lm-signup-success-spinner {
+  width         : 16px;
+  height        : 16px;
+  border        : 2px solid rgba(114, 16, 42, 0.2);
+  border-radius : 50%;
+  border-top-color: var(--lm-maroon);
+  animation     : lmSuccessSpin 1s infinite linear;
+  display       : inline-block;
+}
+
+@keyframes lmSuccessSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.lm-signup-success-redirect-msg {
+  font-size : 0.76rem;
+  color     : var(--lm-muted);
+}
+
+.lm-signup-success-close {
+  background      : linear-gradient(135deg, var(--lm-maroon) 0%, #901633 100%);
+  color           : #fff;
+  border          : none;
+  border-radius   : 8px;
+  padding         : 11px 28px;
+  font-weight     : 600;
+  font-size       : 0.82rem;
+  cursor          : pointer;
+  box-shadow      : 0 4px 12px rgba(114, 16, 42, 0.25);
+  transition      : all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing  : 0.05em;
+  text-transform  : uppercase;
+}
+
+.lm-signup-success-close:hover {
+  transform  : translateY(-2px);
+  box-shadow : 0 6px 16px rgba(114, 16, 42, 0.4);
 }
 
 /* Reset success */
