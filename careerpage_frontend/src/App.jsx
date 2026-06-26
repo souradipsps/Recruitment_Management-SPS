@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Toaster } from "sonner";
 import { useKeepAwake } from "./lib/keepAwake";
-import { jobs } from "./data/jobs";
+import { jobs } from "./mockData/jobs";
 import { CareerPage } from "./features/careerpage/CareerPage";
 import { LoginModal } from "./features/careerpage/modals/LoginModal";
 import { ApplyModal } from "./features/careerpage/modals/ApplyModal";

@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 import { MapPin, Clock, Briefcase } from "lucide-react";
-import { experienceById } from "../../../data/jobs";
+import { experienceById } from "../../../mockData/jobs";
 import "./css/JobCard.css";
 
 // A single opportunity card. `showOverlay` renders the blurred "See More"

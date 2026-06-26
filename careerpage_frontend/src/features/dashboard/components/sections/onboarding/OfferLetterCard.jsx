@@ -1,6 +1,6 @@
 import React from "react";
 import { PartyPopper, CheckCircle, XCircle, Eye, Download } from "lucide-react";
-import { offerLetter } from "../../../data/dashboardMockData";
+import { offerLetter } from "../../../../../mockData/dashboardMockData";
 import "../../css/sections/onboarding/OfferLetterCard.css";
 
 export function OfferLetterCard({
