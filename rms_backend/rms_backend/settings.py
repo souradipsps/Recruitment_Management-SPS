@@ -30,7 +30,12 @@ INSTALLED_APPS = [
     "corsheaders",
     "django_filters",
     # Local
-    "recruitment",
+    "users",
+    "jobs",
+    "applications",
+    "interviews",
+    "onboarding",
+    "notifications",
 ]
 
 # ─── Middleware ───────────────────────────────────────────────────────────────
@@ -79,7 +84,7 @@ DATABASES = {
 }
 
 # Custom user model
-AUTH_USER_MODEL = "recruitment.User"
+AUTH_USER_MODEL = "users.User"
 
 # ─── Password Validation ──────────────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
