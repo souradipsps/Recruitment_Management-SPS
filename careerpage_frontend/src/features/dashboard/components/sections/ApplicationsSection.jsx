@@ -4,7 +4,7 @@ import { Briefcase, MapPin, Calendar, Eye } from "lucide-react";
 import { MAROON } from "../../data/dashboardMockData";
 import { getStatusClass, getStatusIcon } from "../../utils/statusHelper";
 import "../css/sections/ApplicationsSection.css";
-import "../css/data/dashboardMockData.css";
+import "../css/data/statusBadges.css";
 
 export function ApplicationsSection({
   dynamicApplications,

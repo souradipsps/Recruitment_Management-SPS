@@ -4,7 +4,7 @@ import { ChevronRight, Calendar, MapPin } from "lucide-react";
 import { MAROON } from "../../data/dashboardMockData";
 import { getStatusClass, getStatusIcon } from "../../utils/statusHelper";
 import "../css/sections/OverviewSection.css";
-import "../css/data/dashboardMockData.css";
+import "../css/data/statusBadges.css";
 
 export function OverviewSection({ profile, dynamicApplications, setActiveTab }) {
   const stats = [
