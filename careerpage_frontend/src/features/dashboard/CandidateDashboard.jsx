@@ -72,10 +72,56 @@ export function CandidateDashboard({
   const [profilePic, setProfilePic] = useState(null);
   const [saved, setSaved] = useState(false);
 
+  const [lastSavedProfile, setLastSavedProfile] = useState({
+    name: initialProfileData?.fullName
+      ? initialProfileData.fullName.trim().split(" ")[0]
+      : (signupData?.name || userName),
+    lastName: initialProfileData?.fullName
+      ? initialProfileData.fullName.trim().split(" ").slice(1).join(" ")
+      : (signupData?.lastName || ""),
+    email: signupData?.email || "",
+    phone: initialProfileData?.phone ?? (signupData?.phone || ""),
+    location: initialProfileData?.location ?? "Guwahati, Assam",
+    highestEducation: initialProfileData?.highestEducation ?? initialProfileData?.education ?? "",
+    degreeName: initialProfileData?.degreeName ?? "",
+    professionalQualification: initialProfileData?.professionalQualification ?? "",
+    professionalQualificationOther: initialProfileData?.professionalQualificationOther ?? "",
+    experience: initialProfileData?.experience ?? "",
+    salary: initialProfileData?.salary ?? "",
+    extracurricular: initialProfileData?.extracurricular ?? "",
+    extracurricularOther: initialProfileData?.extracurricularOther ?? "",
+    roles: initialProfileData?.selectedRoles ?? [],
+    skills: initialProfileData?.selectedSkills ?? [],
+    linkedin: initialProfileData?.linkedin ?? "",
+    portfolio: initialProfileData?.portfolio ?? "",
+    resumeFile: initialProfileData?.resumeFile || null,
+  });
+
+  const hasUnsavedChanges = () => {
+    const keys = Object.keys(profile);
+    for (const key of keys) {
+      const currentVal = profile[key];
+      const savedVal = lastSavedProfile[key];
+
+      if (Array.isArray(currentVal)) {
+        if (!Array.isArray(savedVal) || currentVal.length !== savedVal.length || currentVal.some((v, i) => v !== savedVal[i])) {
+          return true;
+        }
+      } else {
+        if ((currentVal || "") !== (savedVal || "")) {
+          return true;
+        }
+      }
+    }
+    if ((resumeFile || "") !== (lastSavedProfile.resumeFile || "")) {
+      return true;
+    }
+    return false;
+  };
+
   // Resume states
   const [resumeFile, setResumeFile] = useState(initialProfileData?.resumeFile || null);
   const [resumeUrl, setResumeUrl] = useState(initialProfileData?.resumeUrl || null);
-  const [resumeReplaced, setResumeReplaced] = useState(false);
   const [fileSizeError, setFileSizeError] = useState("");
 
   // Refs for auto-scrolling
@@ -143,14 +189,18 @@ export function CandidateDashboard({
 
   // Keep refs in sync for popstate navigation logic
   const activeTabRef = useRef(activeTab);
-  const resumeReplacedRef = useRef(resumeReplaced);
   const selectedJobDescRef = useRef(selectedJobDesc);
   const sidebarOpenRef = useRef(sidebarOpen);
+  const unsavedChangesRef = useRef(false);
 
   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
-  useEffect(() => { resumeReplacedRef.current = resumeReplaced; }, [resumeReplaced]);
   useEffect(() => { selectedJobDescRef.current = selectedJobDesc; }, [selectedJobDesc]);
   useEffect(() => { sidebarOpenRef.current = sidebarOpen; }, [sidebarOpen]);
+
+  const unsaved = hasUnsavedChanges();
+  useEffect(() => {
+    unsavedChangesRef.current = unsaved;
+  }, [unsaved]);
 
   // Handle browser back button navigation interception
   useEffect(() => {
@@ -158,7 +208,6 @@ export function CandidateDashboard({
 
     const handlePopState = () => {
       const currentTab = activeTabRef.current;
-      const currentResumeReplaced = resumeReplacedRef.current;
       const currentJobDesc = selectedJobDescRef.current;
       const currentSidebarOpen = sidebarOpenRef.current;
 
@@ -179,7 +228,7 @@ export function CandidateDashboard({
           window.history.pushState({ portal: "candidate-dashboard" }, "");
           setActiveTab("resume");
         } else {
-          if (currentResumeReplaced) {
+          if (unsavedChangesRef.current) {
             window.history.pushState({ portal: "candidate-dashboard" }, "");
             setPendingNavigation({ type: "close", bypassApplyModal: false });
           } else {
@@ -189,7 +238,7 @@ export function CandidateDashboard({
       } else {
         if (currentTab !== "dashboard") {
           window.history.pushState({ portal: "candidate-dashboard" }, "");
-          if (currentTab === "resume" && currentResumeReplaced) {
+          if (currentTab === "resume" && unsavedChangesRef.current) {
             setPendingNavigation({ type: "tab", targetId: "dashboard" });
           } else {
             setActiveTab("dashboard");
@@ -209,11 +258,29 @@ export function CandidateDashboard({
     };
   }, [onClose, cameFromApply]);
 
-  // Reset resume state changes on cancellation
+  // Reset profile and resume state changes on cancellation
   const revertUnsavedChanges = () => {
-    setResumeFile(initialProfileData?.resumeFile || null);
+    setProfile({
+      name: lastSavedProfile.name,
+      lastName: lastSavedProfile.lastName,
+      email: lastSavedProfile.email,
+      phone: lastSavedProfile.phone,
+      location: lastSavedProfile.location,
+      highestEducation: lastSavedProfile.highestEducation,
+      degreeName: lastSavedProfile.degreeName,
+      professionalQualification: lastSavedProfile.professionalQualification,
+      professionalQualificationOther: lastSavedProfile.professionalQualificationOther,
+      experience: lastSavedProfile.experience,
+      salary: lastSavedProfile.salary,
+      extracurricular: lastSavedProfile.extracurricular,
+      extracurricularOther: lastSavedProfile.extracurricularOther,
+      roles: lastSavedProfile.roles,
+      skills: lastSavedProfile.skills,
+      linkedin: lastSavedProfile.linkedin,
+      portfolio: lastSavedProfile.portfolio,
+    });
+    setResumeFile(lastSavedProfile.resumeFile);
     setResumeUrl(initialProfileData?.resumeUrl || null);
-    setResumeReplaced(false);
   };
 
   // Execute a pending navigation action after the unsaved-changes prompt resolves
@@ -250,7 +317,6 @@ export function CandidateDashboard({
     if (resumeUrl) URL.revokeObjectURL(resumeUrl);
     setResumeFile(f.name);
     setResumeUrl(URL.createObjectURL(f));
-    setResumeReplaced(true);
   };
 
   // Open dynamic resume preview
@@ -517,7 +583,10 @@ export function CandidateDashboard({
       resumeUrl: resumeUrl || "",
     };
     onProfileUpdate?.(updatedData);
-    setResumeReplaced(false);
+    setLastSavedProfile({
+      ...profile,
+      resumeFile: resumeFile,
+    });
     setTimeout(() => setSaved(false), 2000);
     return true;
   };
@@ -625,7 +694,7 @@ export function CandidateDashboard({
               cursor: "pointer",
             }}
             onClick={() => {
-              if (activeTab === "resume" && resumeReplaced) {
+              if (activeTab === "resume" && hasUnsavedChanges()) {
                 setPendingNavigation({ type: "close", bypassApplyModal: true });
               } else {
                 onClose(true);
@@ -669,7 +738,7 @@ export function CandidateDashboard({
               color="rgba(255,255,255,0.8)"
               style={{ cursor: "pointer" }}
               onClick={() => {
-                if (activeTab === "resume" && resumeReplaced) {
+                if (activeTab === "resume" && hasUnsavedChanges()) {
                   setPendingNavigation({ type: "tab", targetId: "notifications" });
                 } else {
                   setActiveTab("notifications");
@@ -709,7 +778,7 @@ export function CandidateDashboard({
           </div>
           <button
             onClick={() => {
-              if (activeTab === "resume" && resumeReplaced) {
+              if (activeTab === "resume" && hasUnsavedChanges()) {
                 if (cameFromApply) {
                   setPendingNavigation({ type: "close", bypassApplyModal: false });
                 } else {
@@ -774,7 +843,7 @@ export function CandidateDashboard({
           profile={profile}
           profilePic={profilePic}
           activeTab={activeTab}
-          resumeReplaced={resumeReplaced}
+          hasUnsavedChanges={hasUnsavedChanges()}
           unreadCount={unreadCount}
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}

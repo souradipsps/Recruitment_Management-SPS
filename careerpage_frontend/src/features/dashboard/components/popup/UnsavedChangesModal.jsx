@@ -26,7 +26,7 @@ export function UnsavedChangesModal({ open, onDismiss, onDiscard, onSave }) {
               Unsaved Changes
             </h3>
             <p className="uc-body">
-              Are you sure you do not want to save the changes? If you proceed, your new resume upload will be lost.
+              It looks like you have made some changes to your profile or resume. Do you want to keep these changes? If so, please choose to save them. If you choose to discard, they will not be saved.
             </p>
 
             <div className="uc-actions">
