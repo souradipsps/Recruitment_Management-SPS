@@ -1,49 +1,26 @@
 import React from "react";
-import { MAROON } from "../../../data/dashboardMockData";
 import { SkillsMultiSelect } from "./SkillsMultiSelect";
+import "../../css/sections/profile/ProfessionalInfoCard.css";
 
 export function ProfessionalInfoCard({ profile, setProfile, sectionRef }) {
   return (
     <div
       ref={sectionRef}
-      style={{
-        background: "#fff",
-        border: "1px solid #e5e7eb",
-        borderRadius: "12px",
-        padding: "20px",
-        marginBottom: "16px",
-      }}
+      className="pr-card"
     >
-      <h2
-        style={{
-          fontWeight: 700,
-          fontSize: "0.95rem",
-          color: MAROON,
-          marginBottom: "16px",
-          fontFamily: "'Playfair Display', serif",
-        }}
-      >
+      <h2 className="pr-title">
         Professional Information
       </h2>
-      <div style={{ gap: "14px" }} className="grid grid-cols-1 sm:grid-cols-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-[14px]">
         {/* Educational Qualification */}
         <div>
-          <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#4a4a4a", display: "block", marginBottom: "5px" }}>
-            Educational Qualification <span style={{ color: MAROON }}>*</span>
+          <label className="pr-field-label">
+            Educational Qualification <span className="pr-required-star">*</span>
           </label>
           <select
             value={profile.highestEducation}
             onChange={(e) => setProfile({ ...profile, highestEducation: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "9px 12px",
-              border: "1.5px solid #e5e7eb",
-              borderRadius: "8px",
-              fontSize: "0.85rem",
-              background: "#faf8f5",
-              color: "#1a0a0a",
-              boxSizing: "border-box",
-            }}
+            className="pr-input"
           >
             <option value="">Select education</option>
             <option>High School / 12th</option>
@@ -58,45 +35,26 @@ export function ProfessionalInfoCard({ profile, setProfile, sectionRef }) {
 
         {/* Degree Name */}
         <div>
-          <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#4a4a4a", display: "block", marginBottom: "5px" }}>
+          <label className="pr-field-label">
             Degree Name
           </label>
           <input
             value={profile.degreeName}
             onChange={(e) => setProfile({ ...profile, degreeName: e.target.value })}
             placeholder="e.g. M.Sc Mathematics"
-            style={{
-              width: "100%",
-              padding: "9px 12px",
-              border: "1.5px solid #e5e7eb",
-              borderRadius: "8px",
-              fontSize: "0.85rem",
-              outline: "none",
-              background: "#faf8f5",
-              color: "#1a0a0a",
-              boxSizing: "border-box",
-            }}
+            className="pr-input"
           />
         </div>
 
         {/* Professional Qualification */}
         <div>
-          <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#4a4a4a", display: "block", marginBottom: "5px" }}>
-            Professional Qualification <span style={{ fontWeight: 400, color: "#9a8a8a" }}>(Optional)</span>
+          <label className="pr-field-label">
+            Professional Qualification <span className="pr-optional-label">(Optional)</span>
           </label>
           <select
             value={profile.professionalQualification}
             onChange={(e) => setProfile({ ...profile, professionalQualification: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "9px 12px",
-              border: "1.5px solid #e5e7eb",
-              borderRadius: "8px",
-              fontSize: "0.85rem",
-              background: "#faf8f5",
-              color: "#1a0a0a",
-              boxSizing: "border-box",
-            }}
+            className="pr-input"
           >
             <option value="">Select qualification</option>
             <option>B.Ed (Bachelor of Education)</option>
@@ -112,45 +70,26 @@ export function ProfessionalInfoCard({ profile, setProfile, sectionRef }) {
 
         {/* Other Professional Qualification Text */}
         <div>
-          <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#4a4a4a", display: "block", marginBottom: "5px" }}>
+          <label className="pr-field-label">
             Detail (if 'Other')
           </label>
           <input
             value={profile.professionalQualificationOther}
             onChange={(e) => setProfile({ ...profile, professionalQualificationOther: e.target.value })}
             placeholder="e.g. B.Ed, CTET, NET"
-            style={{
-              width: "100%",
-              padding: "9px 12px",
-              border: "1.5px solid #e5e7eb",
-              borderRadius: "8px",
-              fontSize: "0.85rem",
-              outline: "none",
-              background: "#faf8f5",
-              color: "#1a0a0a",
-              boxSizing: "border-box",
-            }}
+            className="pr-input"
           />
         </div>
 
         {/* Years of Experience */}
         <div>
-          <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#4a4a4a", display: "block", marginBottom: "5px" }}>
+          <label className="pr-field-label">
             Years of Experience
           </label>
           <select
             value={profile.experience}
             onChange={(e) => setProfile({ ...profile, experience: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "9px 12px",
-              border: "1.5px solid #e5e7eb",
-              borderRadius: "8px",
-              fontSize: "0.85rem",
-              background: "#faf8f5",
-              color: "#1a0a0a",
-              boxSizing: "border-box",
-            }}
+            className="pr-input"
           >
             <option value="">Select experience</option>
             <option>0–1 years (Fresher)</option>
@@ -163,22 +102,13 @@ export function ProfessionalInfoCard({ profile, setProfile, sectionRef }) {
 
         {/* Extracurricular Qualification */}
         <div className="sm:col-start-1">
-          <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#4a4a4a", display: "block", marginBottom: "5px" }}>
-            Extracurricular Qualification <span style={{ fontWeight: 400, color: "#9a8a8a" }}>(Optional)</span>
+          <label className="pr-field-label">
+            Extracurricular Qualification <span className="pr-optional-label">(Optional)</span>
           </label>
           <select
             value={profile.extracurricular}
             onChange={(e) => setProfile({ ...profile, extracurricular: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "9px 12px",
-              border: "1.5px solid #e5e7eb",
-              borderRadius: "8px",
-              fontSize: "0.85rem",
-              background: "#faf8f5",
-              color: "#1a0a0a",
-              boxSizing: "border-box",
-            }}
+            className="pr-input"
           >
             <option value="">Select qualification</option>
             <option>Sports Coaching</option>
@@ -197,31 +127,21 @@ export function ProfessionalInfoCard({ profile, setProfile, sectionRef }) {
 
         {/* Other Extracurricular Detail */}
         <div>
-          <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#4a4a4a", display: "block", marginBottom: "5px" }}>
+          <label className="pr-field-label">
             Detail (if 'Other')
           </label>
           <input
             value={profile.extracurricularOther}
             onChange={(e) => setProfile({ ...profile, extracurricularOther: e.target.value })}
             placeholder="e.g. Sports Coach, Music Diploma"
-            style={{
-              width: "100%",
-              padding: "9px 12px",
-              border: "1.5px solid #e5e7eb",
-              borderRadius: "8px",
-              fontSize: "0.85rem",
-              outline: "none",
-              background: "#faf8f5",
-              color: "#1a0a0a",
-              boxSizing: "border-box",
-            }}
+            className="pr-input"
           />
         </div>
       </div>
 
       {/* Roles Interested In */}
-      <div style={{ marginTop: "14px" }}>
-        <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#4a4a4a", display: "block", marginBottom: "5px" }}>
+      <div className="pr-group-margin">
+        <label className="pr-field-label">
           Roles Interested In
         </label>
         <SkillsMultiSelect
@@ -232,8 +152,8 @@ export function ProfessionalInfoCard({ profile, setProfile, sectionRef }) {
       </div>
 
       {/* Skills & Strengths */}
-      <div style={{ marginTop: "14px" }}>
-        <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#4a4a4a", display: "block", marginBottom: "5px" }}>
+      <div className="pr-group-margin">
+        <label className="pr-field-label">
           Skills & Strengths
         </label>
         <SkillsMultiSelect
@@ -244,24 +164,15 @@ export function ProfessionalInfoCard({ profile, setProfile, sectionRef }) {
       </div>
 
       {/* Salary Expectations + LinkedIn + Portfolio */}
-      <div style={{ marginTop: "14px", gap: "14px" }} className="grid grid-cols-1 sm:grid-cols-2">
+      <div className="pr-group-margin grid grid-cols-1 sm:grid-cols-2 gap-[14px]">
         <div>
-          <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#4a4a4a", display: "block", marginBottom: "5px" }}>
+          <label className="pr-field-label">
             Salary Expectations (₹ per annum)
           </label>
           <select
             value={profile.salary}
             onChange={(e) => setProfile({ ...profile, salary: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "9px 12px",
-              border: "1.5px solid #e5e7eb",
-              borderRadius: "8px",
-              fontSize: "0.85rem",
-              background: "#faf8f5",
-              color: "#1a0a0a",
-              boxSizing: "border-box",
-            }}
+            className="pr-input"
           >
             <option value="">Select expected salary</option>
             <option value="200000">₹2,00,000</option>
@@ -277,45 +188,25 @@ export function ProfessionalInfoCard({ profile, setProfile, sectionRef }) {
         </div>
         <div className="hidden sm:block" />
         <div>
-          <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#4a4a4a", display: "block", marginBottom: "5px" }}>
-            LinkedIn Profile <span style={{ fontWeight: 400, color: "#9a8a8a" }}>(Optional)</span>
+          <label className="pr-field-label">
+            LinkedIn Profile <span className="pr-optional-label">(Optional)</span>
           </label>
           <input
             value={profile.linkedin}
             onChange={(e) => setProfile({ ...profile, linkedin: e.target.value })}
             placeholder="https://linkedin.com/in/yourname"
-            style={{
-              width: "100%",
-              padding: "9px 12px",
-              border: "1.5px solid #e5e7eb",
-              borderRadius: "8px",
-              fontSize: "0.85rem",
-              outline: "none",
-              background: "#faf8f5",
-              color: "#1a0a0a",
-              boxSizing: "border-box",
-            }}
+            className="pr-input"
           />
         </div>
         <div>
-          <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#4a4a4a", display: "block", marginBottom: "5px" }}>
-            Portfolio / GitHub / Other <span style={{ fontWeight: 400, color: "#9a8a8a" }}>(Optional)</span>
+          <label className="pr-field-label">
+            Portfolio / GitHub / Other <span className="pr-optional-label">(Optional)</span>
           </label>
           <input
             value={profile.portfolio}
             onChange={(e) => setProfile({ ...profile, portfolio: e.target.value })}
             placeholder="https://github.com/username"
-            style={{
-              width: "100%",
-              padding: "9px 12px",
-              border: "1.5px solid #e5e7eb",
-              borderRadius: "8px",
-              fontSize: "0.85rem",
-              outline: "none",
-              background: "#faf8f5",
-              color: "#1a0a0a",
-              boxSizing: "border-box",
-            }}
+            className="pr-input"
           />
         </div>
       </div>

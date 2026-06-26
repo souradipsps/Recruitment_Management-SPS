@@ -1,6 +1,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { MAROON } from "../../data/dashboardMockData";
+import "../css/popup/ProfilePicturePopup.css";
 
 export function ProfilePicturePopup({
   open,
@@ -13,16 +13,7 @@ export function ProfilePicturePopup({
     <AnimatePresence>
       {open && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 1100,
-            background: "rgba(0, 0, 0, 0.55)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
-          }}
+          className="pp-backdrop"
           onClick={onClose}
         >
           <motion.div
@@ -30,56 +21,19 @@ export function ProfilePicturePopup({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
             onClick={(e) => e.stopPropagation()}
-            style={{
-              background: "#fff",
-              borderRadius: "16px",
-              padding: "24px",
-              width: "100%",
-              maxWidth: "320px",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
-              textAlign: "center",
-            }}
+            className="pp-panel"
           >
-            <h3
-              style={{
-                fontFamily: "'Playfair Display', serif",
-                fontWeight: 700,
-                fontSize: "1.1rem",
-                color: MAROON,
-                marginBottom: "16px",
-              }}
-            >
+            <h3 className="pp-title">
               Update Profile Picture
             </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div className="pp-actions">
               <button
                 onClick={onTakePhoto}
-                style={{
-                  background: MAROON,
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "10px",
-                  padding: "12px",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
+                className="pp-btn-photo"
               >
                 Take Photo (Webcam)
               </button>
-              <label
-                style={{
-                  background: "#faf8f5",
-                  border: "1.5px solid #e5e7eb",
-                  borderRadius: "10px",
-                  padding: "12px",
-                  color: "#4a4a4a",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  display: "block",
-                }}
-              >
+              <label className="pp-label-upload">
                 Upload File
                 <input
                   ref={picRef}
@@ -91,15 +45,7 @@ export function ProfilePicturePopup({
               </label>
               <button
                 onClick={onClose}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "#6b5c5c",
-                  fontSize: "0.78rem",
-                  cursor: "pointer",
-                  textDecoration: "underline",
-                  marginTop: "6px",
-                }}
+                className="pp-btn-cancel"
               >
                 Cancel
               </button>

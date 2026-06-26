@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { MAROON, ALL_SKILLS } from "../../../data/dashboardMockData";
+import { ALL_SKILLS } from "../../../data/dashboardMockData";
+import "../../css/sections/profile/SkillsMultiSelect.css";
 
 export function SkillsMultiSelect({ selected, onChange, placeholder = "Select or add items…" }) {
   const [open, setOpen] = useState(false);
@@ -22,24 +23,13 @@ export function SkillsMultiSelect({ selected, onChange, placeholder = "Select or
   };
 
   return (
-    <div style={{ position: "relative" }}>
+    <div className="sms-wrapper">
       <div
         onClick={() => setOpen(!open)}
-        style={{
-          minHeight: "42px",
-          padding: "8px 32px 8px 12px",
-          border: "1.5px solid #e5e7eb",
-          borderRadius: "8px",
-          background: "#faf8f5",
-          cursor: "pointer",
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "4px",
-          position: "relative",
-        }}
+        className="sms-trigger"
       >
         {selected.length === 0 && (
-          <span style={{ color: "#9ca3af", fontSize: "0.85rem", alignSelf: "center" }}>
+          <span className="sms-placeholder">
             {placeholder}
           </span>
         )}
@@ -50,79 +40,32 @@ export function SkillsMultiSelect({ selected, onChange, placeholder = "Select or
               e.stopPropagation();
               toggle(s);
             }}
-            style={{
-              background: `rgba(114,16,42,0.1)`,
-              color: MAROON,
-              fontSize: "0.72rem",
-              fontWeight: 600,
-              padding: "2px 8px",
-              borderRadius: "999px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-            }}
+            className="sms-badge"
           >
             {s} &times;
           </span>
         ))}
         <span
-          style={{
-            position: "absolute",
-            right: "10px",
-            top: "50%",
-            transform: `translateY(-50%) rotate(${open ? 180 : 0}deg)`,
-            transition: "transform 0.2s",
-            color: "#6b5c5c",
-            fontSize: "0.75rem",
-          }}
+          className={`sms-caret ${
+            open ? "sms-caret--open" : "sms-caret--closed"
+          }`}
         >
           ▼
         </span>
       </div>
       {open && (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            left: 0,
-            right: 0,
-            background: "#fff",
-            border: "1.5px solid #e5e7eb",
-            borderRadius: "8px",
-            zIndex: 100,
-            maxHeight: "220px",
-            overflowY: "auto",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
-          }}
-        >
-          <div style={{ padding: "8px", borderBottom: "1px solid #f0f0f0", display: "flex", gap: "6px" }}>
+        <div className="sms-dropdown">
+          <div className="sms-custom-row">
             <input
               value={custom}
               onChange={(e) => setCustom(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addCustom()}
               placeholder="Add custom item…"
-              style={{
-                flex: 1,
-                padding: "6px 10px",
-                border: "1px solid #e5e7eb",
-                borderRadius: "6px",
-                fontSize: "0.8rem",
-                outline: "none",
-              }}
+              className="sms-custom-input"
             />
             <button
               onClick={addCustom}
-              style={{
-                background: MAROON,
-                color: "#fff",
-                border: "none",
-                borderRadius: "6px",
-                padding: "6px 12px",
-                fontSize: "0.78rem",
-                cursor: "pointer",
-                fontWeight: 600,
-              }}
+              className="sms-btn-add"
             >
               Add
             </button>
@@ -131,20 +74,12 @@ export function SkillsMultiSelect({ selected, onChange, placeholder = "Select or
             <div
               key={opt}
               onClick={() => toggle(opt)}
-              style={{
-                padding: "9px 12px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                fontSize: "0.82rem",
-                color: selected.includes(opt) ? MAROON : "#1a0a0a",
-                background: selected.includes(opt) ? "rgba(114,16,42,0.05)" : "transparent",
-                fontWeight: selected.includes(opt) ? 600 : 400,
-              }}
+              className={`sms-option ${
+                selected.includes(opt) ? "sms-option--selected" : "sms-option--unselected"
+              }`}
             >
               {opt}
-              {selected.includes(opt) && <span style={{ color: MAROON }}>✓</span>}
+              {selected.includes(opt) && <span className="sms-checkmark">✓</span>}
             </div>
           ))}
         </div>

@@ -1,6 +1,6 @@
 import React from "react";
 import { CheckCircle, XCircle, Eye, Upload, Trash2, Camera, Clock } from "lucide-react";
-import { MAROON } from "../../../data/dashboardMockData";
+import "../../css/sections/onboarding/DocumentRow.css";
 
 const verifConfig = {
   verified: {
@@ -49,33 +49,19 @@ export function DocumentRow({
   const verif = docsSubmitted && uploaded ? docStatus[docKey] || "pending" : null;
 
   return (
-    <div style={{ border: "1px solid #e5e7eb", borderRadius: "10px", padding: "14px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "#1a0a0a" }}>{label}</div>
-          <div style={{ color: "#9a8a8a", fontSize: "0.72rem", marginTop: "2px" }}>
+    <div className="dr-row-container">
+      <div className="dr-row-header">
+        <div className="dr-info">
+          <div className="dr-label">{label}</div>
+          <div className="dr-note">
             {uploaded ? uploaded : note}
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div className="dr-controls">
           {uploaded ? (
             <>
-              <div
-                style={{
-                  background: "#f0fdf4",
-                  border: "1px solid #6ee7b7",
-                  color: "#065f46",
-                  borderRadius: "6px",
-                  padding: "6px 12px",
-                  fontSize: "0.75rem",
-                  fontWeight: 600,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                  whiteSpace: "nowrap",
-                }}
-              >
+              <div className="dr-badge-uploaded">
                 <CheckCircle size={12} /> Uploaded
               </div>
               <button
@@ -85,20 +71,7 @@ export function DocumentRow({
                     window.open(url, "_blank");
                   }
                 }}
-                style={{
-                  background: "#fff",
-                  border: `1.5px solid #e5e7eb`,
-                  color: "#4a4a4a",
-                  borderRadius: "6px",
-                  padding: "6px 12px",
-                  fontSize: "0.75rem",
-                  fontWeight: 600,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                  cursor: "pointer",
-                }}
-                className="hover:bg-[#f0f0f0]"
+                className="dr-btn-view hover:bg-[#f0f0f0]"
               >
                 <Eye size={12} /> View
               </button>
@@ -116,15 +89,7 @@ export function DocumentRow({
                       return copy;
                     });
                   }}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    color: "#dc2626",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    padding: "4px",
-                  }}
+                  className="dr-btn-remove"
                   title="Remove document"
                 >
                   <Trash2 size={14} />
@@ -133,28 +98,14 @@ export function DocumentRow({
             </>
           ) : !docsSubmitted ? (
             <>
-              <label style={{ cursor: "pointer" }}>
-                <div
-                  style={{
-                    background: `rgba(114,16,42,0.07)`,
-                    border: `1px solid ${MAROON}`,
-                    color: MAROON,
-                    borderRadius: "6px",
-                    padding: "6px 12px",
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    whiteSpace: "nowrap",
-                  }}
-                >
+              <label className="dr-pointer-label">
+                <div className="dr-btn-upload-wrap">
                   <Upload size={12} /> Upload File
                 </div>
                 <input
                   type="file"
                   accept={accept}
-                  style={{ display: "none" }}
+                  className="dr-file-input"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
                     if (f) {
@@ -167,27 +118,13 @@ export function DocumentRow({
               </label>
               <button
                 onClick={() => startDocCamera(docKey)}
-                style={{
-                  background: "#faf8f5",
-                  border: "1.5px solid #e5e7eb",
-                  color: "#4a4a4a",
-                  borderRadius: "6px",
-                  padding: "6px 12px",
-                  fontSize: "0.75rem",
-                  fontWeight: 600,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                  whiteSpace: "nowrap",
-                  cursor: "pointer",
-                }}
-                className="hover:bg-[#f0f0f0]"
+                className="dr-btn-camera hover:bg-[#f0f0f0]"
               >
                 <Camera size={12} /> Take Photo
               </button>
             </>
           ) : (
-            <span style={{ color: "#dc2626", fontSize: "0.75rem", fontWeight: 600 }}>
+            <span className="dr-missing-text">
               Missing document
             </span>
           )}
@@ -199,18 +136,11 @@ export function DocumentRow({
       {verif && (
         <div
           style={{
-            marginTop: "10px",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "5px",
             background: verifConfig[verif].bg,
             border: `1px solid ${verifConfig[verif].border}`,
             color: verifConfig[verif].color,
-            fontSize: "0.72rem",
-            fontWeight: 700,
-            padding: "3px 10px",
-            borderRadius: "999px",
           }}
+          className="dr-verification-badge"
         >
           {verifConfig[verif].icon} {verifConfig[verif].label}
         </div>

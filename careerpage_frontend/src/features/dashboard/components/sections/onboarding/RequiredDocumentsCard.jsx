@@ -1,8 +1,8 @@
 import React from "react";
 import { Upload, Clock } from "lucide-react";
-import { MAROON } from "../../../data/dashboardMockData";
 import { DocumentRow } from "./DocumentRow";
 import { AadhaarField, PanField, BankDetailsField } from "./IdentityFields";
+import "../../css/sections/onboarding/RequiredDocumentsCard.css";
 
 const COMPULSORY_DOCS = [
   { key: "aadhar", label: "Aadhaar Card *", accept: ".pdf,.jpg,.jpeg,.png", note: "Front & back scan — PDF or image" },
@@ -82,33 +82,17 @@ export function RequiredDocumentsCard({
   };
 
   return (
-    <div
-      style={{
-        background: "#fff",
-        border: "1px solid #e5e7eb",
-        borderRadius: "12px",
-        overflow: "hidden",
-        marginBottom: "16px",
-      }}
-    >
-      <div
-        style={{
-          padding: "16px 20px",
-          borderBottom: "1px solid #f0f0f0",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-        }}
-      >
-        <Upload size={16} color={MAROON} />
-        <h2 style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a0a0a" }}>Required Documents</h2>
+    <div className="rd-card">
+      <div className="rd-header">
+        <Upload size={16} />
+        <h2 className="rd-title">Required Documents</h2>
       </div>
 
-      <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: "12px" }}>
-        <h3 style={{ fontSize: "0.85rem", fontWeight: 700, color: MAROON, marginBottom: "8px" }}>
+      <div className="rd-body">
+        <h3 className="rd-section-title">
           Compulsory Details
         </h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "20px" }}>
+        <div className="rd-list rd-list--margin">
           {COMPULSORY_DOCS.map((doc) => (
             <DocumentRow key={doc.key} docKey={doc.key} label={doc.label} accept={doc.accept} note={doc.note} {...rowProps}>
               {extraFor(doc.key)}
@@ -116,13 +100,13 @@ export function RequiredDocumentsCard({
           ))}
         </div>
 
-        <h3 style={{ fontSize: "0.85rem", fontWeight: 700, color: MAROON, marginBottom: "8px" }}>
+        <h3 className="rd-section-title">
           Optional Details
         </h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <div style={{ border: "1px solid #e5e7eb", borderRadius: "10px", padding: "14px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
+        <div className="rd-list">
+          <div className="rd-optional-fields-box">
             <div>
-              <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#4a4a4a", display: "block", marginBottom: "6px" }}>
+              <label className="rd-field-label">
                 PF Number
               </label>
               <input
@@ -131,20 +115,11 @@ export function RequiredDocumentsCard({
                 disabled={docsSubmitted}
                 onChange={(e) => setPfNumber(e.target.value.replace(/\D/g, ""))}
                 placeholder="Enter PF Number"
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  border: "1.5px solid #e5e7eb",
-                  borderRadius: "8px",
-                  fontSize: "0.85rem",
-                  outline: "none",
-                  background: docsSubmitted ? "#f3f4f6" : "#faf8f5",
-                  color: docsSubmitted ? "#6b5c5c" : "#1a0a0a",
-                }}
+                className="rd-field-input"
               />
             </div>
             <div>
-              <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#4a4a4a", display: "block", marginBottom: "6px" }}>
+              <label className="rd-field-label">
                 ESI Number
               </label>
               <input
@@ -153,16 +128,7 @@ export function RequiredDocumentsCard({
                 disabled={docsSubmitted}
                 onChange={(e) => setEsiNumber(e.target.value.replace(/\D/g, ""))}
                 placeholder="Enter ESI Number"
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  border: "1.5px solid #e5e7eb",
-                  borderRadius: "8px",
-                  fontSize: "0.85rem",
-                  outline: "none",
-                  background: docsSubmitted ? "#f3f4f6" : "#faf8f5",
-                  color: docsSubmitted ? "#6b5c5c" : "#1a0a0a",
-                }}
+                className="rd-field-input"
               />
             </div>
           </div>
@@ -173,44 +139,22 @@ export function RequiredDocumentsCard({
 
         {/* Document Submit Bottom Status / Action */}
         {docsSubmitted ? (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              background: "#fef9f0",
-              border: "1px solid #fde68a",
-              borderRadius: "10px",
-              padding: "14px",
-              marginTop: "8px",
-            }}
-          >
-            <Clock size={20} color="#b45309" style={{ flexShrink: 0 }} />
+          <div className="rd-banner--review">
+            <Clock size={20} color="#b45309" className="rd-banner-icon" />
             <div>
-              <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#b45309" }}>
+              <div className="rd-banner-title--review">
                 Documents Under Review
               </div>
-              <div style={{ color: "#374151", fontSize: "0.78rem", marginTop: "2px" }}>
+              <div className="rd-banner-text">
                 Your documents have been submitted and are currently under review by HR.
               </div>
             </div>
           </div>
         ) : (
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
+          <div className="rd-footer">
             <button
               onClick={handleSubmitDocs}
-              style={{
-                background: MAROON,
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: "0.85rem",
-                border: "none",
-                borderRadius: "8px",
-                padding: "10px 24px",
-                cursor: "pointer",
-                transition: "opacity 0.2s",
-              }}
-              className="hover:opacity-90"
+              className="rd-btn-submit"
             >
               Submit Documents
             </button>
