@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  Clock, CheckCircle, XCircle, AlertCircle,
   LayoutDashboard, FileText, Upload, Bell, Video, ClipboardCheck
 } from "lucide-react";
 
@@ -41,24 +40,6 @@ export const notifications = [
   },
 ];
 
-export const statusConfig = {
-  "Under Review": {
-    className: "status-under-review",
-    icon: <Clock size={13} />,
-  },
-  Shortlisted: {
-    className: "status-shortlisted",
-    icon: <CheckCircle size={13} />,
-  },
-  Rejected: {
-    className: "status-rejected",
-    icon: <XCircle size={13} />,
-  },
-  "Interview Scheduled": {
-    className: "status-interview-scheduled",
-    icon: <AlertCircle size={13} />,
-  },
-};
 
 export const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
