@@ -170,7 +170,29 @@ export function CandidateDashboard({
       type: j.type,
     }));
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const [dashboardNotifications, setDashboardNotifications] = useState(() =>
+    notifications.map((n) => ({ ...n, isNew: !n.read }))
+  );
+
+  const unreadCount = dashboardNotifications.filter((n) => !n.read).length;
+
+  useEffect(() => {
+    if (activeTab === "notifications") {
+      setDashboardNotifications((prev) =>
+        prev.map((n) => (n.read ? n : { ...n, read: true }))
+      );
+    }
+  }, [activeTab]);
+
+  const prevTabRef = useRef(activeTab);
+  useEffect(() => {
+    if (prevTabRef.current === "notifications" && activeTab !== "notifications") {
+      setDashboardNotifications((prev) =>
+        prev.map((n) => (n.isNew ? { ...n, isNew: false } : n))
+      );
+    }
+    prevTabRef.current = activeTab;
+  }, [activeTab]);
 
   // Handles auto scrolling to specific sections in Profile
   useEffect(() => {
@@ -732,18 +754,19 @@ export function CandidateDashboard({
         </div>
 
         <div className="flex items-center gap-3">
-          <div style={{ position: "relative" }}>
+          <div
+            style={{ position: "relative", cursor: "pointer" }}
+            onClick={() => {
+              if (activeTab === "resume" && hasUnsavedChanges()) {
+                setPendingNavigation({ type: "tab", targetId: "notifications" });
+              } else {
+                setActiveTab("notifications");
+              }
+            }}
+          >
             <Bell
               size={18}
               color="rgba(255,255,255,0.8)"
-              style={{ cursor: "pointer" }}
-              onClick={() => {
-                if (activeTab === "resume" && hasUnsavedChanges()) {
-                  setPendingNavigation({ type: "tab", targetId: "notifications" });
-                } else {
-                  setActiveTab("notifications");
-                }
-              }}
             />
             {unreadCount > 0 && (
               <span
@@ -891,7 +914,7 @@ export function CandidateDashboard({
 
           {/* Notifications Tab */}
           {activeTab === "notifications" && (
-            <NotificationsSection notifications={notifications} />
+            <NotificationsSection notifications={dashboardNotifications} />
           )}
 
           {/* Upcoming Interviews Tab */}
