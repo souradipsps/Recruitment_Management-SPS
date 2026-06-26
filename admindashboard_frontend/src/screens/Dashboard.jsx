@@ -140,10 +140,11 @@ export default function Dashboard({ approvalRequests }) {
         ))}
       </div>
 
-      {/* Dept Progress + Monthly Trends */}
-      <div style={{ display: "grid", gridTemplateColumns: twoCol, gap: 14, marginBottom: 14 }}>
-        <div className="animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
-          <Card style={{ padding: 20 }}>
+      {/* Dept Progress + Monthly Trends + Pipeline + Upcoming — unified grid for equal row heights */}
+      <div style={{ display: "grid", gridTemplateColumns: twoCol, gap: 14, marginBottom: 14, alignItems: "stretch" }}>
+        {/* Row 1, Col 1 — Hiring Progress by Dept */}
+        <div className="animate-fade-in-up" style={{ animationDelay: "0.4s", display: "flex", flexDirection: "column" }}>
+          <Card style={{ padding: 20, flex: 1 }}>
             <div style={{
               fontSize: font.sm, fontWeight: font.bold, fontFamily: font.body,
               color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 16
@@ -175,15 +176,16 @@ export default function Dashboard({ approvalRequests }) {
           </Card>
         </div>
 
-        <div className="animate-fade-in-up" style={{ animationDelay: "0.45s" }}>
-          <Card style={{ padding: 20 }}>
+        {/* Row 1, Col 2 — Monthly Hiring Trends */}
+        <div className="animate-fade-in-up" style={{ animationDelay: "0.45s", display: "flex", flexDirection: "column" }}>
+          <Card style={{ padding: 20, flex: 1, display: "flex", flexDirection: "column" }}>
             <div style={{
               fontSize: font.sm, fontWeight: font.bold, fontFamily: font.body,
               color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 16
             }}>
               Monthly Hiring Trends
             </div>
-            <div style={{ display: "flex", gap: 6, alignItems: "flex-end", height: 120, marginBottom: 10 }}>
+            <div style={{ flex: 1, display: "flex", gap: 6, alignItems: "flex-end", minHeight: 120, marginBottom: 10 }}>
               {monthly.map((m, idx) => (
                 <div key={m.m} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, height: "100%", justifyContent: "flex-end" }}>
                   <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: 2, height: "100%" }}>
@@ -222,12 +224,10 @@ export default function Dashboard({ approvalRequests }) {
             </div>
           </Card>
         </div>
-      </div>
 
-      {/* Pipeline + Upcoming */}
-      <div style={{ display: "grid", gridTemplateColumns: twoCol, gap: 14, marginBottom: 14 }}>
-        <div className="animate-fade-in-up" style={{ animationDelay: "0.5s" }}>
-          <Card style={{ padding: 20 }}>
+        {/* Row 2, Col 1 — Recruitment Funnel */}
+        <div className="animate-fade-in-up" style={{ animationDelay: "0.5s", display: "flex", flexDirection: "column" }}>
+          <Card style={{ padding: 20, flex: 1 }}>
             <div style={{
               fontSize: font.sm, fontWeight: font.bold, fontFamily: font.body,
               color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 16
@@ -267,8 +267,9 @@ export default function Dashboard({ approvalRequests }) {
           </Card>
         </div>
 
-        <div className="animate-fade-in-up" style={{ animationDelay: "0.55s" }}>
-          <Card style={{ padding: 20 }}>
+        {/* Row 2, Col 2 — Upcoming Interviews */}
+        <div className="animate-fade-in-up" style={{ animationDelay: "0.55s", display: "flex", flexDirection: "column" }}>
+          <Card style={{ padding: 20, flex: 1 }}>
             <div style={{
               fontSize: font.sm, fontWeight: font.bold, fontFamily: font.body,
               color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 16
