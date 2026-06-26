@@ -21,6 +21,19 @@ const ALL_SKILLS = [
 function SkillsMultiSelect({ options, selected, onChange, placeholder, readOnly = false }) {
   const [open, setOpen] = useState(false);
   const [custom, setCustom] = useState("");
+  const wrapperRef = useRef(null);
+
+  // Close the dropdown when clicking anywhere outside this component.
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
 
   const toggle = (opt) => {
     if (readOnly) return;
@@ -35,7 +48,7 @@ function SkillsMultiSelect({ options, selected, onChange, placeholder, readOnly 
   };
 
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative" }} ref={wrapperRef}>
       <div
         onClick={() => !readOnly && setOpen(!open)}
         className={`jm-multiselect-trigger ${readOnly ? "jm-multiselect-trigger--readonly" : "jm-multiselect-trigger--editable"}`}
@@ -68,7 +81,7 @@ function SkillsMultiSelect({ options, selected, onChange, placeholder, readOnly 
               onKeyDown={(e) => e.key === "Enter" && addCustom()}
               placeholder="Add custom…"
             />
-            <button onClick={addCustom} className="jm-multiselect-add-btn">Add</button>
+            <button type="button" onClick={addCustom} className="jm-multiselect-add-btn">Add</button>
           </div>
           {options.map((opt) => (
             <div
