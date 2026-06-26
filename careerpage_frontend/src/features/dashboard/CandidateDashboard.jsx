@@ -581,7 +581,7 @@ export function CandidateDashboard({
         style={{
           background: MAROON,
           padding: "0 24px",
-          height: "56px",
+          height: "76px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -620,25 +620,25 @@ export function CandidateDashboard({
             <img
               src={logoImg}
               alt="South Point School"
-              style={{ height: "32px", objectFit: "contain" }}
+              style={{ height: "44px", objectFit: "contain" }}
             />
             <div>
               <div
                 style={{
                   color: GOLD,
-                  fontSize: "0.85rem",
+                  fontSize: "1.1rem",
                   fontWeight: 700,
                   fontFamily: "'Playfair Display', serif",
-                  lineHeight: 1.1,
+                  lineHeight: 1.2,
                 }}
               >
                 South Point School
               </div>
               <div
                 style={{
-                  color: "rgba(255,255,255,0.6)",
-                  fontSize: "0.6rem",
-                  letterSpacing: "0.1em",
+                  color: "rgba(255,255,255,0.7)",
+                  fontSize: "0.68rem",
+                  letterSpacing: "0.15em",
                 }}
               >
                 CANDIDATE PORTAL
@@ -735,7 +735,7 @@ export function CandidateDashboard({
               style={{
                 position: "fixed",
                 inset: 0,
-                top: "56px",
+                top: "76px",
                 zIndex: 998,
                 background: "rgba(0,0,0,0.4)",
               }}
