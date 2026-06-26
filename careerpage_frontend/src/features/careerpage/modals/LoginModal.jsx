@@ -4,8 +4,7 @@ import { Eye, EyeOff, Phone, Lock, X, User, Mail } from "lucide-react";
 import logoImg from "../../../assets/logo.png";
 import campusImg from "../../../assets/campus.jpg";
 import "./css/LoginModal.css";
-
-const MAROON = "#72102a";
+import { MAROON } from "../../../lib/constants";
 
 const capitalizeWords = (str) => str.replace(/\b\w/g, (char) => char.toUpperCase());
 

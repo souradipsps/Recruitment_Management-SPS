@@ -1,10 +1,23 @@
-import React, { useState } from "react";
-import { ALL_SKILLS } from "../../../data/dashboardMockData";
+import React, { useState, useRef, useEffect } from "react";
+import { ALL_SKILLS } from "../../../../../mockData/dashboardMockData";
 import "../../css/sections/profile/SkillsMultiSelect.css";
 
-export function SkillsMultiSelect({ selected, onChange, placeholder = "Select or add items…" }) {
+export function SkillsMultiSelect({ options = ALL_SKILLS, selected, onChange, placeholder = "Select or add items…" }) {
   const [open, setOpen] = useState(false);
   const [custom, setCustom] = useState("");
+  const wrapperRef = useRef(null);
+
+  // Close the dropdown when clicking anywhere outside this component.
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
 
   const toggle = (opt) => {
     onChange(
@@ -23,7 +36,7 @@ export function SkillsMultiSelect({ selected, onChange, placeholder = "Select or
   };
 
   return (
-    <div className="sms-wrapper">
+    <div className="sms-wrapper" ref={wrapperRef}>
       <div
         onClick={() => setOpen(!open)}
         className="sms-trigger"
@@ -64,13 +77,14 @@ export function SkillsMultiSelect({ selected, onChange, placeholder = "Select or
               className="sms-custom-input"
             />
             <button
+              type="button"
               onClick={addCustom}
               className="sms-btn-add"
             >
               Add
             </button>
           </div>
-          {ALL_SKILLS.map((opt) => (
+          {options.map((opt) => (
             <div
               key={opt}
               onClick={() => toggle(opt)}

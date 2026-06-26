@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { Award, TrendingUp, Users, Heart } from "lucide-react";
-import { stats } from "../../../data/jobs";
+import { stats } from "../../../mockData/jobs";
 import campusImg from "../../../assets/campus.jpg";
 import "./css/HeroSection.css";
 

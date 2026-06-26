@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { CheckCircle } from "lucide-react";
-import { capitalizeWords } from "../../../data/dashboardMockData";
+import { capitalizeWords } from "../../../../../mockData/dashboardMockData";
 import "../../css/sections/profile/PersonalInfoCard.css";
 
 export function PersonalInfoCard({ profile, setProfile, sectionRef }) {

@@ -115,8 +115,9 @@
 
 .sms-option--selected {
   color: var(--sms-maroon);
-  background: rgba(114, 16, 42, 0.05);
+  background: rgba(114, 16, 42, 0.12);
   font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--sms-maroon);
 }
 
 .sms-option--unselected {

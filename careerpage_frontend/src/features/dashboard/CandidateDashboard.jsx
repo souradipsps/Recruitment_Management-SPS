@@ -4,8 +4,10 @@ import { Menu, Bell, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import logoImg from "../../assets/logo.png";
 
+import { MAROON, GOLD } from "../../lib/constants";
+
 // Mock data & configurations
-import { MAROON, GOLD, notifications } from "./data/dashboardMockData";
+import { notifications } from "../../mockData/dashboardMockData";
 
 // Layout
 import { DashboardSidebar } from "./components/layout/DashboardSidebar";
@@ -810,13 +812,13 @@ export function CandidateDashboard({
                 onClose(true);
               }
             }}
+            className="hidden sm:flex"
             style={{
               background: "rgba(255,255,255,0.12)",
               border: "1px solid rgba(255,255,255,0.25)",
               borderRadius: "6px",
               padding: "5px 12px",
               cursor: "pointer",
-              display: "flex",
               alignItems: "center",
               gap: "6px",
               color: "#fff",
