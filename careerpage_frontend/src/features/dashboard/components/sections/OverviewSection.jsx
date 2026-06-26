@@ -1,7 +1,8 @@
 import React from "react";
 import { motion } from "motion/react";
 import { ChevronRight, Calendar, MapPin } from "lucide-react";
-import { MAROON, statusConfig } from "../../data/dashboardMockData";
+import { MAROON } from "../../data/dashboardMockData";
+import { getStatusClass, getStatusIcon } from "../../utils/statusHelper";
 import "../css/sections/OverviewSection.css";
 import "../css/data/dashboardMockData.css";
 
@@ -84,11 +85,8 @@ export function OverviewSection({ profile, dynamicApplications, setActiveTab }) 
           </div>
         ) : (
           dynamicApplications.slice(0, 3).map((job) => {
-            const s = statusConfig[job.status] || {
-              color: "#555",
-              bg: "#f5f5f5",
-              icon: null,
-            };
+            const statusClass = getStatusClass(job.status);
+            const statusIcon = getStatusIcon(job.status);
             return (
               <div
                 key={job.id}
@@ -109,8 +107,8 @@ export function OverviewSection({ profile, dynamicApplications, setActiveTab }) 
                     </span>
                   </div>
                 </div>
-                <span className={`ov-status-badge ${s.className || "status-default"}`}>
-                  {s.icon}
+                <span className={`ov-status-badge ${statusClass}`}>
+                  {statusIcon}
                   {job.status}
                 </span>
               </div>
