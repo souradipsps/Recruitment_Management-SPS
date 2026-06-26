@@ -162,7 +162,30 @@
   gap: 6px;
   font-size: 0.82rem;
   font-weight: 600;
-  margin-left: auto;
+}
+
+/* ── Mobile: all 4 buttons in one straight row ───────────────────────────── */
+@media (max-width: 600px) {
+  .ol-actions {
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  .ol-btn-secondary,
+  .ol-btn-accept,
+  .ol-btn-decline {
+    flex: 1;
+    justify-content: center;
+    padding: 8px 4px;
+    font-size: 0.72rem;
+    gap: 4px;
+    white-space: nowrap;
+  }
+
+  /* Hide icons on the two secondary buttons to save space */
+  .ol-btn-secondary svg {
+    display: none;
+  }
 }
 
 /* ── Confirmation panels ──────────────────────────────────────────────────── */
