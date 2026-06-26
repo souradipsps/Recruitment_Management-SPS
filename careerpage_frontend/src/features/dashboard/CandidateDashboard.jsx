@@ -36,6 +36,7 @@ export function CandidateDashboard({
   initialSection,
   onProfileUpdate,
   applicationsData = {},
+  cameFromApply = false,
 }) {
   // Navigation & UI state
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -173,15 +174,29 @@ export function CandidateDashboard({
         return;
       }
 
-      if (currentTab !== "dashboard") {
-        window.history.pushState({ portal: "candidate-dashboard" }, "");
-        if (currentTab === "resume" && currentResumeReplaced) {
-          setPendingNavigation({ type: "tab", targetId: "dashboard" });
+      if (cameFromApply) {
+        if (currentTab !== "resume") {
+          window.history.pushState({ portal: "candidate-dashboard" }, "");
+          setActiveTab("resume");
         } else {
-          setActiveTab("dashboard");
+          if (currentResumeReplaced) {
+            window.history.pushState({ portal: "candidate-dashboard" }, "");
+            setPendingNavigation({ type: "close", bypassApplyModal: false });
+          } else {
+            onClose(false);
+          }
         }
       } else {
-        onClose(true);
+        if (currentTab !== "dashboard") {
+          window.history.pushState({ portal: "candidate-dashboard" }, "");
+          if (currentTab === "resume" && currentResumeReplaced) {
+            setPendingNavigation({ type: "tab", targetId: "dashboard" });
+          } else {
+            setActiveTab("dashboard");
+          }
+        } else {
+          onClose(true);
+        }
       }
     };
 
@@ -192,7 +207,7 @@ export function CandidateDashboard({
         window.history.back();
       }
     };
-  }, [onClose]);
+  }, [onClose, cameFromApply]);
 
   // Reset resume state changes on cancellation
   const revertUnsavedChanges = () => {
@@ -695,7 +710,17 @@ export function CandidateDashboard({
           <button
             onClick={() => {
               if (activeTab === "resume" && resumeReplaced) {
-                setPendingNavigation({ type: "tab", targetId: "dashboard" });
+                if (cameFromApply) {
+                  setPendingNavigation({ type: "close", bypassApplyModal: false });
+                } else {
+                  setPendingNavigation({ type: "tab", targetId: "dashboard" });
+                }
+              } else if (cameFromApply) {
+                if (activeTab !== "resume") {
+                  setActiveTab("resume");
+                } else {
+                  onClose(false);
+                }
               } else if (activeTab !== "dashboard") {
                 setActiveTab("dashboard");
               } else {

@@ -163,6 +163,7 @@ export default function App() {
             setApplicationDraft(null);
           }}
           applicationsData={applicationsData}
+          cameFromApply={cameFromApply}
         />
       )}
 
