@@ -1,7 +1,7 @@
 import React from "react";
 import { motion } from "motion/react";
 import { Briefcase, MapPin, Calendar, Eye } from "lucide-react";
-import { MAROON } from "../../data/dashboardMockData";
+import { MAROON } from "../../../../lib/constants";
 import { getStatusClass, getStatusIcon } from "../../utils/statusHelper";
 import "../css/sections/ApplicationsSection.css";
 import "../css/data/statusBadges.css";

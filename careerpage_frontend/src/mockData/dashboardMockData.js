@@ -1,10 +1,6 @@
-import React from "react";
 import {
   LayoutDashboard, FileText, Upload, Bell, Video, ClipboardCheck
 } from "lucide-react";
-
-export const GOLD = "#c9a84c";
-export const MAROON = "#72102a";
 
 export const capitalizeWords = (str) => {
   return str.replace(/\b\w/g, (char) => char.toUpperCase());

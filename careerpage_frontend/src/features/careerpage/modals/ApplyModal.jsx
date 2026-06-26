@@ -5,8 +5,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import "./css/ApplyModal.css";
-
-const MAROON = "#72102a";
+import { MAROON } from "../../../lib/constants";
 
 const ALL_ROLES = [
   "Senior Mathematics Teacher", "English Language & Literature Teacher", "Physics Teacher",

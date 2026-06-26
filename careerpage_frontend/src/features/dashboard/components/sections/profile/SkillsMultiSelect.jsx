@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ALL_SKILLS } from "../../../data/dashboardMockData";
+import { ALL_SKILLS } from "../../../../../mockData/dashboardMockData";
 import "../../css/sections/profile/SkillsMultiSelect.css";
 
 export function SkillsMultiSelect({ selected, onChange, placeholder = "Select or add items…" }) {

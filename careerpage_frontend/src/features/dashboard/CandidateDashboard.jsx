@@ -4,8 +4,10 @@ import { Menu, Bell, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import logoImg from "../../assets/logo.png";
 
+import { MAROON, GOLD } from "../../lib/constants";
+
 // Mock data & configurations
-import { MAROON, GOLD, notifications } from "./data/dashboardMockData";
+import { notifications } from "../../mockData/dashboardMockData";
 
 // Layout
 import { DashboardSidebar } from "./components/layout/DashboardSidebar";

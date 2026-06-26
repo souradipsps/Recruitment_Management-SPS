@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "motion/react";
 import { Search } from "lucide-react";
-import { CATEGORIES } from "../../../data/jobs";
+import { CATEGORIES } from "../../../mockData/jobs";
 import { useJobFilters } from "../hooks/useJobFilters";
 import { JobCard } from "./JobCard";
 import "./css/OpportunitiesSection.css";
