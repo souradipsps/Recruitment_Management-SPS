@@ -1,7 +1,7 @@
 import React from "react";
 import { motion } from "motion/react";
 import { Briefcase, MapPin, Calendar, Eye } from "lucide-react";
-import { MAROON, statusConfig } from "../data/dashboardMockData";
+import { MAROON, statusConfig } from "../../data/dashboardMockData";
 
 export function ApplicationsSection({
   dynamicApplications,
