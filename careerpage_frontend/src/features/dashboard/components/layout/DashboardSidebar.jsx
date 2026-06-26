@@ -41,7 +41,7 @@ export function DashboardSidebar({
 
   return (
     <aside
-      className={`ds-sidebar fixed left-0 top-[56px] bottom-0 z-[999] shadow-lg flex transition-transform duration-300 ease-in-out ${
+      className={`ds-sidebar fixed left-0 top-[76px] bottom-0 z-[999] shadow-lg flex transition-transform duration-300 ease-in-out ${
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       } md:relative md:top-0 md:shadow-none md:flex md:translate-x-0`}
     >
