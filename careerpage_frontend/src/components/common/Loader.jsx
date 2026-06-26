@@ -1,0 +1,41 @@
+import { motion } from "motion/react";
+import { LOADER_BG } from "../../lib/constants";
+
+// Full-screen loading overlay shown during page/view transitions. The dots
+// animation is an inline SVG (see LOADER_BG) so it renders instantly.
+export function Loader() {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25 }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(255, 255, 255, 0.18)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
+      }}
+    >
+      <motion.div
+        initial={{ scale: 0.85, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.85, opacity: 0 }}
+        transition={{ delay: 0.05, duration: 0.2 }}
+        style={{
+          width: 96,
+          height: 96,
+          backgroundImage: LOADER_BG,
+          backgroundSize: "contain",
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "center",
+        }}
+      />
+    </motion.div>
+  );
+}

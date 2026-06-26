@@ -225,10 +225,14 @@ export function CandidateDashboard({
   const selectedJobDescRef = useRef(selectedJobDesc);
   const sidebarOpenRef = useRef(sidebarOpen);
   const unsavedChangesRef = useRef(false);
+  const onCloseRef = useRef(onClose);
+  const cameFromApplyRef = useRef(cameFromApply);
 
   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
   useEffect(() => { selectedJobDescRef.current = selectedJobDesc; }, [selectedJobDesc]);
   useEffect(() => { sidebarOpenRef.current = sidebarOpen; }, [sidebarOpen]);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+  useEffect(() => { cameFromApplyRef.current = cameFromApply; }, [cameFromApply]);
 
   const unsaved = hasUnsavedChanges();
   useEffect(() => {
@@ -256,7 +260,7 @@ export function CandidateDashboard({
         return;
       }
 
-      if (cameFromApply) {
+      if (cameFromApplyRef.current) {
         if (currentTab !== "resume") {
           window.history.pushState({ portal: "candidate-dashboard" }, "");
           setActiveTab("resume");
@@ -265,7 +269,7 @@ export function CandidateDashboard({
             window.history.pushState({ portal: "candidate-dashboard" }, "");
             setPendingNavigation({ type: "close", bypassApplyModal: false });
           } else {
-            onClose(false);
+            onCloseRef.current(false);
           }
         }
       } else {
@@ -277,7 +281,7 @@ export function CandidateDashboard({
             setActiveTab("dashboard");
           }
         } else {
-          onClose(true);
+          onCloseRef.current(true);
         }
       }
     };
@@ -289,7 +293,7 @@ export function CandidateDashboard({
         window.history.back();
       }
     };
-  }, [onClose, cameFromApply]);
+  }, []);
 
   // Reset profile and resume state changes on cancellation
   const revertUnsavedChanges = () => {
