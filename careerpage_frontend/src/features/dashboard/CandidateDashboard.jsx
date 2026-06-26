@@ -1,40 +1,29 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import {
-  X,
-  Menu,
-  Bell,
-  ChevronLeft,
-  AlertCircle,
-  Briefcase,
-  Calendar,
-  MapPin,
-  Clock,
-  CheckCircle,
-  XCircle,
-  LogOut,
-} from "lucide-react";
+import { Menu, Bell, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import logoImg from "../../assets/logo.png";
 
 // Mock data & configurations
-import {
-  MAROON,
-  GOLD,
-  statusConfig,
-  capitalizeWords,
-  offerLetter,
-  notifications,
-} from "./data/dashboardMockData";
+import { MAROON, GOLD, notifications } from "./data/dashboardMockData";
 
-// Modular Sub-components
-import { CameraModal } from "./components/CameraModal";
-import { DashboardSidebar } from "./components/DashboardSidebar";
-import { OverviewSection } from "./components/OverviewSection";
-import { ApplicationsSection } from "./components/ApplicationsSection";
-import { ProfileSection } from "./components/ProfileSection";
-import { InterviewsSection } from "./components/InterviewsSection";
-import { OnboardingSection } from "./components/OnboardingSection";
+// Layout
+import { DashboardSidebar } from "./components/layout/DashboardSidebar";
+
+// Tab sections
+import { OverviewSection } from "./components/sections/OverviewSection";
+import { ApplicationsSection } from "./components/sections/ApplicationsSection";
+import { ProfileSection } from "./components/sections/ProfileSection";
+import { InterviewsSection } from "./components/sections/InterviewsSection";
+import { OnboardingSection } from "./components/sections/OnboardingSection";
+import { NotificationsSection } from "./components/sections/NotificationsSection";
+import { SettingsSection } from "./components/sections/SettingsSection";
+
+// Popups & overlays
+import { CameraModal } from "./components/popup/CameraModal";
+import { ProfilePicturePopup } from "./components/popup/ProfilePicturePopup";
+import { JobDescriptionDrawer } from "./components/popup/JobDescriptionDrawer";
+import { UnsavedChangesModal } from "./components/popup/UnsavedChangesModal";
 
 export function CandidateDashboard({
   onClose,
@@ -102,6 +91,16 @@ export function CandidateDashboard({
   const [docs, setDocs] = useState({});
   const [docUrls, setDocUrls] = useState({});
   const [docsSubmitted, setDocsSubmitted] = useState(false);
+
+  // Onboarding identity & bank form states
+  const [aadharNumber, setAadharNumber] = useState("");
+  const [panNumber, setPanNumber] = useState("");
+  const [pfNumber, setPfNumber] = useState("");
+  const [esiNumber, setEsiNumber] = useState("");
+  const [bankAccount, setBankAccount] = useState("");
+  const [bankIfsc, setBankIfsc] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [bankHolder, setBankHolder] = useState("");
 
   // Settings states (Mock notifications)
   const [settingsNotify, setSettingsNotify] = useState({
@@ -208,6 +207,19 @@ export function CandidateDashboard({
     setResumeFile(initialProfileData?.resumeFile || null);
     setResumeUrl(initialProfileData?.resumeUrl || null);
     setResumeReplaced(false);
+  };
+
+  // Execute a pending navigation action after the unsaved-changes prompt resolves
+  const proceedNavigation = (action) => {
+    if (!action) return;
+    if (action.type === "tab" && action.targetId) {
+      setActiveTab(action.targetId);
+      setSidebarOpen(false);
+    } else if (action.type === "close") {
+      onClose(action.bypassApplyModal);
+    } else if (action.type === "logout") {
+      onLogout?.();
+    }
   };
 
   // Profile picture camera/file triggers
@@ -802,57 +814,7 @@ export function CandidateDashboard({
 
           {/* Notifications Tab */}
           {activeTab === "notifications" && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <h1
-                style={{
-                  fontFamily: "'Playfair Display', serif",
-                  color: "#1a0a0a",
-                  fontSize: "1.4rem",
-                  fontWeight: 700,
-                  marginBottom: "20px",
-                }}
-              >
-                Notifications
-              </h1>
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                {notifications.map((n) => (
-                  <div
-                    key={n.id}
-                    style={{
-                      background: n.read ? "#fff" : "#fef9f0",
-                      border: `1px solid ${n.read ? "#e5e7eb" : "#fde68a"}`,
-                      borderRadius: "10px",
-                      padding: "14px 18px",
-                      display: "flex",
-                      gap: "12px",
-                      alignItems: "flex-start",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "8px",
-                        height: "8px",
-                        borderRadius: "50%",
-                        background: n.read ? "#d1d5db" : GOLD,
-                        flexShrink: 0,
-                        marginTop: "5px",
-                      }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: "0.85rem", color: "#1a0a0a", lineHeight: 1.5 }}>
-                        {n.text}
-                      </div>
-                      <div style={{ fontSize: "0.72rem", color: "#9a8a8a", marginTop: "4px" }}>
-                        {n.time}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
+            <NotificationsSection notifications={notifications} />
           )}
 
           {/* Upcoming Interviews Tab */}
@@ -895,589 +857,55 @@ export function CandidateDashboard({
 
           {/* Settings Tab */}
           {activeTab === "settings" && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <h1
-                style={{
-                  fontFamily: "'Playfair Display', serif",
-                  color: "#1a0a0a",
-                  fontSize: "1.4rem",
-                  fontWeight: 700,
-                  marginBottom: "20px",
-                }}
-              >
-                Settings
-              </h1>
-              <div
-                style={{
-                  background: "#fff",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "12px",
-                  overflow: "hidden",
-                }}
-              >
-                {[
-                  {
-                    key: "email",
-                    label: "Email Notifications",
-                    desc: "Receive updates about your applications via email",
-                  },
-                  {
-                    key: "sms",
-                    label: "SMS Alerts",
-                    desc: "Get text message alerts for interview invitations",
-                  },
-                  {
-                    key: "visibility",
-                    label: "Profile Visibility",
-                    desc: "Allow recruiters to find your profile",
-                  },
-                ].map(({ key, label, desc }, i) => (
-                  <div
-                    key={label}
-                    style={{
-                      padding: "16px 20px",
-                      borderBottom: i < 2 ? "1px solid #f0f0f0" : "none",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "#1a0a0a" }}>
-                        {label}
-                      </div>
-                      <div style={{ color: "#6b5c5c", fontSize: "0.75rem", marginTop: "2px" }}>
-                        {desc}
-                      </div>
-                    </div>
-                    <div
-                      onClick={() =>
-                        setSettingsNotify((prev) => ({ ...prev, [key]: !prev[key] }))
-                      }
-                      style={{
-                        width: "40px",
-                        height: "22px",
-                        borderRadius: "999px",
-                        background: settingsNotify[key] ? MAROON : "#d1d5db",
-                        cursor: "pointer",
-                        position: "relative",
-                        flexShrink: 0,
-                        transition: "background 0.2s",
-                      }}
-                    >
-                      <div
-                        style={{
-                          position: "absolute",
-                          left: settingsNotify[key] ? "21px" : "3px",
-                          top: "3px",
-                          width: "16px",
-                          height: "16px",
-                          borderRadius: "50%",
-                          background: "#fff",
-                          transition: "left 0.2s",
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div
-                style={{
-                  marginTop: "16px",
-                  background: "#fff",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "12px",
-                  padding: "16px 20px",
-                }}
-              >
-                <button
-                  onClick={onLogout}
-                  style={{
-                    color: "#991b1b",
-                    fontWeight: 600,
-                    fontSize: "0.85rem",
-                    background: "none",
-                    border: "1px solid #fca5a5",
-                    borderRadius: "8px",
-                    padding: "9px 20px",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                  }}
-                >
-                  <LogOut size={14} /> Log Out
-                </button>
-              </div>
-            </motion.div>
+            <SettingsSection
+              settingsNotify={settingsNotify}
+              setSettingsNotify={setSettingsNotify}
+              onLogout={onLogout}
+            />
           )}
         </main>
       </div>
 
       {/* Profile Picture Popup Dialog */}
-      <AnimatePresence>
-        {showPhotoPopup && (
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              zIndex: 1100,
-              background: "rgba(0, 0, 0, 0.55)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "20px",
-            }}
-            onClick={() => setShowPhotoPopup(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                background: "#fff",
-                borderRadius: "16px",
-                padding: "24px",
-                width: "100%",
-                maxWidth: "320px",
-                boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
-                textAlign: "center",
-              }}
-            >
-              <h3
-                style={{
-                  fontFamily: "'Playfair Display', serif",
-                  fontWeight: 700,
-                  fontSize: "1.1rem",
-                  color: MAROON,
-                  marginBottom: "16px",
-                }}
-              >
-                Update Profile Picture
-              </h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <button
-                  onClick={() => {
-                    setCameraTargetDocKey(null);
-                    setCameraOpen(true);
-                    setShowPhotoPopup(false);
-                  }}
-                  style={{
-                    background: MAROON,
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "10px",
-                    padding: "12px",
-                    fontSize: "0.85rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  Take Photo (Webcam)
-                </button>
-                <label
-                  style={{
-                    background: "#faf8f5",
-                    border: "1.5px solid #e5e7eb",
-                    borderRadius: "10px",
-                    padding: "12px",
-                    color: "#4a4a4a",
-                    fontSize: "0.85rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    display: "block",
-                  }}
-                >
-                  Upload File
-                  <input
-                    ref={picRef}
-                    type="file"
-                    accept="image/*"
-                    style={{ display: "none" }}
-                    onChange={handlePhotoUpload}
-                  />
-                </label>
-                <button
-                  onClick={() => setShowPhotoPopup(false)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#6b5c5c",
-                    fontSize: "0.78rem",
-                    cursor: "pointer",
-                    textDecoration: "underline",
-                    marginTop: "6px",
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <ProfilePicturePopup
+        open={showPhotoPopup}
+        picRef={picRef}
+        onTakePhoto={() => {
+          setCameraTargetDocKey(null);
+          setCameraOpen(true);
+          setShowPhotoPopup(false);
+        }}
+        onPhotoUpload={handlePhotoUpload}
+        onClose={() => setShowPhotoPopup(false)}
+      />
 
       {/* Job Description Drawer Overlay */}
-      <AnimatePresence>
-        {selectedJobDesc && (
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              zIndex: 2000,
-              background: "rgba(0,0,0,0.55)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "24px 16px",
-            }}
-            onClick={() => setSelectedJobDesc(null)}
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 30, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20 }}
-              transition={{ duration: 0.3 }}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                position: "relative",
-                background: "#fff",
-                borderRadius: "16px",
-                width: "100%",
-                maxWidth: "500px",
-                overflow: "hidden",
-                boxShadow: "0 24px 60px rgba(0,0,0,0.3)",
-                padding: "28px",
-              }}
-            >
-              {/* Close Button */}
-              <button
-                onClick={() => setSelectedJobDesc(null)}
-                style={{
-                  position: "absolute",
-                  top: "16px",
-                  right: "16px",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "#9ca3af",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: "4px",
-                }}
-              >
-                <X size={18} />
-              </button>
-
-              {/* Title & Department */}
-              <h2
-                style={{
-                  color: MAROON,
-                  fontFamily: "'Playfair Display', serif",
-                  fontSize: "1.3rem",
-                  fontWeight: 700,
-                  marginBottom: "6px",
-                  paddingRight: "24px",
-                }}
-              >
-                {selectedJobDesc.title}
-              </h2>
-              <div
-                style={{
-                  color: "#6b5c5c",
-                  fontSize: "0.82rem",
-                  fontWeight: 500,
-                  marginBottom: "20px",
-                }}
-              >
-                {selectedJobDesc.department} &bull; {selectedJobDesc.location}
-              </div>
-
-              {/* Job Info Pills */}
-              <div style={{ display: "flex", gap: "8px", marginBottom: "20px", flexWrap: "wrap" }}>
-                <span
-                  style={{
-                    background: "rgba(114,16,42,0.08)",
-                    color: MAROON,
-                    fontSize: "0.72rem",
-                    fontWeight: 600,
-                    padding: "4px 10px",
-                    borderRadius: "999px",
-                  }}
-                >
-                  {selectedJobDesc.type}
-                </span>
-                <span
-                  style={{
-                    background: "rgba(201,168,76,0.12)",
-                    color: "#9a781b",
-                    fontSize: "0.72rem",
-                    fontWeight: 600,
-                    padding: "4px 10px",
-                    borderRadius: "999px",
-                  }}
-                >
-                  Deadline: {selectedJobDesc.deadline}
-                </span>
-              </div>
-
-              {/* Description */}
-              <div style={{ marginBottom: "20px" }}>
-                <h4 style={{ fontSize: "0.85rem", fontWeight: 700, color: "#1a0a0a", marginBottom: "6px" }}>
-                  Job Description
-                </h4>
-                <p style={{ fontSize: "0.82rem", color: "#4a4a4a", lineHeight: 1.6 }}>
-                  {selectedJobDesc.description}
-                </p>
-              </div>
-
-              {/* Qualifications */}
-              {selectedJobDesc.qualifications && selectedJobDesc.qualifications.length > 0 && (
-                <div>
-                  <h4 style={{ fontSize: "0.85rem", fontWeight: 700, color: "#1a0a0a", marginBottom: "8px" }}>
-                    Required Qualifications
-                  </h4>
-                  <ul style={{ paddingLeft: "16px", margin: 0 }}>
-                    {selectedJobDesc.qualifications.map((qual, idx) => (
-                      <li
-                        key={idx}
-                        style={{
-                          fontSize: "0.82rem",
-                          color: "#4a4a4a",
-                          lineHeight: 1.6,
-                          marginBottom: "4px",
-                          listStyleType: "disc",
-                        }}
-                      >
-                        {qual}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Additional Information Submitted */}
-              {appliedJobIds.includes(selectedJobDesc.id) && (
-                <div style={{ marginTop: "20px", borderTop: "1.5px solid #e5e7eb", paddingTop: "20px" }}>
-                  <h4 style={{ fontSize: "0.85rem", fontWeight: 700, color: MAROON, marginBottom: "12px" }}>
-                    Your Additional Information
-                  </h4>
-                  {(() => {
-                    const appData = applicationsData[selectedJobDesc.id] || {
-                      coverLetter: "Interested in the position.",
-                      noticePeriod: "Immediate",
-                      hasReferral: "No",
-                      referralEmpId: "",
-                    };
-                    return (
-                      <div
-                        style={{
-                          background: "#faf8f5",
-                          border: "1px solid #e5e7eb",
-                          borderRadius: "10px",
-                          padding: "14px",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "10px",
-                        }}
-                      >
-                        <div>
-                          <span style={{ fontSize: "0.72rem", color: "#6b5c5c", fontWeight: 600, textTransform: "uppercase" }}>
-                            Notice Period
-                          </span>
-                          <div style={{ fontSize: "0.82rem", color: "#1a0a0a", fontWeight: 500, marginTop: "2px" }}>
-                            {appData.noticePeriod}
-                          </div>
-                        </div>
-                        <div>
-                          <span style={{ fontSize: "0.72rem", color: "#6b5c5c", fontWeight: 600, textTransform: "uppercase" }}>
-                            Referral Information
-                          </span>
-                          <div style={{ fontSize: "0.82rem", color: "#1a0a0a", fontWeight: 500, marginTop: "2px" }}>
-                            {appData.hasReferral === "Yes" ? `Yes (Employee ID: ${appData.referralEmpId})` : "No Referral"}
-                          </div>
-                        </div>
-                        {appData.coverLetter && (
-                          <div>
-                            <span style={{ fontSize: "0.72rem", color: "#6b5c5c", fontWeight: 600, textTransform: "uppercase" }}>
-                              Cover Letter / SOP
-                            </span>
-                            <div style={{ fontSize: "0.82rem", color: "#4a4a4a", marginTop: "2px", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
-                              {appData.coverLetter}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-
-              {/* Action Button */}
-              <div style={{ marginTop: "24px", display: "flex", justifyContent: "flex-end" }}>
-                <button
-                  onClick={() => setSelectedJobDesc(null)}
-                  style={{
-                    background: MAROON,
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "8px",
-                    padding: "10px 24px",
-                    fontWeight: 600,
-                    fontSize: "0.82rem",
-                    cursor: "pointer",
-                  }}
-                >
-                  Close
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <JobDescriptionDrawer
+        selectedJobDesc={selectedJobDesc}
+        appliedJobIds={appliedJobIds}
+        applicationsData={applicationsData}
+        onClose={() => setSelectedJobDesc(null)}
+      />
 
       {/* Unsaved Changes Tab Navigation Confirm Overlay */}
-      <AnimatePresence>
-        {pendingNavigation && (
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              zIndex: 2000,
-              background: "rgba(0,0,0,0.55)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "20px",
-            }}
-            onClick={() => setPendingNavigation(null)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ duration: 0.2 }}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                background: "#fff",
-                borderRadius: "16px",
-                padding: "28px 24px",
-                width: "100%",
-                maxWidth: "400px",
-                boxShadow: "0 24px 60px rgba(0,0,0,0.35)",
-                textAlign: "center",
-              }}
-            >
-              <div
-                style={{
-                  background: "rgba(114,16,42,0.08)",
-                  borderRadius: "50%",
-                  width: "56px",
-                  height: "56px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 16px",
-                }}
-              >
-                <AlertCircle size={28} color={MAROON} />
-              </div>
-              <h3
-                style={{
-                  fontFamily: "'Playfair Display', serif",
-                  fontWeight: 700,
-                  fontSize: "1.25rem",
-                  color: MAROON,
-                  marginBottom: "8px",
-                }}
-              >
-                Unsaved Changes
-              </h3>
-              <p
-                style={{
-                  color: "#6b5c5c",
-                  fontSize: "0.875rem",
-                  lineHeight: 1.5,
-                  marginBottom: "24px",
-                }}
-              >
-                Are you sure you do not want to save the changes? If you proceed, your new resume upload will be lost.
-              </p>
-
-              <div style={{ display: "flex", gap: "12px" }}>
-                <button
-                  onClick={() => {
-                    const action = pendingNavigation;
-                    setPendingNavigation(null);
-                    revertUnsavedChanges();
-                    if (action.type === "tab" && action.targetId) {
-                      setActiveTab(action.targetId);
-                      setSidebarOpen(false);
-                    } else if (action.type === "close") {
-                      onClose(action.bypassApplyModal);
-                    } else if (action.type === "logout") {
-                      onLogout?.();
-                    }
-                  }}
-                  style={{
-                    flex: 1,
-                    background: MAROON,
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    fontSize: "0.85rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    transition: "opacity 0.2s",
-                  }}
-                  className="hover:opacity-90"
-                >
-                  Discard Changes
-                </button>
-                <button
-                  onClick={() => {
-                    const savedSuccessfully = handleSave();
-                    if (savedSuccessfully) {
-                      const action = pendingNavigation;
-                      setPendingNavigation(null);
-                      if (action.type === "tab" && action.targetId) {
-                        setActiveTab(action.targetId);
-                        setSidebarOpen(false);
-                      } else if (action.type === "close") {
-                        onClose(action.bypassApplyModal);
-                      } else if (action.type === "logout") {
-                        onLogout?.();
-                      }
-                    }
-                  }}
-                  style={{
-                    flex: 1,
-                    background: "#faf8f5",
-                    border: "1.5px solid #e5e7eb",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    color: "#4a4a4a",
-                    fontSize: "0.85rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    transition: "background 0.2s",
-                  }}
-                  className="hover:bg-gray-50"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <UnsavedChangesModal
+        open={!!pendingNavigation}
+        onDismiss={() => setPendingNavigation(null)}
+        onDiscard={() => {
+          const action = pendingNavigation;
+          setPendingNavigation(null);
+          revertUnsavedChanges();
+          proceedNavigation(action);
+        }}
+        onSave={() => {
+          const savedSuccessfully = handleSave();
+          if (savedSuccessfully) {
+            const action = pendingNavigation;
+            setPendingNavigation(null);
+            proceedNavigation(action);
+          }
+        }}
+      />
 
       {/* Universal Camera Modal Streamer */}
       <CameraModal

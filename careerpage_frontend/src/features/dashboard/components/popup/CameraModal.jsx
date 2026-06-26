@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Camera } from "lucide-react";
-import { MAROON } from "../data/dashboardMockData";
+import { MAROON } from "../../data/dashboardMockData";
 
 export function CameraModal({ isOpen, cameraTargetDocKey, onCapture, onClose }) {
   const videoRef = useRef(null);

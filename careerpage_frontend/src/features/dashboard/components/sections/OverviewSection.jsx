@@ -1,7 +1,7 @@
 import React from "react";
 import { motion } from "motion/react";
 import { ChevronRight, Calendar, MapPin } from "lucide-react";
-import { MAROON, statusConfig } from "../data/dashboardMockData";
+import { MAROON, statusConfig } from "../../data/dashboardMockData";
 
 export function OverviewSection({ profile, dynamicApplications, setActiveTab }) {
   const stats = [
