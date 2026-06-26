@@ -767,15 +767,6 @@ export function CandidateDashboard({
               </span>
             )}
           </div>
-          <div
-            style={{
-              color: "rgba(255,255,255,0.85)",
-              fontSize: "0.78rem",
-            }}
-            className="hidden sm:block"
-          >
-            {profile.name}
-          </div>
           <button
             onClick={() => {
               if (activeTab === "resume" && hasUnsavedChanges()) {
