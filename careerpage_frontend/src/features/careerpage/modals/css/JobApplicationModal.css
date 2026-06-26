@@ -80,45 +80,139 @@
 
 /* ── Success state ───────────────────────────────────────────────────────── */
 .jm-success {
-  padding    : 48px 24px;
-  text-align : center;
+  padding         : 40px 32px;
+  text-align      : center;
+  background      : #ffffff;
+  border-radius   : 12px;
+  margin          : 20px;
+  box-shadow      : 0 10px 30px rgba(0, 0, 0, 0.05);
+  border          : 1px solid rgba(114, 16, 42, 0.08);
+  display         : flex;
+  flex-direction  : column;
+  align-items     : center;
 }
 
-.jm-success-icon {
+.jm-success-logo {
+  height        : 95px;
+  width         : auto;
+  margin-bottom : 24px;
+  filter        : drop-shadow(0 4px 10px rgba(0, 0, 0, 0.06));
+}
+
+.jm-success-badge-container {
+  display         : flex;
+  justify-content : center;
+  margin-bottom   : 20px;
+}
+
+.jm-success-icon-wrapper {
   background      : rgba(114, 16, 42, 0.08);
+  border          : 2px solid rgba(114, 16, 42, 0.15);
   border-radius   : 50%;
-  width           : 64px;
-  height          : 64px;
+  padding         : 14px;
   display         : flex;
   align-items     : center;
   justify-content : center;
-  margin          : 0 auto 16px;
+  box-shadow      : 0 6px 20px rgba(114, 16, 42, 0.1);
+  animation       : jmSuccessPulse 2s infinite ease-in-out;
+}
+
+.jm-success-check-icon {
+  color : var(--jm-maroon);
+}
+
+@keyframes jmSuccessPulse {
+  0% {
+    transform  : scale(1);
+    box-shadow : 0 6px 20px rgba(114, 16, 42, 0.1);
+  }
+  50% {
+    transform  : scale(1.05);
+    box-shadow : 0 8px 24px rgba(114, 16, 42, 0.2);
+  }
+  100% {
+    transform  : scale(1);
+    box-shadow : 0 6px 20px rgba(114, 16, 42, 0.1);
+  }
 }
 
 .jm-success-title {
   font-family : 'Playfair Display', serif;
   color       : var(--jm-maroon);
-  font-size   : 1.3rem;
+  font-size   : 1.45rem;
   font-weight : 700;
+  margin      : 0 0 12px;
+}
+
+.jm-success-divider {
+  width         : 40px;
+  height        : 3px;
+  background    : #c9a84c;
+  border-radius : 2px;
+  margin-bottom : 18px;
 }
 
 .jm-success-msg {
   color       : var(--jm-muted);
-  font-size   : 0.875rem;
-  margin-top  : 8px;
+  font-size   : 0.9rem;
   line-height : 1.6;
+  margin-bottom: 24px;
+  max-width   : 420px;
+}
+
+.jm-success-next-steps {
+  width         : 100%;
+  background    : #fdf8f9;
+  border        : 1px solid rgba(114, 16, 42, 0.08);
+  border-radius : 8px;
+  padding       : 18px 20px;
+  margin-bottom : 28px;
+  text-align    : left;
+  box-sizing    : border-box;
+}
+
+.jm-success-next-steps h4 {
+  font-size     : 0.85rem;
+  font-weight   : 700;
+  color         : var(--jm-maroon);
+  margin        : 0 0 10px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.jm-success-next-steps ul {
+  margin       : 0;
+  padding-left : 18px;
+  list-style-type: disc;
+}
+
+.jm-success-next-steps li {
+  font-size     : 0.8rem;
+  color         : #5a4c4c;
+  line-height   : 1.5;
+  margin-bottom : 6px;
+}
+
+.jm-success-next-steps li:last-child {
+  margin-bottom : 0;
 }
 
 .jm-success-close {
-  margin-top    : 20px;
-  background    : var(--jm-maroon);
+  background    : linear-gradient(135deg, var(--jm-maroon) 0%, #901633 100%);
   color         : #fff;
   border        : none;
   border-radius : 8px;
-  padding       : 12px 32px;
+  padding       : 12px 36px;
   font-weight   : 600;
   font-size     : 0.875rem;
   cursor        : pointer;
+  box-shadow    : 0 4px 12px rgba(114, 16, 42, 0.25);
+  transition    : all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.jm-success-close:hover {
+  transform  : translateY(-2px);
+  box-shadow : 0 6px 16px rgba(114, 16, 42, 0.4);
 }
 
 /* ── Form body ───────────────────────────────────────────────────────────── */
@@ -427,19 +521,46 @@
 
 /* ── Submit button ───────────────────────────────────────────────────────── */
 .jm-btn-submit {
-  background     : var(--jm-maroon);
-  color          : #fff;
-  font-weight    : 700;
-  font-size      : 0.9rem;
-  padding        : 14px;
-  border-radius  : 8px;
-  border         : none;
-  cursor         : pointer;
-  width          : 100%;
-  letter-spacing : 0.04em;
-  transition     : opacity 0.2s ease;
+  background      : linear-gradient(135deg, var(--jm-maroon) 0%, #901633 100%);
+  color           : #fff;
+  font-weight     : 700;
+  font-size       : 0.9rem;
+  padding         : 14px;
+  border-radius   : 8px;
+  border          : none;
+  cursor          : pointer;
+  width           : 100%;
+  letter-spacing  : 0.04em;
+  display         : flex;
+  align-items     : center;
+  justify-content : center;
+  gap             : 10px;
+  box-shadow      : 0 4px 12px rgba(114, 16, 42, 0.25);
+  transition      : all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing      : border-box;
 }
 
 .jm-btn-submit:hover {
-  opacity : 0.9;
+  transform  : translateY(-2px);
+  box-shadow : 0 6px 16px rgba(114, 16, 42, 0.4);
+  background : linear-gradient(135deg, #8c1433 0%, #aa2042 100%);
+}
+
+.jm-btn-submit:active {
+  transform  : translateY(0);
+  box-shadow : 0 2px 6px rgba(114, 16, 42, 0.2);
+}
+
+.jm-btn-logo {
+  height         : 20px;
+  width          : 20px;
+  object-fit     : contain;
+  filter         : drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+  background     : rgba(255, 255, 255, 0.95);
+  padding        : 2px;
+  border-radius  : 50%;
+  border         : 1px solid rgba(255, 255, 255, 0.5);
+  display        : inline-block;
+  vertical-align : middle;
+  box-sizing     : border-box;
 }

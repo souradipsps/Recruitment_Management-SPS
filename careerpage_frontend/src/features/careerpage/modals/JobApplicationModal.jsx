@@ -4,6 +4,7 @@ import { X, Check, FileText } from "lucide-react";
 import { toast } from "sonner";
 import "./css/JobApplicationModal.css";
 import { MAROON } from "../../../lib/constants";
+import logoImg from "../../../assets/logo.png";
 
 const ALL_ROLES = [
   "Senior Mathematics Teacher", "English Language & Literature Teacher", "Physics Teacher",
@@ -205,13 +206,28 @@ const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileDat
 
           {submitted ? (
             /* ── Success ─────────────────────────────────────────────── */
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="jm-success">
-              <div className="jm-success-icon">
-                <Check size={28} color={MAROON} />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="jm-success"
+            >
+              <img src={logoImg} alt="South Point School Guwahati" className="jm-success-logo" />
+              <h3 className="jm-success-title">Application Submitted Successfully!</h3>
+              <div className="jm-success-divider"></div>
+              <p className="jm-success-msg">
+                Thank you for applying for <strong>{job.title}</strong> at <strong>South Point School, Guwahati</strong>. 
+                Your job application has been registered, and our selection committee will review it.
+              </p>
+              <div className="jm-success-next-steps">
+                <h4>What's Next?</h4>
+                <ul>
+                  <li>Your qualification profile will be compared against the role's requirements.</li>
+                  <li>An automated confirmation email has been sent to you.</li>
+                  <li>Our recruitment officer will contact you if your profile is shortlisted for interviews.</li>
+                </ul>
               </div>
-              <h3 className="jm-success-title">Application Submitted!</h3>
-              <p className="jm-success-msg">Thank you for applying for <strong>{job.title}</strong>. We'll be in touch soon.</p>
-              <button onClick={onClose} className="jm-success-close">Close</button>
+              <button onClick={onClose} className="jm-success-close">Return to Careers</button>
             </motion.div>
           ) : (
             /* ── Form ────────────────────────────────────────────────── */
@@ -329,7 +345,8 @@ const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileDat
                 )}
               </div>
 
-              <button type="submit" className="jm-btn-submit hover:opacity-90">
+              <button type="submit" className="jm-btn-submit">
+                <img src={logoImg} alt="" className="jm-btn-logo" />
                 Submit Application
               </button>
             </form>

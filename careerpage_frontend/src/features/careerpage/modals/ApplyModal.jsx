@@ -6,6 +6,7 @@ import {
 import { toast } from "sonner";
 import "./css/ApplyModal.css";
 import { MAROON } from "../../../lib/constants";
+import logoImg from "../../../assets/logo.png";
 
 const ALL_ROLES = [
   "Senior Mathematics Teacher", "English Language & Literature Teacher", "Physics Teacher",
@@ -175,11 +176,28 @@ export function ApplyModal({ onClose, signupData, onSubmitData }) {
 
           {submitted ? (
             /* ── Success ─────────────────────────────────────────────── */
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="am-success">
-              <div className="am-success-icon">✓</div>
-              <h3 className="am-success-title">Application Submitted!</h3>
-              <p className="am-success-msg">Thank you for applying to South Point School. We'll be in touch soon.</p>
-              <button onClick={onClose} className="am-success-close">Close</button>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="am-success"
+            >
+              <img src={logoImg} alt="South Point School Guwahati" className="am-success-logo" />
+              <h3 className="am-success-title">Application Submitted Successfully!</h3>
+              <div className="am-success-divider"></div>
+              <p className="am-success-msg">
+                Thank you for applying to <strong>South Point School, Guwahati</strong>. 
+                Your professional profile has been securely recorded in our talent pool.
+              </p>
+              <div className="am-success-next-steps">
+                <h4>What's Next?</h4>
+                <ul>
+                  <li>Our recruitment team will review your qualifications against open roles.</li>
+                  <li>An confirmation email has been dispatched to your email address.</li>
+                  <li>You can track your application status anytime via your dashboard.</li>
+                </ul>
+              </div>
+              <button onClick={onClose} className="am-success-close">Return to Careers</button>
             </motion.div>
           ) : (
             /* ── Form ────────────────────────────────────────────────── */
@@ -337,7 +355,10 @@ export function ApplyModal({ onClose, signupData, onSubmitData }) {
               {/* Actions */}
               <div className="am-form-footer">
                 <button type="button" onClick={onClose} className="am-btn-cancel">Cancel</button>
-                <button type="submit" className="am-btn-submit">Submit Application</button>
+                <button type="submit" className="am-btn-submit">
+                  <img src={logoImg} alt="" className="am-btn-logo" />
+                  Submit Application
+                </button>
               </div>
 
             </form>
