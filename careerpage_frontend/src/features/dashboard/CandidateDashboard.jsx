@@ -17,7 +17,6 @@ import { ProfileSection } from "./components/sections/ProfileSection";
 import { InterviewsSection } from "./components/sections/InterviewsSection";
 import { OnboardingSection } from "./components/sections/OnboardingSection";
 import { NotificationsSection } from "./components/sections/NotificationsSection";
-import { SettingsSection } from "./components/sections/SettingsSection";
 
 // Popups & overlays
 import { CameraModal } from "./components/popup/CameraModal";
@@ -101,13 +100,6 @@ export function CandidateDashboard({
   const [bankIfsc, setBankIfsc] = useState("");
   const [bankName, setBankName] = useState("");
   const [bankHolder, setBankHolder] = useState("");
-
-  // Settings states (Mock notifications)
-  const [settingsNotify, setSettingsNotify] = useState({
-    email: true,
-    sms: true,
-    visibility: true,
-  });
 
   // Camera state
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -852,15 +844,6 @@ export function CandidateDashboard({
               docsSubmitted={docsSubmitted}
               startDocCamera={startDocCamera}
               handleSubmitDocs={handleSubmitDocs}
-            />
-          )}
-
-          {/* Settings Tab */}
-          {activeTab === "settings" && (
-            <SettingsSection
-              settingsNotify={settingsNotify}
-              setSettingsNotify={setSettingsNotify}
-              onLogout={onLogout}
             />
           )}
         </main>
