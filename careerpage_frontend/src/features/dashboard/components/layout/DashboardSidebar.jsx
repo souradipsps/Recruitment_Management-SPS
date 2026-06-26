@@ -1,6 +1,6 @@
 import React from "react";
 import { LogOut } from "lucide-react";
-import { navItems } from "../../data/dashboardMockData";
+import { navItems } from "../../../../mockData/dashboardMockData";
 import "../css/layout/DashboardSidebar.css";
 
 export function DashboardSidebar({

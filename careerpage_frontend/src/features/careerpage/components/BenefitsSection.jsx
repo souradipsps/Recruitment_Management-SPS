@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { benefits } from "../../../data/jobs";
+import { benefits } from "../../../mockData/jobs";
 import "./css/BenefitsSection.css";
 
 // "Why Build Your Career at South Point School?" — grid of benefit cards.

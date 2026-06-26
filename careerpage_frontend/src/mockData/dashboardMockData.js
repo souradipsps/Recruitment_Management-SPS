@@ -1,14 +1,16 @@
-import React from "react";
 import {
   LayoutDashboard, FileText, Upload, Bell, Video, ClipboardCheck
 } from "lucide-react";
 
-export const GOLD = "#c9a84c";
-export const MAROON = "#72102a";
-
 export const capitalizeWords = (str) => {
   return str.replace(/\b\w/g, (char) => char.toUpperCase());
 };
+
+export const ALL_ROLES = [
+  "Senior Mathematics Teacher", "English Language & Literature Teacher", "Physics Teacher",
+  "School Counsellor", "Computer Science Teacher", "Physical Education Teacher",
+  "Academic Coordinator", "Office Administrator", "Facilities & Maintenance Supervisor", "IT Support Technician",
+];
 
 export const ALL_SKILLS = [
   "Curriculum Development", "Classroom Management", "Student Assessment",
