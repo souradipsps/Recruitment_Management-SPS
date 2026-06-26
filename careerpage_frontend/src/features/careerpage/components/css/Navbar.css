@@ -1,0 +1,114 @@
+/* ─── Navbar.css ───────────────────────────────────────────────────────────── */
+:root {
+  --nb-maroon : #72102a;
+  --nb-gold   : #c9a84c;
+  --nb-cream  : #faf8f5;
+  --nb-ink    : #1a0a0a;
+}
+
+/* ── Nav wrapper ─────────────────────────────────────────────────────────── */
+.navbar {
+  background          : rgba(114, 16, 42, 0.85);
+  backdrop-filter     : blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-bottom       : 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ── Brand / logo area ───────────────────────────────────────────────────── */
+.navbar-brand {
+  cursor : pointer;
+}
+
+.navbar-school-name {
+  font-family : 'Playfair Display', serif;
+  color       : var(--nb-gold);
+  font-size   : 1.1rem;
+  font-weight : 700;
+  line-height : 1.2;
+}
+
+.navbar-school-sub {
+  color          : rgba(250, 248, 245, 0.7);
+  font-size      : 0.68rem;
+  letter-spacing : 0.1em;
+  text-transform : uppercase;
+}
+
+/* ── Shared button base ──────────────────────────────────────────────────── */
+.nb-btn {
+  font-size      : 0.78rem;
+  font-weight    : 600;
+  letter-spacing : 0.05em;
+  text-transform : uppercase;
+  border-radius  : 2px;
+  cursor         : pointer;
+  transition     : all 0.2s ease;
+  text-align     : center;
+}
+
+/* Outline variant (Login / Dashboard) */
+.nb-btn-outline {
+  border     : 1.5px solid rgba(250, 248, 245, 0.4);
+  color      : var(--nb-cream);
+  background : transparent;
+  font-weight: 500;
+}
+
+.nb-btn-outline:hover {
+  border-color : #fff;
+}
+
+/* Solid / gold variant (Sign Up / Log Out) */
+.nb-btn-solid {
+  background : var(--nb-gold);
+  color      : var(--nb-ink);
+  border     : none;
+}
+
+.nb-btn-solid:hover {
+  opacity : 0.9;
+}
+
+/* ── Mobile hamburger summary ────────────────────────────────────────────── */
+.nb-hamburger {
+  list-style    : none;
+  cursor        : pointer;
+  color         : var(--nb-cream);
+  padding       : 6px 8px;
+  border        : 1.5px solid rgba(250, 248, 245, 0.35);
+  border-radius : 4px;
+  user-select   : none;
+  display       : flex;
+  flex-direction: column;
+  gap           : 4px;
+}
+
+.nb-hamburger-bar {
+  display       : block;
+  width         : 18px;
+  height        : 2px;
+  background    : var(--nb-cream);
+  border-radius : 2px;
+}
+
+/* ── Mobile dropdown panel ───────────────────────────────────────────────── */
+.nb-mobile-dropdown {
+  position      : absolute;
+  right         : 0;
+  top           : calc(100% + 8px);
+  background    : var(--nb-maroon);
+  border        : 1.5px solid rgba(250, 248, 245, 0.15);
+  border-radius : 4px;
+  padding       : 10px;
+  display       : flex;
+  flex-direction: column;
+  gap           : 8px;
+  min-width     : 130px;
+  z-index       : 50;
+  animation     : slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
