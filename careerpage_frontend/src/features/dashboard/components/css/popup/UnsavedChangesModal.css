@@ -67,23 +67,6 @@
 
 .uc-btn-discard {
   flex          : 1;
-  background    : var(--uc-maroon);
-  color         : #fff;
-  border        : none;
-  border-radius : 8px;
-  padding       : 12px;
-  font-size     : 0.85rem;
-  font-weight   : 600;
-  cursor        : pointer;
-  transition    : opacity 0.2s;
-}
-
-.uc-btn-discard:hover {
-  opacity : 0.9;
-}
-
-.uc-btn-save {
-  flex          : 1;
   background    : var(--uc-cream);
   border        : 1.5px solid var(--uc-border);
   border-radius : 8px;
@@ -95,6 +78,23 @@
   transition    : background 0.2s;
 }
 
-.uc-btn-save:hover {
+.uc-btn-discard:hover {
   background : #f3f4f6;
+}
+
+.uc-btn-save {
+  flex          : 1;
+  background    : var(--uc-maroon);
+  color         : #fff;
+  border        : none;
+  border-radius : 8px;
+  padding       : 12px;
+  font-size     : 0.85rem;
+  font-weight   : 600;
+  cursor        : pointer;
+  transition    : opacity 0.2s;
+}
+
+.uc-btn-save:hover {
+  opacity : 0.9;
 }

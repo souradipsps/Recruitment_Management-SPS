@@ -7,7 +7,7 @@ export function DashboardSidebar({
   profile,
   profilePic,
   activeTab,
-  resumeReplaced,
+  hasUnsavedChanges,
   unreadCount,
   sidebarOpen,
   setSidebarOpen,
@@ -17,7 +17,7 @@ export function DashboardSidebar({
   onLogout,
 }) {
   const handleTabClick = (id) => {
-    if (activeTab === "resume" && resumeReplaced) {
+    if (activeTab === "resume" && hasUnsavedChanges) {
       setPendingNavigation({ type: "tab", targetId: id });
     } else {
       setActiveTab(id);
@@ -26,7 +26,7 @@ export function DashboardSidebar({
   };
 
   const handleLogoutClick = () => {
-    if (activeTab === "resume" && resumeReplaced) {
+    if (activeTab === "resume" && hasUnsavedChanges) {
       setPendingNavigation({ type: "logout" });
     } else {
       if (onLogout) onLogout();
