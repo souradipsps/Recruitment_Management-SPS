@@ -282,8 +282,9 @@
 
 .am-multiselect-option--selected {
   color      : var(--am-maroon);
-  background : rgba(114, 16, 42, 0.05);
+  background : rgba(114, 16, 42, 0.12);
   font-weight: 600;
+  box-shadow : inset 3px 0 0 var(--am-maroon);
 }
 
 .am-multiselect-option--unselected {

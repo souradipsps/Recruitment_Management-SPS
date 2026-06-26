@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   X, User, Mail, Phone, MapPin, Briefcase, GraduationCap, Upload, Linkedin, Check, Link as LinkIcon,
@@ -23,6 +23,19 @@ const ALL_SKILLS = [
 function SkillsMultiSelect({ options, selected, onChange, placeholder }) {
   const [open, setOpen] = useState(false);
   const [custom, setCustom] = useState("");
+  const wrapperRef = useRef(null);
+
+  // Close the dropdown when clicking anywhere outside this component.
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
 
   const toggle = (opt) => {
     onChange(selected.includes(opt) ? selected.filter((s) => s !== opt) : [...selected, opt]);
@@ -35,7 +48,7 @@ function SkillsMultiSelect({ options, selected, onChange, placeholder }) {
   };
 
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative" }} ref={wrapperRef}>
       <div onClick={() => setOpen(!open)} className="am-multiselect-trigger">
         {selected.length === 0 && <span className="am-multiselect-placeholder">{placeholder}</span>}
         {selected.map((s) => (
@@ -59,7 +72,7 @@ function SkillsMultiSelect({ options, selected, onChange, placeholder }) {
               onKeyDown={(e) => e.key === "Enter" && addCustom()}
               placeholder="Add custom…"
             />
-            <button onClick={addCustom} className="am-multiselect-add-btn">Add</button>
+            <button type="button" onClick={addCustom} className="am-multiselect-add-btn">Add</button>
           </div>
           {options.map((opt) => (
             <div

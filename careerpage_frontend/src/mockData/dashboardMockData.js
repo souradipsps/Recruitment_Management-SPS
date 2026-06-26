@@ -6,6 +6,12 @@ export const capitalizeWords = (str) => {
   return str.replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
+export const ALL_ROLES = [
+  "Senior Mathematics Teacher", "English Language & Literature Teacher", "Physics Teacher",
+  "School Counsellor", "Computer Science Teacher", "Physical Education Teacher",
+  "Academic Coordinator", "Office Administrator", "Facilities & Maintenance Supervisor", "IT Support Technician",
+];
+
 export const ALL_SKILLS = [
   "Curriculum Development", "Classroom Management", "Student Assessment",
   "Communication", "Leadership", "Team Collaboration", "Microsoft Office",
