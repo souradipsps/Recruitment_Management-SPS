@@ -15,9 +15,9 @@ export function NotificationsSection({ notifications }) {
         {notifications.map((n) => (
           <div
             key={n.id}
-            className={`ns-item ${n.read ? "ns-item--read" : "ns-item--unread"}`}
+            className={`ns-item ${n.isNew ? "ns-item--new-unread" : "ns-item--read"}`}
           >
-            <div className={`ns-dot ${n.read ? "ns-dot--read" : "ns-dot--unread"}`} />
+            <div className={`ns-dot ${n.isNew ? "ns-dot--unread" : "ns-dot--read"}`} />
             <div className="ns-content">
               <div className="ns-text">
                 {n.text}
