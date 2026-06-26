@@ -709,6 +709,9 @@ export function CandidateDashboard({
           >
             {profile.name}
           </div>
+          {/* Hidden on small screens — mobile users navigate back via the
+              Android hardware back button / iOS swipe gesture, handled by the
+              popstate listener above. */}
           <button
             onClick={() => {
               if (activeTab === "resume" && resumeReplaced) {
@@ -729,13 +732,13 @@ export function CandidateDashboard({
                 onClose(true);
               }
             }}
+            className="hidden sm:flex"
             style={{
               background: "rgba(255,255,255,0.12)",
               border: "1px solid rgba(255,255,255,0.25)",
               borderRadius: "6px",
               padding: "5px 12px",
               cursor: "pointer",
-              display: "flex",
               alignItems: "center",
               gap: "6px",
               color: "#fff",
