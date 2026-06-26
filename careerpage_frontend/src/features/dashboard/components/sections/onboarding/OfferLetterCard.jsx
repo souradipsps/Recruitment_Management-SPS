@@ -1,6 +1,7 @@
 import React from "react";
 import { PartyPopper, CheckCircle, XCircle, Eye, Download } from "lucide-react";
-import { MAROON, offerLetter } from "../../../data/dashboardMockData";
+import { offerLetter } from "../../../data/dashboardMockData";
+import "../../css/sections/onboarding/OfferLetterCard.css";
 
 export function OfferLetterCard({
   offerAccepted,
@@ -11,49 +12,22 @@ export function OfferLetterCard({
   setShowOfferConfirm,
 }) {
   return (
-    <div
-      style={{
-        background: "#fff",
-        border: "1px solid #e5e7eb",
-        borderRadius: "12px",
-        overflow: "hidden",
-        marginBottom: "16px",
-      }}
-    >
-      <div
-        style={{
-          padding: "16px 20px",
-          borderBottom: "1px solid #f0f0f0",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-        }}
-      >
-        <PartyPopper size={16} color={MAROON} />
-        <h2 style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1a0a0a" }}>Offer Letter</h2>
+    <div className="ol-card">
+      <div className="ol-header">
+        <PartyPopper size={16} />
+        <h2 className="ol-title">Offer Letter</h2>
       </div>
 
-      <div style={{ padding: "20px" }}>
+      <div className="ol-body">
         {/* Status Banners */}
         {offerAccepted && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              background: "#f0fdf4",
-              border: "1px solid #6ee7b7",
-              borderRadius: "10px",
-              padding: "14px",
-              marginBottom: "16px",
-            }}
-          >
-            <CheckCircle size={20} color="#065f46" style={{ flexShrink: 0 }} />
+          <div className="ol-banner--accepted">
+            <CheckCircle size={20} color="#065f46" className="ol-banner-icon" />
             <div>
-              <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#065f46" }}>
+              <div className="ol-banner-title--accepted">
                 Offer Accepted!
               </div>
-              <div style={{ color: "#374151", fontSize: "0.78rem", marginTop: "2px" }}>
+              <div className="ol-banner-text">
                 Welcome to South Point School. Joining date: <strong>{offerLetter.joiningDate}</strong>
               </div>
             </div>
@@ -61,24 +35,13 @@ export function OfferLetterCard({
         )}
 
         {offerRejected && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              background: "#fff5f5",
-              border: "1px solid #fca5a5",
-              borderRadius: "10px",
-              padding: "14px",
-              marginBottom: "16px",
-            }}
-          >
-            <XCircle size={20} color="#991b1b" style={{ flexShrink: 0 }} />
+          <div className="ol-banner--declined">
+            <XCircle size={20} color="#991b1b" className="ol-banner-icon" />
             <div>
-              <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#991b1b" }}>
+              <div className="ol-banner-title--declined">
                 Offer Declined
               </div>
-              <div style={{ color: "#374151", fontSize: "0.78rem", marginTop: "2px" }}>
+              <div className="ol-banner-text">
                 You have declined the offer. Contact HR if this was a mistake.
               </div>
             </div>
@@ -86,19 +49,11 @@ export function OfferLetterCard({
         )}
 
         {/* Offer Details Grid */}
-        <div
-          style={{
-            background: "#fef9f0",
-            border: "1px solid #fde68a",
-            borderRadius: "10px",
-            padding: "16px",
-            marginBottom: "16px",
-          }}
-        >
-          <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "#1a0a0a", marginBottom: "10px" }}>
+        <div className="ol-details-box">
+          <div className="ol-details-title">
             Offer Details
           </div>
-          <div style={{ gap: "10px" }} className="grid grid-cols-1 sm:grid-cols-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-[10px]">
             {[
               { label: "Position", value: offerLetter.role },
               { label: "Department", value: offerLetter.department },
@@ -108,24 +63,13 @@ export function OfferLetterCard({
               { label: "Offer Expires", value: offerLetter.expiryDate },
             ].map(({ label, value }) => (
               <div key={label}>
-                <div
-                  style={{
-                    color: "#6b5c5c",
-                    fontSize: "0.72rem",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                  }}
-                >
+                <div className="ol-details-label">
                   {label}
                 </div>
                 <div
-                  style={{
-                    color: label === "Offer Expires" ? "#b45309" : "#1a0a0a",
-                    fontSize: "0.85rem",
-                    fontWeight: 600,
-                    marginTop: "2px",
-                  }}
+                  className={`ol-details-val ${
+                    label === "Offer Expires" ? "ol-details-val--expires" : ""
+                  }`}
                 >
                   {value}
                 </div>
@@ -135,21 +79,9 @@ export function OfferLetterCard({
         </div>
 
         {/* Action Buttons */}
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+        <div className="ol-actions">
           <button
-            style={{
-              border: `1px solid ${MAROON}`,
-              color: MAROON,
-              background: "#fff",
-              borderRadius: "8px",
-              padding: "9px 16px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              fontSize: "0.82rem",
-              fontWeight: 600,
-            }}
+            className="ol-btn-secondary"
             onClick={() => window.open("#", "_blank")}
           >
             <Eye size={14} /> View Letter
@@ -157,19 +89,7 @@ export function OfferLetterCard({
 
           {!offerRejected && (
             <button
-              style={{
-                border: `1px solid ${MAROON}`,
-                color: MAROON,
-                background: "#fff",
-                borderRadius: "8px",
-                padding: "9px 16px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                fontSize: "0.82rem",
-                fontWeight: 600,
-              }}
+              className="ol-btn-secondary"
               onClick={() => window.open("#", "_blank")}
             >
               <Download size={14} /> Download PDF
@@ -180,38 +100,13 @@ export function OfferLetterCard({
             <>
               <button
                 onClick={() => setShowOfferConfirm("accept")}
-                style={{
-                  background: "#065f46",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "8px",
-                  padding: "9px 18px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontSize: "0.82rem",
-                  fontWeight: 700,
-                }}
+                className="ol-btn-accept"
               >
                 <CheckCircle size={14} /> Accept Offer
               </button>
               <button
                 onClick={() => setShowOfferConfirm("reject")}
-                style={{
-                  background: "#fff",
-                  border: "1px solid #fca5a5",
-                  color: "#991b1b",
-                  borderRadius: "8px",
-                  padding: "9px 18px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontSize: "0.82rem",
-                  fontWeight: 600,
-                  marginLeft: "auto",
-                }}
+                className="ol-btn-decline"
               >
                 <XCircle size={14} /> Decline Offer
               </button>
@@ -221,40 +116,23 @@ export function OfferLetterCard({
 
         {/* Accept / Decline Confirm Boxes */}
         {showOfferConfirm === "accept" && (
-          <div style={{ marginTop: "14px", background: "#f0fdf4", border: "1px solid #6ee7b7", borderRadius: "10px", padding: "16px" }}>
-            <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "#065f46", marginBottom: "10px" }}>
+          <div className="ol-confirm--accept">
+            <div className="ol-confirm-title--accept">
               Confirm acceptance of the offer for <strong>{offerLetter.role}</strong>?
             </div>
-            <div style={{ display: "flex", gap: "8px" }}>
+            <div className="ol-confirm-actions">
               <button
                 onClick={() => {
                   setOfferAccepted(true);
                   setShowOfferConfirm(null);
                 }}
-                style={{
-                  background: "#065f46",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "6px",
-                  padding: "8px 20px",
-                  cursor: "pointer",
-                  fontWeight: 700,
-                  fontSize: "0.82rem",
-                }}
+                className="ol-confirm-btn--accept"
               >
                 Yes, Accept
               </button>
               <button
                 onClick={() => setShowOfferConfirm(null)}
-                style={{
-                  background: "#fff",
-                  border: "1px solid #d1d5db",
-                  color: "#4a4a4a",
-                  borderRadius: "6px",
-                  padding: "8px 16px",
-                  cursor: "pointer",
-                  fontSize: "0.82rem",
-                }}
+                className="ol-confirm-btn--cancel"
               >
                 Cancel
               </button>
@@ -263,40 +141,23 @@ export function OfferLetterCard({
         )}
 
         {showOfferConfirm === "reject" && (
-          <div style={{ marginTop: "14px", background: "#fff5f5", border: "1px solid #fca5a5", borderRadius: "10px", padding: "16px" }}>
-            <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "#991b1b", marginBottom: "10px" }}>
+          <div className="ol-confirm--reject">
+            <div className="ol-confirm-title--reject">
               Are you sure you want to decline the offer for <strong>{offerLetter.role}</strong>? This cannot be undone.
             </div>
-            <div style={{ display: "flex", gap: "8px" }}>
+            <div className="ol-confirm-actions">
               <button
                 onClick={() => {
                   setOfferRejected(true);
                   setShowOfferConfirm(null);
                 }}
-                style={{
-                  background: "#991b1b",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "6px",
-                  padding: "8px 20px",
-                  cursor: "pointer",
-                  fontWeight: 700,
-                  fontSize: "0.82rem",
-                }}
+                className="ol-confirm-btn--reject"
               >
                 Yes, Decline
               </button>
               <button
                 onClick={() => setShowOfferConfirm(null)}
-                style={{
-                  background: "#fff",
-                  border: "1px solid #d1d5db",
-                  color: "#4a4a4a",
-                  borderRadius: "6px",
-                  padding: "8px 16px",
-                  cursor: "pointer",
-                  fontSize: "0.82rem",
-                }}
+                className="ol-confirm-btn--cancel"
               >
                 Cancel
               </button>

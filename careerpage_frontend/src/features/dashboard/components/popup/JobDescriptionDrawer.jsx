@@ -1,7 +1,7 @@
 import React from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X } from "lucide-react";
-import { MAROON } from "../../data/dashboardMockData";
+import "../css/popup/JobDescriptionDrawer.css";
 
 export function JobDescriptionDrawer({
   selectedJobDesc,
@@ -13,16 +13,7 @@ export function JobDescriptionDrawer({
     <AnimatePresence>
       {selectedJobDesc && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 2000,
-            background: "rgba(0,0,0,0.55)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "24px 16px",
-          }}
+          className="jd-backdrop"
           onClick={onClose}
         >
           <motion.div
@@ -31,116 +22,55 @@ export function JobDescriptionDrawer({
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.3 }}
             onClick={(e) => e.stopPropagation()}
-            style={{
-              position: "relative",
-              background: "#fff",
-              borderRadius: "16px",
-              width: "100%",
-              maxWidth: "500px",
-              overflow: "hidden",
-              boxShadow: "0 24px 60px rgba(0,0,0,0.3)",
-              padding: "28px",
-            }}
+            className="jd-panel"
           >
             {/* Close Button */}
             <button
               onClick={onClose}
-              style={{
-                position: "absolute",
-                top: "16px",
-                right: "16px",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                color: "#9ca3af",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "4px",
-              }}
+              className="jd-close-btn"
             >
               <X size={18} />
             </button>
 
             {/* Title & Department */}
-            <h2
-              style={{
-                color: MAROON,
-                fontFamily: "'Playfair Display', serif",
-                fontSize: "1.3rem",
-                fontWeight: 700,
-                marginBottom: "6px",
-                paddingRight: "24px",
-              }}
-            >
+            <h2 className="jd-title">
               {selectedJobDesc.title}
             </h2>
-            <div
-              style={{
-                color: "#6b5c5c",
-                fontSize: "0.82rem",
-                fontWeight: 500,
-                marginBottom: "20px",
-              }}
-            >
+            <div className="jd-subtitle">
               {selectedJobDesc.department} &bull; {selectedJobDesc.location}
             </div>
 
             {/* Job Info Pills */}
-            <div style={{ display: "flex", gap: "8px", marginBottom: "20px", flexWrap: "wrap" }}>
-              <span
-                style={{
-                  background: "rgba(114,16,42,0.08)",
-                  color: MAROON,
-                  fontSize: "0.72rem",
-                  fontWeight: 600,
-                  padding: "4px 10px",
-                  borderRadius: "999px",
-                }}
-              >
+            <div className="jd-pills">
+              <span className="jd-pill--type">
                 {selectedJobDesc.type}
               </span>
-              <span
-                style={{
-                  background: "rgba(201,168,76,0.12)",
-                  color: "#9a781b",
-                  fontSize: "0.72rem",
-                  fontWeight: 600,
-                  padding: "4px 10px",
-                  borderRadius: "999px",
-                }}
-              >
+              <span className="jd-pill--deadline">
                 Deadline: {selectedJobDesc.deadline}
               </span>
             </div>
 
             {/* Description */}
-            <div style={{ marginBottom: "20px" }}>
-              <h4 style={{ fontSize: "0.85rem", fontWeight: 700, color: "#1a0a0a", marginBottom: "6px" }}>
+            <div className="jd-section">
+              <h4 className="jd-section-title">
                 Job Description
               </h4>
-              <p style={{ fontSize: "0.82rem", color: "#4a4a4a", lineHeight: 1.6 }}>
+              <p className="jd-description">
                 {selectedJobDesc.description}
               </p>
             </div>
 
             {/* Qualifications */}
             {selectedJobDesc.qualifications && selectedJobDesc.qualifications.length > 0 && (
-              <div>
-                <h4 style={{ fontSize: "0.85rem", fontWeight: 700, color: "#1a0a0a", marginBottom: "8px" }}>
+              <div className="jd-section">
+                <h4 className="jd-section-title">
                   Required Qualifications
                 </h4>
-                <ul style={{ paddingLeft: "16px", margin: 0 }}>
+                <ul className="jd-qual-list">
                   {selectedJobDesc.qualifications.map((qual, idx) => (
                     <li
                       key={idx}
-                      style={{
-                        fontSize: "0.82rem",
-                        color: "#4a4a4a",
-                        lineHeight: 1.6,
-                        marginBottom: "4px",
-                        listStyleType: "disc",
-                      }}
+                      className="jd-qual-item"
                     >
                       {qual}
                     </li>
@@ -151,8 +81,8 @@ export function JobDescriptionDrawer({
 
             {/* Additional Information Submitted */}
             {appliedJobIds.includes(selectedJobDesc.id) && (
-              <div style={{ marginTop: "20px", borderTop: "1.5px solid #e5e7eb", paddingTop: "20px" }}>
-                <h4 style={{ fontSize: "0.85rem", fontWeight: 700, color: MAROON, marginBottom: "12px" }}>
+              <div className="jd-additional">
+                <h4 className="jd-additional-title">
                   Your Additional Information
                 </h4>
                 {(() => {
@@ -163,39 +93,29 @@ export function JobDescriptionDrawer({
                     referralEmpId: "",
                   };
                   return (
-                    <div
-                      style={{
-                        background: "#faf8f5",
-                        border: "1px solid #e5e7eb",
-                        borderRadius: "10px",
-                        padding: "14px",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "10px",
-                      }}
-                    >
+                    <div className="jd-info-box">
                       <div>
-                        <span style={{ fontSize: "0.72rem", color: "#6b5c5c", fontWeight: 600, textTransform: "uppercase" }}>
+                        <span className="jd-info-label">
                           Notice Period
                         </span>
-                        <div style={{ fontSize: "0.82rem", color: "#1a0a0a", fontWeight: 500, marginTop: "2px" }}>
+                        <div className="jd-info-value">
                           {appData.noticePeriod}
                         </div>
                       </div>
                       <div>
-                        <span style={{ fontSize: "0.72rem", color: "#6b5c5c", fontWeight: 600, textTransform: "uppercase" }}>
+                        <span className="jd-info-label">
                           Referral Information
                         </span>
-                        <div style={{ fontSize: "0.82rem", color: "#1a0a0a", fontWeight: 500, marginTop: "2px" }}>
+                        <div className="jd-info-value">
                           {appData.hasReferral === "Yes" ? `Yes (Employee ID: ${appData.referralEmpId})` : "No Referral"}
                         </div>
                       </div>
                       {appData.coverLetter && (
                         <div>
-                          <span style={{ fontSize: "0.72rem", color: "#6b5c5c", fontWeight: 600, textTransform: "uppercase" }}>
+                          <span className="jd-info-label">
                             Cover Letter / SOP
                           </span>
-                          <div style={{ fontSize: "0.82rem", color: "#4a4a4a", marginTop: "2px", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
+                          <div className="jd-info-value--pre">
                             {appData.coverLetter}
                           </div>
                         </div>
@@ -207,19 +127,10 @@ export function JobDescriptionDrawer({
             )}
 
             {/* Action Button */}
-            <div style={{ marginTop: "24px", display: "flex", justifyContent: "flex-end" }}>
+            <div className="jd-footer">
               <button
                 onClick={onClose}
-                style={{
-                  background: MAROON,
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "8px",
-                  padding: "10px 24px",
-                  fontWeight: 600,
-                  fontSize: "0.82rem",
-                  cursor: "pointer",
-                }}
+                className="jd-btn-close"
               >
                 Close
               </button>

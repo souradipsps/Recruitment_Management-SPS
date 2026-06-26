@@ -43,23 +43,19 @@ export const notifications = [
 
 export const statusConfig = {
   "Under Review": {
-    color: "#b45309",
-    bg: "#fef3c7",
+    className: "status-under-review",
     icon: <Clock size={13} />,
   },
   Shortlisted: {
-    color: "#065f46",
-    bg: "#d1fae5",
+    className: "status-shortlisted",
     icon: <CheckCircle size={13} />,
   },
   Rejected: {
-    color: "#991b1b",
-    bg: "#fee2e2",
+    className: "status-rejected",
     icon: <XCircle size={13} />,
   },
   "Interview Scheduled": {
-    color: "#1e40af",
-    bg: "#dbeafe",
+    className: "status-interview-scheduled",
     icon: <AlertCircle size={13} />,
   },
 };

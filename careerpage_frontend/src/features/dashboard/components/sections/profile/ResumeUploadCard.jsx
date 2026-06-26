@@ -1,6 +1,6 @@
 import React from "react";
 import { FileText, Eye, Download, Upload } from "lucide-react";
-import { MAROON } from "../../../data/dashboardMockData";
+import "../../css/sections/profile/ResumeUploadCard.css";
 
 export function ResumeUploadCard({
   resumeFile,
@@ -15,95 +15,59 @@ export function ResumeUploadCard({
   return (
     <div
       ref={sectionRef}
-      style={{
-        background: "#fff",
-        border: "1px solid #e5e7eb",
-        borderRadius: "12px",
-        padding: "20px",
-        marginBottom: "16px",
-      }}
+      className="ru-card"
     >
-      <h2 style={{ fontWeight: 700, fontSize: "0.95rem", color: MAROON, marginBottom: "16px", fontFamily: "'Playfair Display', serif" }}>
+      <h2 className="ru-title">
         CV / Resume
       </h2>
-      <div style={{ border: "1px solid #e5e7eb", borderRadius: "10px", padding: "14px", marginBottom: "16px", background: "#faf8f5" }}>
-        <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "#1a0a0a", marginBottom: "6px" }}>
+      <div className="ru-status-box">
+        <div className="ru-status-title">
           Current Resume
         </div>
         {resumeFile ? (
           <>
-            <div style={{ fontSize: "0.8rem", color: "#6b5c5c", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-              <FileText size={13} color={MAROON} /> {resumeFile}
+            <div className="ru-file-info">
+              <FileText size={13} color="#72102a" /> {resumeFile}
             </div>
-            <div style={{ display: "flex", gap: "8px" }}>
+            <div className="ru-actions-row">
               <button
                 onClick={handleViewResume}
-                style={{
-                  border: `1px solid ${MAROON}`,
-                  color: MAROON,
-                  background: "white",
-                  borderRadius: "6px",
-                  padding: "7px 12px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontSize: "0.8rem",
-                }}
+                className="ru-btn-action"
               >
                 <Eye size={14} /> View Resume
               </button>
               <a
                 href={resumeUrl || "#"}
                 download={resumeFile}
-                style={{
-                  border: `1px solid ${MAROON}`,
-                  color: MAROON,
-                  background: "white",
-                  borderRadius: "6px",
-                  padding: "7px 12px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontSize: "0.8rem",
-                  textDecoration: "none",
-                }}
+                className="ru-btn-action"
               >
                 <Download size={14} /> Download
               </a>
             </div>
           </>
         ) : (
-          <div style={{ fontSize: "0.8rem", color: "#9a8a8a", fontStyle: "italic" }}>
+          <div className="ru-empty-text">
             No resume uploaded yet.
           </div>
         )}
       </div>
       <div
         onClick={() => fileInputRef.current && fileInputRef.current.click()}
-        style={{
-          border: `2px dashed ${MAROON}`,
-          borderRadius: "10px",
-          padding: "24px",
-          textAlign: "center",
-          cursor: "pointer",
-          background: "#fdf8f9",
-        }}
+        className="ru-dropzone"
       >
-        <Upload size={28} style={{ color: MAROON, margin: "0 auto 10px" }} />
-        <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "#1a0a0a" }}>
+        <Upload size={28} color="#72102a" className="ru-upload-icon" />
+        <div className="ru-dropzone-title">
           {resumeFile ? "Replace Resume" : "Upload Resume"}
         </div>
-        <div style={{ color: "#6b5c5c", fontSize: "0.75rem", marginTop: "4px" }}>
+        <div className="ru-dropzone-subtitle">
           PDF, DOC or DOCX &bull; Maximum 5 MB
         </div>
-        {fileSizeError && <div style={{ color: "#d00", fontSize: "0.75rem", marginTop: "6px" }}>{fileSizeError}</div>}
+        {fileSizeError && <div className="ru-error-msg">{fileSizeError}</div>}
         <input
           ref={fileInputRef}
           type="file"
           accept=".pdf,.doc,.docx"
-          style={{ display: "none" }}
+          className="ru-hidden-input"
           onChange={handleResumeUpload}
         />
       </div>

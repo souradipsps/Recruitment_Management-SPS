@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 import { OfferLetterCard } from "./onboarding/OfferLetterCard";
 import { RequiredDocumentsCard } from "./onboarding/RequiredDocumentsCard";
 import { OnboardingProgress } from "./onboarding/OnboardingProgress";
+import "../css/sections/OnboardingSection.css";
 
 export function OnboardingSection({
   offerAccepted,
@@ -53,18 +54,10 @@ export function OnboardingSection({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
     >
-      <h1
-        style={{
-          fontFamily: "'Playfair Display', serif",
-          color: "#1a0a0a",
-          fontSize: "1.4rem",
-          fontWeight: 700,
-          marginBottom: "4px",
-        }}
-      >
+      <h1 className="ob-page-title">
         Onboarding
       </h1>
-      <p style={{ color: "#6b5c5c", fontSize: "0.85rem", marginBottom: "20px" }}>
+      <p className="ob-page-sub">
         Submit required documents and complete your onboarding process.
       </p>
 
