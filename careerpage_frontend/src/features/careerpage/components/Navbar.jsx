@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import logoImg from "../../../assets/logo.png";
 import "./css/Navbar.css";
 
@@ -10,6 +10,32 @@ export function Navbar({ loggedInUser, onLogin, onSignup, onOpenDashboard, onLog
 
   const toggleMobileMenu = () => setIsOpen((prev) => !prev);
   const closeMobileMenu = () => setIsOpen(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 640) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    // Reset viewport meta tag to force the mobile browser to recalculate scales
+    // and layout width when returning from the external non-responsive site in the same tab.
+    let meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "viewport";
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=5.0");
+    const timer = setTimeout(() => {
+      meta.setAttribute("content", "width=device-width, initial-scale=1.0");
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <>
@@ -34,6 +60,13 @@ export function Navbar({ loggedInUser, onLogin, onSignup, onOpenDashboard, onLog
 
             {/* ── Desktop buttons ──────────────────────────────────────────── */}
             <div className="hidden sm:flex items-center gap-2">
+              <a
+                href="https://www.spsghy.co.in"
+                className="nb-btn nb-btn-outline px-3 py-1.5"
+                style={{ textDecoration: "none" }}
+              >
+                Home
+              </a>
               {loggedInUser ? (
                 <>
                   <button onClick={onOpenDashboard} className="nb-btn nb-btn-outline px-3 py-1.5">
@@ -59,7 +92,7 @@ export function Navbar({ loggedInUser, onLogin, onSignup, onOpenDashboard, onLog
             <button
               type="button"
               onClick={toggleMobileMenu}
-              className="nb-hamburger sm:hidden"
+              className={`nb-hamburger sm:hidden ${isOpen ? "is-active" : ""}`}
               aria-label="Toggle menu"
             >
               <span className="nb-hamburger-bar" />
@@ -72,18 +105,17 @@ export function Navbar({ loggedInUser, onLogin, onSignup, onOpenDashboard, onLog
       </nav>
 
       {/* ── Mobile menu overlay and panel ───────────────────────────────── */}
-      <div className={`nb-mobile-overlay ${isOpen ? "is-open" : ""}`} onClick={closeMobileMenu}>
+      <div className={`nb-mobile-panel-wrapper ${isOpen ? "is-open" : ""}`}>
         <div className="nb-mobile-panel" onClick={(e) => e.stopPropagation()}>
-          <button
-            type="button"
-            className="nb-mobile-close"
-            onClick={closeMobileMenu}
-            aria-label="Close menu"
-          >
-            &times;
-          </button>
-
           <div className="nb-mobile-actions">
+            <a
+              href="https://www.spsghy.co.in"
+              className="nb-btn nb-btn-outline"
+              style={{ textDecoration: "none" }}
+              onClick={closeMobileMenu}
+            >
+              Home
+            </a>
             {loggedInUser ? (
               <>
                 <button
@@ -117,6 +149,7 @@ export function Navbar({ loggedInUser, onLogin, onSignup, onOpenDashboard, onLog
             )}
           </div>
         </div>
+        <div className="nb-mobile-backdrop" onClick={closeMobileMenu} />
       </div>
     </>
   );

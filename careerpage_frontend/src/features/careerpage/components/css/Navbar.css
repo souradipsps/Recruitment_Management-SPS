@@ -90,38 +90,47 @@
   height        : 2px;
   background    : var(--nb-cream);
   border-radius : 2px;
+  transition    : transform 0.25s ease, opacity 0.25s ease;
 }
 
-/* ── Mobile menu overlay and panel ────────────────────────────────────────── */
-.nb-mobile-overlay {
+/* Hamburger active transformation (forms an ✕) */
+.nb-hamburger.is-active .nb-hamburger-bar:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.nb-hamburger.is-active .nb-hamburger-bar:nth-child(2) {
+  opacity: 0;
+}
+
+.nb-hamburger.is-active .nb-hamburger-bar:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+/* ── Mobile menu wrapper, panel, and backdrop ────────────────────────────── */
+.nb-mobile-panel-wrapper {
   position       : fixed;
-  inset          : 0;
-  background     : rgba(0, 0, 0, 0);
-  backdrop-filter: blur(0px);
-  -webkit-backdrop-filter: blur(0px);
-  z-index        : 100;
+  top            : 76px; /* Exactly below the sticky navbar */
+  left           : 0;
+  right          : 0;
+  bottom         : 0;
+  z-index        : 40; /* Behind navbar (z-50) */
   display        : flex;
   flex-direction : column;
-  align-items    : center;
-  justify-content: flex-start;
   pointer-events : none;
-  opacity        : 0;
-  transition     : opacity 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease;
+  overflow       : hidden; /* Clips the panel when translated up */
 }
 
-.nb-mobile-overlay.is-open {
-  background     : rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+.nb-mobile-panel-wrapper.is-open {
   pointer-events : auto;
-  opacity        : 1;
 }
 
 .nb-mobile-panel {
   width          : 100%;
-  background     : var(--nb-maroon);
-  padding        : 72px 24px 54px 24px;
-  box-shadow     : 0 10px 30px rgba(0, 0, 0, 0.35);
+  background     : rgba(114, 16, 42, 0.85); /* Exact match with navbar background */
+  backdrop-filter: blur(16px) saturate(180%); /* Exact match with navbar blur */
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  padding        : 24px;
+  box-shadow     : 0 10px 30px rgba(0, 0, 0, 0.2);
   display        : flex;
   flex-direction : column;
   align-items    : center;
@@ -130,16 +139,34 @@
   border-bottom  : 1.5px solid rgba(250, 248, 245, 0.08);
   transform      : translateY(-100%);
   transition     : transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index        : 2; /* Above backdrop */
 }
 
-.nb-mobile-overlay.is-open .nb-mobile-panel {
+.nb-mobile-panel-wrapper.is-open .nb-mobile-panel {
   transform      : translateY(0);
+}
+
+.nb-mobile-backdrop {
+  flex           : 1;
+  width          : 100%;
+  background     : rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity        : 0;
+  z-index        : 1; /* Below panel */
+  transition     : opacity 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease;
+  pointer-events : none;
+}
+
+.nb-mobile-panel-wrapper.is-open .nb-mobile-backdrop {
+  opacity        : 1;
+  pointer-events : auto;
 }
 
 /* Centered button stack */
 .nb-mobile-actions {
   width          : 100%;
-  max-width      : 280px;
+  max-width      : 220px;
   display        : flex;
   flex-direction : column;
   gap            : 14px;
@@ -152,26 +179,12 @@
   border-radius: 4px;
 }
 
-/* Close (✕) button, top-right of the panel */
-.nb-mobile-close {
-  position   : absolute;
-  top        : 18px;
-  right      : 20px;
-  background : none;
-  border     : none;
-  color      : var(--nb-cream);
-  font-size  : 2.2rem;
-  line-height: 1;
-  cursor     : pointer;
-  padding    : 4px 10px;
-}
-
 /* ── Hide mobile menu elements on desktop views ──────────────────────────── */
 @media (min-width: 640px) {
   .nb-hamburger {
     display: none !important;
   }
-  .nb-mobile-overlay {
+  .nb-mobile-panel-wrapper {
     display: none !important;
   }
 }
