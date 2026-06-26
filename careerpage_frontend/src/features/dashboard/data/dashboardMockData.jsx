@@ -5,7 +5,6 @@ import {
 } from "lucide-react";
 
 export const GOLD = "#c9a84c";
-export const CREAM = "#faf8f5";
 export const MAROON = "#72102a";
 
 export const capitalizeWords = (str) => {
@@ -19,45 +18,6 @@ export const ALL_SKILLS = [
   "CBSE Curriculum", "Digital Literacy", "Research & Development",
   "Counselling", "Event Management", "Administration", "IT Support",
   "Sports Coaching", "Content Creation", "Public Speaking",
-];
-
-export const appliedJobs = [
-  {
-    id: 1,
-    title: "Senior Mathematics Teacher",
-    department: "Academic Department",
-    location: "Guwahati, Assam",
-    appliedDate: "June 10, 2026",
-    status: "Under Review",
-    type: "Full-time",
-  },
-  {
-    id: 2,
-    title: "Physics Teacher",
-    department: "Academic Department",
-    location: "Guwahati, Assam",
-    appliedDate: "June 8, 2026",
-    status: "Shortlisted",
-    type: "Full-time",
-  },
-  {
-    id: 3,
-    title: "Academic Coordinator",
-    department: "Administration",
-    location: "Guwahati, Assam",
-    appliedDate: "June 5, 2026",
-    status: "Rejected",
-    type: "Full-time",
-  },
-  {
-    id: 4,
-    title: "Computer Science Teacher",
-    department: "Academic Department",
-    location: "Guwahati, Assam",
-    appliedDate: "June 1, 2026",
-    status: "Interview Scheduled",
-    type: "Full-time",
-  },
 ];
 
 export const notifications = [
