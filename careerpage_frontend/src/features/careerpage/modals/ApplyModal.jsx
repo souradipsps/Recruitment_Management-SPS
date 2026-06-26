@@ -355,10 +355,7 @@ export function ApplyModal({ onClose, signupData, onSubmitData }) {
               {/* Actions */}
               <div className="am-form-footer">
                 <button type="button" onClick={onClose} className="am-btn-cancel">Cancel</button>
-                <button type="submit" className="am-btn-submit">
-                  <img src={logoImg} alt="" className="am-btn-logo" />
-                  Submit Application
-                </button>
+                <button type="submit" className="am-btn-submit">Submit Application</button>
               </div>
 
             </form>
