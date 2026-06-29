@@ -1,39 +1,39 @@
 import { useState } from "react";
-import { T, font, radius, shadow } from "../theme";
+import { T, font, radius, shadow, transition } from "../theme";
 
 export default function ModuleSelector({ currentUser, onSelectModule, onLogout }) {
   const modules = [
     {
       id: "Recruitment",
-      title: "Recruitment",
+      title: "HR & Recruitment",
       icon: "💼",
-      desc: "Manage role requests, job postings, candidate applications, panel evaluations, and onboarding.",
+      desc: "Publish vacancies, evaluate applications, coordinate panel interviews, and manage onboarding for new academic and administrative staff.",
       status: "active",
-      badge: "Active",
+      badge: "Active Workspace",
     },
     {
       id: "Academics",
-      title: "Academics & Grading",
+      title: "Academics & Curriculum",
       icon: "📚",
-      desc: "Schedule classes, manage course curricula, syllabus progress tracking, and report card generation.",
+      desc: "Configure syllabus frameworks, manage classroom timetables, track progression, and generate student gradebooks.",
       status: "locked",
-      badge: "Coming Soon",
+      badge: "Academics Desk",
     },
     {
       id: "Students",
-      title: "Student Records",
+      title: "Student Information (SIS)",
       icon: "👥",
-      desc: "Manage student admissions, profiles, attendance records, and classroom allocations.",
+      desc: "Track student admissions, coordinate classroom allocations, log daily attendance, and manage guardian registries.",
       status: "locked",
-      badge: "Coming Soon",
+      badge: "Registry Desk",
     },
     {
       id: "Finance",
-      title: "Finance & Fees",
+      title: "Financial Operations",
       icon: "💳",
-      desc: "Oversee fee structures, collection tracking, staff payroll, and budget sheets.",
+      desc: "Administer student fee collections, process payroll allocations, track receipts, and audit departmental budgets.",
       status: "locked",
-      badge: "Coming Soon",
+      badge: "Finance Desk",
     },
   ];
 
@@ -44,7 +44,7 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        backgroundImage: "linear-gradient(rgba(92, 12, 33, 0.94) 0%, rgba(48, 6, 17, 0.97) 100%), url('/school_campus.png')",
+        backgroundImage: "linear-gradient(rgba(92, 12, 33, 0.94) 0%, rgba(48, 6, 17, 0.97) 100%), url('/school_campus.jpg')",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
@@ -54,21 +54,18 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
         overflow: "hidden",
       }}
     >
-      {/* Injected style tag for premium animations and hover states */}
+      {/* CSS stylesheet for spring-based responsive zooms and animations */}
       <style>{`
-        .mis-card-active {
-          transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        .mis-card {
+          transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
         }
         .mis-card-active:hover {
-          transform: translateY(-8px) scale(1.025) !important;
+          transform: translateY(-8px) scale(1.03) !important;
           border-color: ${T.accent} !important;
           box-shadow: 0 20px 40px rgba(114, 16, 42, 0.25), 0 10px 20px rgba(201, 168, 76, 0.15) !important;
         }
-        .mis-card-locked {
-          transition: all 0.3s ease !important;
-        }
         .mis-card-locked:hover {
-          transform: translateY(-3px) !important;
+          transform: translateY(-2px) !important;
           box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important;
         }
         
@@ -82,7 +79,7 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
         }
       `}</style>
 
-      {/* Floating glowing background blur blobs for visual fascination and depth */}
+      {/* Floating background blur blobs for premium depth */}
       <div
         style={{
           position: "absolute",
@@ -114,7 +111,7 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
         }}
       />
 
-      {/* Content wrapper to raise content above background blur blobs */}
+      {/* Content wrapper */}
       <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", minHeight: "100%", width: "100%", flex: 1 }}>
         {/* Top bar */}
         <div
@@ -178,6 +175,7 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
             margin: "0 auto",
           }}
         >
+          {/* Simple and clean header with text updates */}
           <div style={{ textAlign: "center", marginBottom: 36 }} className="animate-fade-in-up">
             <h2
               style={{
@@ -189,10 +187,10 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
                 letterSpacing: "-0.02em",
               }}
             >
-              MIS Modules
+              Management Information System
             </h2>
-            <p style={{ fontSize: 14, color: "rgba(255, 255, 255, 0.8)", marginTop: 8 }}>
-              Choose a module to load your authorized management controls and systems.
+            <p style={{ fontSize: 14, color: "rgba(255, 255, 255, 0.8)", marginTop: 8, maxWidth: 600, lineHeight: 1.5, margin: "8px auto 0" }}>
+              Welcome to the South Point School administrative console. Select an authorized department workspace below to manage institutional operations.
             </p>
           </div>
 
@@ -210,26 +208,26 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
                 <div
                   key={m.id}
                   onClick={() => isActive && onSelectModule(m.id)}
-                  className={isActive ? "mis-card-active className-fade-in-up" : "mis-card-locked className-fade-in-up"}
+                  className={`mis-card ${isActive ? "mis-card-active card-hover" : "mis-card-locked"}`}
                   style={{
                     background: isActive ? T.surface : T.primaryPale,
                     borderRadius: 20,
                     border: isActive ? `2px solid ${T.accent}88` : `1.5px solid ${T.border}`,
-                    padding: 24,
+                    padding: 28,
                     cursor: isActive ? "pointer" : "default",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
                     boxShadow: isActive ? shadow.primary : shadow.sm,
-                    minHeight: 210,
-                    opacity: isActive ? 1 : 0.8,
+                    minHeight: 220,
+                    opacity: isActive ? 1 : 0.75,
                     animation: "fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both",
                     animationDelay: `${idx * 0.06}s`,
                   }}
                 >
                   <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
-                      <span style={{ fontSize: 28 }}>{m.icon}</span>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                      <span style={{ fontSize: 32 }}>{m.icon}</span>
                       <span
                         style={{
                           fontSize: 9.5,
@@ -238,7 +236,7 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
                           letterSpacing: "0.06em",
                           borderRadius: 99,
                           padding: "4px 10px",
-                          background: isActive ? T.primaryLight : "rgba(114, 16, 42, 0.06)",
+                          background: isActive ? T.primaryLight : "rgba(114, 16, 42, 0.05)",
                           color: isActive ? T.primary : T.inkLight,
                           border: isActive ? `1px solid ${T.primary}33` : `1px solid ${T.border}`,
                         }}
@@ -249,7 +247,7 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
 
                     <h3
                       style={{
-                        fontSize: 16,
+                        fontSize: 17,
                         fontWeight: 800,
                         color: isActive ? T.ink : T.inkMid,
                         margin: "0 0 8px 0",
@@ -280,9 +278,10 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
                         display: "flex",
                         alignItems: "center",
                         gap: 4,
+                        transition: "all 0.25s ease",
                       }}
                     >
-                      Enter Module ➔
+                      <span>Enter Module ➔</span>
                     </div>
                   )}
                 </div>
