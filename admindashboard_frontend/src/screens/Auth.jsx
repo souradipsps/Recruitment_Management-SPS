@@ -16,7 +16,7 @@ function FormLabel({ text }) {
       color: "#374151",
       letterSpacing: "0.06em",
       textTransform: "uppercase",
-      marginBottom: 8,
+      marginBottom: 5,
       display: "block",
     }}>
       {text}
@@ -39,8 +39,8 @@ function CustomInput({ icon, type = "text", placeholder, value, onChange, showPa
     className="input-focus-container"
     >
       <div style={{
-        width: 44,
-        height: 42,
+        width: 38,
+        height: 36,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -60,7 +60,7 @@ function CustomInput({ icon, type = "text", placeholder, value, onChange, showPa
           flex: 1,
           border: "none",
           outline: "none",
-          padding: "10px 14px",
+          padding: "8px 12px",
           fontSize: 14,
           fontFamily: font.body,
           color: T.ink,
@@ -75,7 +75,7 @@ function CustomInput({ icon, type = "text", placeholder, value, onChange, showPa
           style={{
             background: "none",
             border: "none",
-            padding: "0 14px",
+            padding: "0 12px",
             cursor: "pointer",
             color: "#6B6B6B",
             display: "flex",
@@ -237,25 +237,25 @@ export default function Auth({ onLoginSuccess }) {
         <div
           style={{
             background: `linear-gradient(135deg, ${T.primary} 0%, ${T.primaryDark} 100%)`,
-            padding: "32px 24px 28px",
+            padding: "20px 24px 16px",
             textAlign: "center",
             borderBottom: `2.5px solid ${T.accent}`,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 12,
+            gap: 8,
           }}
         >
           <img
             src="/images-removebg-preview.png"
             alt="South Point School Logo"
-            style={{ height: 60, width: "auto", objectFit: "contain" }}
+            style={{ height: 48, width: "auto", objectFit: "contain" }}
           />
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
             <h1
               style={{
                 margin: 0,
-                fontSize: 24,
+                fontSize: 20,
                 fontWeight: "bold",
                 fontFamily: "Georgia, serif",
                 color: T.accent,
@@ -264,7 +264,7 @@ export default function Auth({ onLoginSuccess }) {
             >
               South Point School
             </h1>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
               <div style={{ width: 16, height: 1, background: "rgba(255, 255, 255, 0.3)" }} />
               <p
                 style={{
@@ -280,7 +280,7 @@ export default function Auth({ onLoginSuccess }) {
               </p>
               <div style={{ width: 16, height: 1, background: "rgba(255, 255, 255, 0.3)" }} />
             </div>
-            <div style={{ fontSize: 8, color: T.accent, marginTop: 4, lineHeight: 1 }}>◆</div>
+            <div style={{ fontSize: 8, color: T.accent, marginTop: 3, lineHeight: 1 }}>◆</div>
           </div>
         </div>
 
@@ -294,7 +294,7 @@ export default function Auth({ onLoginSuccess }) {
             }}
             style={{
               flex: 1,
-              padding: "16px 0",
+              padding: "11px 0",
               background: tab === "login" ? T.surface : "#f8f9fa",
               border: "none",
               borderBottom: tab === "login" ? `3px solid ${T.primary}` : "1px solid #e8e2d9",
@@ -323,7 +323,7 @@ export default function Auth({ onLoginSuccess }) {
             }}
             style={{
               flex: 1,
-              padding: "16px 0",
+              padding: "11px 0",
               background: tab === "signup" ? T.surface : "#f8f9fa",
               border: "none",
               borderBottom: tab === "signup" ? `3px solid ${T.primary}` : "1px solid #e8e2d9",
@@ -349,18 +349,18 @@ export default function Auth({ onLoginSuccess }) {
         </div>
 
         {/* Auth Forms */}
-        <div style={{ padding: "30px 28px" }}>
+        <div style={{ padding: "20px 24px 18px" }}>
           {error && (
             <div
               style={{
                 background: T.redLight,
                 border: `1px solid ${T.red}33`,
                 color: T.red,
-                padding: "10px 14px",
+                padding: "8px 12px",
                 borderRadius: radius.md,
                 fontSize: 12,
                 fontWeight: 600,
-                marginBottom: 20,
+                marginBottom: 14,
                 lineHeight: 1.4,
               }}
             >
@@ -374,11 +374,11 @@ export default function Auth({ onLoginSuccess }) {
                 background: T.greenLight,
                 border: `1px solid ${T.green}33`,
                 color: T.green,
-                padding: "10px 14px",
+                padding: "8px 12px",
                 borderRadius: radius.md,
                 fontSize: 12,
                 fontWeight: 600,
-                marginBottom: 20,
+                marginBottom: 14,
                 lineHeight: 1.4,
               }}
             >
@@ -387,7 +387,7 @@ export default function Auth({ onLoginSuccess }) {
           )}
 
           {tab === "login" ? (
-            <form onSubmit={handleSignIn} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            <form onSubmit={handleSignIn} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
                 <FormLabel text="Email Address" />
                 <CustomInput
@@ -422,7 +422,7 @@ export default function Auth({ onLoginSuccess }) {
                 />
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: -4 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: -6 }}>
                 <input
                   type="checkbox"
                   id="rememberMe"
@@ -456,7 +456,7 @@ export default function Auth({ onLoginSuccess }) {
                   background: `linear-gradient(135deg, ${T.primary} 0%, #4c0519 100%)`,
                   border: "none",
                   borderRadius: 99,
-                  padding: "12px 0",
+                  padding: "10px 0",
                   width: "100%",
                   color: "#fff",
                   fontWeight: 700,
@@ -466,7 +466,7 @@ export default function Auth({ onLoginSuccess }) {
                   alignItems: "center",
                   justifyContent: "center",
                   boxShadow: "0 10px 20px rgba(114, 16, 42, 0.2)",
-                  marginTop: 8,
+                  marginTop: 4,
                   transition: "all 0.2s"
                 }}
               >
@@ -479,7 +479,7 @@ export default function Auth({ onLoginSuccess }) {
               </button>
             </form>
           ) : (
-            <form onSubmit={handleSignUp} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            <form onSubmit={handleSignUp} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
                 <FormLabel text="Full Name" />
                 <CustomInput
@@ -537,7 +537,7 @@ export default function Auth({ onLoginSuccess }) {
                   background: `linear-gradient(135deg, ${T.primary} 0%, #4c0519 100%)`,
                   border: "none",
                   borderRadius: 99,
-                  padding: "12px 0",
+                  padding: "10px 0",
                   width: "100%",
                   color: "#fff",
                   fontWeight: 700,
@@ -547,7 +547,7 @@ export default function Auth({ onLoginSuccess }) {
                   alignItems: "center",
                   justifyContent: "center",
                   boxShadow: "0 10px 20px rgba(114, 16, 42, 0.2)",
-                  marginTop: 8,
+                  marginTop: 4,
                   transition: "all 0.2s"
                 }}
               >
@@ -560,7 +560,7 @@ export default function Auth({ onLoginSuccess }) {
           )}
 
           {/* OR divider */}
-          <div style={{ display: "flex", alignItems: "center", margin: "24px 0 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", margin: "16px 0 12px" }}>
             <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
             <span style={{ fontSize: 11, color: "#9CA3AF", padding: "0 12px", fontWeight: 600 }}>OR</span>
             <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
