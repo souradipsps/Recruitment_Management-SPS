@@ -97,6 +97,46 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
           0%, 100% { transform: translateY(0) scale(1.05); }
           50% { transform: translateY(20px) scale(1); }
         }
+
+        @media (max-width: 768px) {
+          .mis-top-bar {
+            padding: 10px 16px !important;
+            margin-bottom: 24px !important;
+            border-radius: 16px !important;
+          }
+          .mis-logo-container {
+            width: 38px !important;
+            height: 38px !important;
+          }
+          .mis-logo-container img {
+            height: 30px !important;
+          }
+          .mis-brand {
+            gap: 8px !important;
+          }
+          .mis-title {
+            font-size: 16px !important;
+          }
+          .mis-subtitle {
+            display: none !important;
+          }
+          .mis-user-email {
+            display: none !important;
+          }
+          .mis-user-divider {
+            display: none !important;
+          }
+          .mis-logout-btn {
+            padding: 6px 12px !important;
+            border-radius: 8px !important;
+          }
+          .mis-main-title {
+            font-size: 24px !important;
+          }
+          .mis-main-title-container {
+            margin-bottom: 24px !important;
+          }
+        }
       `}</style>
 
       {/* Floating background blur blobs for premium depth */}
@@ -135,6 +175,7 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
       <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", minHeight: "100%", width: "100%", flex: 1 }}>
         {/* Top bar (rounded panel) */}
         <div
+          className="mis-top-bar"
           style={{
             display: "flex",
             justifyContent: "space-between",
@@ -149,8 +190,8 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
             boxShadow: "0 10px 30px rgba(0,0,0,0.25)"
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{
+          <div className="mis-brand" style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div className="mis-logo-container" style={{
               width: 52,
               height: 52,
               borderRadius: "50%",
@@ -168,46 +209,26 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
               />
             </div>
             <div>
-              <div style={{ fontSize: 22, fontWeight: "bold", color: T.accent, fontFamily: "Georgia, serif", letterSpacing: "0.01em" }}>
+              <div className="mis-title" style={{ fontSize: 22, fontWeight: "bold", color: T.accent, fontFamily: "Georgia, serif", letterSpacing: "0.01em" }}>
                 South Point School
               </div>
-              <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255, 255, 255, 0.75)", textTransform: "uppercase", letterSpacing: "0.12em", marginTop: 2 }}>
+              <div className="mis-subtitle" style={{ fontSize: 9, fontWeight: 700, color: "rgba(255, 255, 255, 0.75)", textTransform: "uppercase", letterSpacing: "0.12em", marginTop: 2 }}>
                 Management Information System (MIS) Portal
               </div>
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ color: "#fff", fontSize: 13, fontWeight: 500 }}>
+          <div className="mis-user-panel" style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div className="mis-user-email" style={{ color: "#fff", fontSize: 13, fontWeight: 500 }}>
               {currentUser?.email || "f@gmail.com"}
             </div>
             
-            <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.2)" }} />
-
-            {/* Notification Bell */}
-            <div style={{ position: "relative", cursor: "pointer", display: "flex", alignItems: "center" }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-              </svg>
-              <span style={{
-                position: "absolute",
-                top: -2,
-                right: -2,
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: T.accent,
-                border: "1.5px solid #4c0519"
-              }} />
-            </div>
-
-            <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.2)" }} />
+            <div className="mis-user-divider" style={{ width: 1, height: 20, background: "rgba(255,255,255,0.2)" }} />
 
             {/* Log Out Button */}
             <button
               onClick={onLogout}
-              className="btn-hover"
+              className="btn-hover mis-logout-btn"
               style={{
                 background: "linear-gradient(135deg, #72102a 0%, #5c0c21 100%)",
                 border: "1px solid rgba(255, 255, 255, 0.2)",
@@ -249,8 +270,9 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
           }}
         >
           {/* Section title and divider */}
-          <div style={{ textAlign: "center", marginBottom: 48 }} className="animate-fade-in-up">
+          <div style={{ textAlign: "center", marginBottom: 48 }} className="animate-fade-in-up mis-main-title-container">
             <h2
+              className="mis-main-title"
               style={{
                 fontSize: 36,
                 fontWeight: 900,
