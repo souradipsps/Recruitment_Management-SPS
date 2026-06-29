@@ -575,7 +575,7 @@ export default function Applications({
             <Table
               cols={["App ID", "Candidate", "Role", "Job Post", "Experience", "Qualification", "Referred By", "Applied Date", "Status", "Actions"]}
               onRowClick={(index) => setSelectedApp(filtered[index])}
-              onRowDoubleClick={(index) => updateStatus(filtered[index], "Shortlisted")}
+              onRowDoubleClick={isMobile ? (index) => updateStatus(filtered[index], "Shortlisted") : undefined}
               rows={filtered.map((a) => [
                 <Mono v={a.id} />,
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -599,7 +599,7 @@ export default function Applications({
             <Table
               cols={["App ID", "Candidate", "Preferred Role", "Department", "Experience", "Qualification", "Applied Date", "Status", "Actions"]}
               onRowClick={(index) => setSelectedApp(filtered[index])}
-              onRowDoubleClick={(index) => updateStatus(filtered[index], "Shortlisted")}
+              onRowDoubleClick={isMobile ? (index) => updateStatus(filtered[index], "Shortlisted") : undefined}
               rows={filtered.map((a) => [
                 <Mono v={a.id} />,
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
