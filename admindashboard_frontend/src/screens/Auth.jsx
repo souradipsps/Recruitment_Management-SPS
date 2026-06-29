@@ -14,9 +14,19 @@ export default function Auth({ onLoginSuccess }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState("admin");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+
+  useEffect(() => {
+    try {
+      const savedEmail = localStorage.getItem("remembered_email");
+      if (savedEmail) {
+        setEmail(savedEmail);
+        setRememberMe(true);
+      }
+    } catch (e) {}
+  }, []);
 
   // Retrieve or initialize users database in localStorage
   const getUsers = () => {
@@ -48,6 +58,14 @@ export default function Auth({ onLoginSuccess }) {
       setError("Invalid email or password.");
       return;
     }
+
+    try {
+      if (rememberMe) {
+        localStorage.setItem("remembered_email", email.trim());
+      } else {
+        localStorage.removeItem("remembered_email");
+      }
+    } catch (err) {}
 
     setSuccess("Login successful!");
     setTimeout(() => {
@@ -81,7 +99,7 @@ export default function Auth({ onLoginSuccess }) {
       name: name.trim(),
       email: email.toLowerCase().trim(),
       password: password,
-      role: role,
+      role: "admin", // Default registered user role to admin
     };
 
     const updatedUsers = [...users, newUser];
@@ -104,7 +122,10 @@ export default function Auth({ onLoginSuccess }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: `linear-gradient(135deg, ${T.primaryDark} 0%, ${T.primary} 50%, #200008 100%)`,
+        backgroundImage: "linear-gradient(rgba(15, 23, 42, 0.55), rgba(15, 23, 42, 0.55)), url('/school_campus.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
         padding: 20,
         fontFamily: font.body,
         boxSizing: "border-box",
@@ -272,23 +293,35 @@ export default function Auth({ onLoginSuccess }) {
                 />
               </FormField>
 
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: -4 }}>
+                <input
+                  type="checkbox"
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  style={{
+                    width: 16,
+                    height: 16,
+                    cursor: "pointer",
+                    accentColor: T.primary,
+                  }}
+                />
+                <label
+                  htmlFor="rememberMe"
+                  style={{
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    color: T.inkLight,
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
+                >
+                  Remember Me
+                </label>
+              </div>
+
               <Btn label="Sign In" variant="primary" style={{ marginTop: 8, padding: "11px 0" }} />
 
-              <div
-                style={{
-                  fontSize: 11,
-                  color: T.inkFaint,
-                  textAlign: "center",
-                  marginTop: 10,
-                  lineHeight: 1.5,
-                }}
-              >
-                <strong>Default Accounts:</strong>
-                <br />
-                Admin: admin@school.edu / admin123
-                <br />
-                Panelist (Dr. Roy): dr.roy@school.edu / roy123
-              </div>
             </form>
           ) : (
             <form onSubmit={handleSignUp} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -319,18 +352,6 @@ export default function Auth({ onLoginSuccess }) {
                 />
               </FormField>
 
-              <FormField label="Assign System Role">
-                <Select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  options={[
-                    { value: "admin", label: "Principal (Admin)" },
-                    { value: "Dr. Roy", label: "Dr. Roy (Panelist)" },
-                    { value: "Mr. Patel", label: "Mr. Patel (Panelist)" },
-                    { value: "Ms. Nisha", label: "Ms. Nisha (Panelist)" },
-                  ]}
-                />
-              </FormField>
 
               <Btn label="Create Account" variant="primary" style={{ marginTop: 8, padding: "11px 0" }} />
             </form>

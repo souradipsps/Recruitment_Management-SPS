@@ -283,59 +283,34 @@ export default function App() {
 
       {/* User profile */}
       <div style={{ padding: "14px 18px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1))",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: font.sm,
-                fontWeight: font.bold,
-                fontFamily: font.body,
-                color: "#fff",
-                border: "1px solid rgba(255,255,255,0.2)",
-                flexShrink: 0,
-              }}
-            >
-              {currentUser?.name ? currentUser.name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2) : "HR"}
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: font.sm + 1, fontWeight: font.bold, fontFamily: font.body, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {currentUser?.name || "HR Admin"}
-              </div>
-              <div style={{ fontSize: font.xs, fontFamily: font.body, color: "rgba(255,255,255,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {currentUser?.email || "hr@southpoint.edu"}
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              setCurrentUser(null);
-            }}
-            title="Log Out"
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div
             style={{
-              background: "rgba(255,255,255,0.1)",
-              border: "none",
-              borderRadius: radius.md,
-              width: 28,
-              height: 28,
-              cursor: "pointer",
-              color: "#fff",
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1))",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 14,
-              transition: "background 0.2s",
+              fontSize: font.sm,
+              fontWeight: font.bold,
+              fontFamily: font.body,
+              color: "#fff",
+              border: "1px solid rgba(255,255,255,0.2)",
+              flexShrink: 0,
             }}
-            className="btn-hover"
           >
-            ↩
-          </button>
+            {currentUser?.name ? currentUser.name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2) : "HR"}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: font.sm + 1, fontWeight: font.bold, fontFamily: font.body, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {currentUser?.name || "HR Admin"}
+            </div>
+            <div style={{ fontSize: font.xs, fontFamily: font.body, color: "rgba(255,255,255,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {currentUser?.email || "hr@southpoint.edu"}
+            </div>
+          </div>
         </div>
       </div>
     </>
@@ -480,23 +455,20 @@ export default function App() {
             <button
               onClick={() => setCurrentUser(null)}
               className="btn-hover"
-              title="Log Out"
               style={{
                 background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(255,255,255,0.15)",
+                border: "1.5px solid rgba(255,255,255,0.25)",
                 borderRadius: radius.md,
-                width: 32,
-                height: 32,
+                padding: "6px 14px",
                 cursor: "pointer",
                 color: "#fff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 14,
+                fontWeight: 700,
+                fontSize: 12,
                 transition: transition.fast,
+                fontFamily: font.body,
               }}
             >
-              ↩
+              Log Out
             </button>
           </div>
         </div>
