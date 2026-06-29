@@ -14,6 +14,7 @@ import InterviewPanel from "./screens/InterviewPanel";
 import Panelist from "./screens/Panelist";
 import Onboarding from "./screens/Onboarding";
 import Auth from "./screens/Auth";
+import ModuleSelector from "./screens/ModuleSelector";
 
 const load = (key, fallback) => {
   try {
@@ -60,6 +61,9 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(() =>
     load("currentUser", null)
   );
+  const [selectedModule, setSelectedModule] = useState(() =>
+    load("selectedModule", null)
+  );
 
   useEffect(() => { localStorage.setItem("roleRequests", JSON.stringify(roleRequests)); }, [roleRequests]);
   useEffect(() => { localStorage.setItem("jobRequests", JSON.stringify(jobRequests)); }, [jobRequests]);
@@ -73,6 +77,7 @@ export default function App() {
   useEffect(() => { localStorage.setItem("panelists", JSON.stringify(panelists)); }, [panelists]);
   useEffect(() => { localStorage.setItem("selectedPanelists", JSON.stringify(selectedPanelists)); }, [selectedPanelists]);
   useEffect(() => { localStorage.setItem("currentUser", JSON.stringify(currentUser)); }, [currentUser]);
+  useEffect(() => { localStorage.setItem("selectedModule", JSON.stringify(selectedModule)); }, [selectedModule]);
 
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
@@ -283,34 +288,58 @@ export default function App() {
 
       {/* User profile */}
       <div style={{ padding: "14px 18px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
-              background: "linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1))",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: font.sm,
-              fontWeight: font.bold,
-              fontFamily: font.body,
-              color: "#fff",
-              border: "1px solid rgba(255,255,255,0.2)",
-              flexShrink: 0,
+        <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1))",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: font.sm,
+                fontWeight: font.bold,
+                fontFamily: font.body,
+                color: "#fff",
+                border: "1px solid rgba(255,255,255,0.2)",
+                flexShrink: 0,
+              }}
+            >
+              {currentUser?.name ? currentUser.name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2) : "HR"}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: font.sm + 1, fontWeight: font.bold, fontFamily: font.body, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {currentUser?.name || "HR Admin"}
+              </div>
+              <div style={{ fontSize: font.xs, fontFamily: font.body, color: "rgba(255,255,255,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {currentUser?.email || "hr@southpoint.edu"}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setCurrentUser(null);
+              setSelectedModule(null);
             }}
+            title="Log Out"
+            style={{
+              background: "rgba(255,255,255,0.08)",
+              border: "1px solid rgba(255,255,255,0.2)",
+              borderRadius: radius.md,
+              padding: "4px 8px",
+              cursor: "pointer",
+              color: "#fff",
+              fontSize: 10,
+              fontWeight: 700,
+              fontFamily: font.body,
+              transition: "background 0.2s",
+            }}
+            className="btn-hover"
           >
-            {currentUser?.name ? currentUser.name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2) : "HR"}
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: font.sm + 1, fontWeight: font.bold, fontFamily: font.body, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {currentUser?.name || "HR Admin"}
-            </div>
-            <div style={{ fontSize: font.xs, fontFamily: font.body, color: "rgba(255,255,255,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {currentUser?.email || "hr@southpoint.edu"}
-            </div>
-          </div>
+            Log Out
+          </button>
         </div>
       </div>
     </>
@@ -321,11 +350,26 @@ export default function App() {
       <Auth
         onLoginSuccess={(user) => {
           setCurrentUser(user);
-          if (user.role === "admin") {
+        }}
+      />
+    );
+  }
+
+  if (!selectedModule) {
+    return (
+      <ModuleSelector
+        currentUser={currentUser}
+        onSelectModule={(mod) => {
+          setSelectedModule(mod);
+          if (currentUser.role === "admin") {
             setActive("dashboard");
           } else {
             setActive("panelist");
           }
+        }}
+        onLogout={() => {
+          setCurrentUser(null);
+          setSelectedModule(null);
         }}
       />
     );
@@ -453,7 +497,9 @@ export default function App() {
               </button>
             )}
             <button
-              onClick={() => setCurrentUser(null)}
+              onClick={() => {
+                setSelectedModule(null);
+              }}
               className="btn-hover"
               style={{
                 background: "rgba(255,255,255,0.08)",
@@ -468,7 +514,7 @@ export default function App() {
                 fontFamily: font.body,
               }}
             >
-              Log Out
+              Back to Modules
             </button>
           </div>
         </div>
