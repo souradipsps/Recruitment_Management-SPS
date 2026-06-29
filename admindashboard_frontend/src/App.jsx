@@ -12,8 +12,8 @@ import JobPostings from "./screens/JobPostings";
 import Applications from "./screens/Applications";
 import InterviewPanel from "./screens/InterviewPanel";
 import Panelist from "./screens/Panelist";
-import OfferManagement from "./screens/OfferManagement";
 import Onboarding from "./screens/Onboarding";
+import Auth from "./screens/Auth";
 
 const load = (key, fallback) => {
   try {
@@ -57,8 +57,8 @@ export default function App() {
   const [selectedPanelists] = useState(() =>
     load("selectedPanelists", ["Dr. Roy", "Mr. Patel", "Ms. Nisha"])
   );
-  const [currentUser] = useState(() =>
-    load("currentUser", "admin")
+  const [currentUser, setCurrentUser] = useState(() =>
+    load("currentUser", null)
   );
 
   useEffect(() => { localStorage.setItem("roleRequests", JSON.stringify(roleRequests)); }, [roleRequests]);
@@ -189,7 +189,7 @@ export default function App() {
             interviews={interviews}
             setInterviews={setInterviews}
             jobPostings={jobPostings}
-            currentUser={currentUser}
+            currentUser={currentUser?.role || "admin"}
           />
         );
       case "offer-management":
@@ -226,7 +226,12 @@ export default function App() {
 
       {/* Navigation */}
       <nav style={{ flex: 1, overflowY: "auto", padding: "12px 10px" }}>
-        {NAV.map((item, idx) => {
+        {NAV.filter((item) => {
+          if (currentUser?.role !== "admin") {
+            return item.id === "panelist";
+          }
+          return true;
+        }).map((item, idx) => {
           const isActive = active === item.id;
           const itemPending = item.id === "approval-requests" ? pendingCount : 0;
           return (
@@ -278,26 +283,78 @@ export default function App() {
 
       {/* User profile */}
       <div style={{ padding: "14px 18px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div
-            style={{
-              width: 32, height: 32, borderRadius: "50%",
-              background: "linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1))",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: font.sm, fontWeight: font.bold, fontFamily: font.body, color: "#fff",
-              border: "1px solid rgba(255,255,255,0.2)",
+        <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1))",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: font.sm,
+                fontWeight: font.bold,
+                fontFamily: font.body,
+                color: "#fff",
+                border: "1px solid rgba(255,255,255,0.2)",
+                flexShrink: 0,
+              }}
+            >
+              {currentUser?.name ? currentUser.name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2) : "HR"}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: font.sm + 1, fontWeight: font.bold, fontFamily: font.body, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {currentUser?.name || "HR Admin"}
+              </div>
+              <div style={{ fontSize: font.xs, fontFamily: font.body, color: "rgba(255,255,255,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {currentUser?.email || "hr@southpoint.edu"}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setCurrentUser(null);
             }}
+            title="Log Out"
+            style={{
+              background: "rgba(255,255,255,0.1)",
+              border: "none",
+              borderRadius: radius.md,
+              width: 28,
+              height: 28,
+              cursor: "pointer",
+              color: "#fff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 14,
+              transition: "background 0.2s",
+            }}
+            className="btn-hover"
           >
-            HR
-          </div>
-          <div>
-            <div style={{ fontSize: font.sm + 1, fontWeight: font.bold, fontFamily: font.body, color: "#fff" }}>HR Admin</div>
-            <div style={{ fontSize: font.xs, fontFamily: font.body, color: "rgba(255,255,255,0.5)" }}>hr@southpoint.edu</div>
-          </div>
+            ↩
+          </button>
         </div>
       </div>
     </>
   );
+
+  if (!currentUser) {
+    return (
+      <Auth
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          if (user.role === "admin") {
+            setActive("dashboard");
+          } else {
+            setActive("panelist");
+          }
+        }}
+      />
+    );
+  }
 
   return (
     <div style={{ display: "flex", height: "100vh", background: T.canvas, fontFamily: font.body }}>
@@ -420,6 +477,27 @@ export default function App() {
                 {pendingCount} Pending
               </button>
             )}
+            <button
+              onClick={() => setCurrentUser(null)}
+              className="btn-hover"
+              title="Log Out"
+              style={{
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.15)",
+                borderRadius: radius.md,
+                width: 32,
+                height: 32,
+                cursor: "pointer",
+                color: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 14,
+                transition: transition.fast,
+              }}
+            >
+              ↩
+            </button>
           </div>
         </div>
 
