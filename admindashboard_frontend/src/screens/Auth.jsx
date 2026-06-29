@@ -10,7 +10,7 @@ const DEFAULT_USERS = [
 ];
 
 export default function Auth({ onLoginSuccess }) {
-  const [tab, setTab] = useState("signin");
+  const [tab, setTab] = useState("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -105,9 +105,9 @@ export default function Auth({ onLoginSuccess }) {
     const updatedUsers = [...users, newUser];
     localStorage.setItem("users", JSON.stringify(updatedUsers));
 
-    setSuccess("Account created successfully! You can now Sign In.");
+    setSuccess("Account created successfully! You can now Log in.");
     setTimeout(() => {
-      setTab("signin");
+      setTab("login");
       setEmail(newUser.email);
       setPassword("");
       setError("");
@@ -193,24 +193,24 @@ export default function Auth({ onLoginSuccess }) {
         <div style={{ display: "flex", borderBottom: `1px solid ${T.border}`, background: T.canvas }}>
           <button
             onClick={() => {
-              setTab("signin");
+              setTab("login");
               setError("");
               setSuccess("");
             }}
             style={{
               flex: 1,
               padding: "16px 0",
-              background: tab === "signin" ? T.surface : "transparent",
+              background: tab === "login" ? T.surface : "transparent",
               border: "none",
-              borderBottom: tab === "signin" ? `2.5px solid ${T.primary}` : "none",
+              borderBottom: tab === "login" ? `2.5px solid ${T.primary}` : "none",
               cursor: "pointer",
               fontWeight: 700,
               fontSize: 13.5,
-              color: tab === "signin" ? T.primary : T.inkLight,
+              color: tab === "login" ? T.primary : T.inkLight,
               transition: "all 0.2s",
             }}
           >
-            Sign In
+            Log in
           </button>
           <button
             onClick={() => {
@@ -273,7 +273,7 @@ export default function Auth({ onLoginSuccess }) {
             </div>
           )}
 
-          {tab === "signin" ? (
+          {tab === "login" ? (
             <form onSubmit={handleSignIn} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
               <FormField label="Email Address">
                 <Input
@@ -320,7 +320,7 @@ export default function Auth({ onLoginSuccess }) {
                 </label>
               </div>
 
-              <Btn label="Sign In" variant="primary" style={{ marginTop: 8, padding: "11px 0" }} />
+              <Btn label="Log in" variant="primary" style={{ marginTop: 8, padding: "11px 0" }} />
 
             </form>
           ) : (

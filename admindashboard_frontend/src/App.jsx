@@ -15,10 +15,20 @@ import Panelist from "./screens/Panelist";
 import Onboarding from "./screens/Onboarding";
 import Auth from "./screens/Auth";
 import ModuleSelector from "./screens/ModuleSelector";
+import OfferManagement from "./screens/OfferManagement";
 
 const load = (key, fallback) => {
   try {
     const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const loadSession = (key, fallback) => {
+  try {
+    const saved = sessionStorage.getItem(key);
     return saved ? JSON.parse(saved) : fallback;
   } catch {
     return fallback;
@@ -59,10 +69,10 @@ export default function App() {
     load("selectedPanelists", ["Dr. Roy", "Mr. Patel", "Ms. Nisha"])
   );
   const [currentUser, setCurrentUser] = useState(() =>
-    load("currentUser", null)
+    loadSession("currentUser", null)
   );
   const [selectedModule, setSelectedModule] = useState(() =>
-    load("selectedModule", null)
+    loadSession("selectedModule", null)
   );
 
   useEffect(() => { localStorage.setItem("roleRequests", JSON.stringify(roleRequests)); }, [roleRequests]);
@@ -76,8 +86,8 @@ export default function App() {
   useEffect(() => { localStorage.setItem("interviews", JSON.stringify(interviews)); }, [interviews]);
   useEffect(() => { localStorage.setItem("panelists", JSON.stringify(panelists)); }, [panelists]);
   useEffect(() => { localStorage.setItem("selectedPanelists", JSON.stringify(selectedPanelists)); }, [selectedPanelists]);
-  useEffect(() => { localStorage.setItem("currentUser", JSON.stringify(currentUser)); }, [currentUser]);
-  useEffect(() => { localStorage.setItem("selectedModule", JSON.stringify(selectedModule)); }, [selectedModule]);
+  useEffect(() => { sessionStorage.setItem("currentUser", JSON.stringify(currentUser)); }, [currentUser]);
+  useEffect(() => { sessionStorage.setItem("selectedModule", JSON.stringify(selectedModule)); }, [selectedModule]);
 
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
