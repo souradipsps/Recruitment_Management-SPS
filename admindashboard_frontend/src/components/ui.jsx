@@ -1,4 +1,5 @@
 import React from "react";
+import ReactDOM from "react-dom";
 import { T, shadow, font, radius, transition } from "../theme";
 import { useBreakpoint } from "../hooks";
 
@@ -424,7 +425,7 @@ export const Modal = ({
 }) => {
   const bp = useBreakpoint();
   if (!open) return null;
-  return (
+  return ReactDOM.createPortal(
     <div
       className="modal-backdrop"
       style={{
@@ -454,7 +455,8 @@ export const Modal = ({
       >
         {children}
       </Card>
-    </div>
+    </div>,
+    document.body
   );
 };
 
