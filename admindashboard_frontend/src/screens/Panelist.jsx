@@ -59,6 +59,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
   const isMobile = bp === "mobile";
   const hScroll = useHorizontalScroll();
 
+  const [statusFilter, setStatusFilter] = useState("Pending");
   const [selectedJobId, setSelectedJobId] = useState(null);
   const [selectedInterview, setSelectedInterview] = useState(null);
   const [evaluatorName, setEvaluatorName] = useState("");
@@ -88,9 +89,16 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
 
   const selectedRole = enrichedPostings.find((p) => p.id === selectedJobId)?.role ?? null;
   const scheduledInterviews = interviews.filter((i) => i.date);
+
+  const statusFilteredInterviews = statusFilter === "All"
+    ? scheduledInterviews
+    : statusFilter === "Pending"
+    ? scheduledInterviews.filter((i) => i.status !== "Completed")
+    : scheduledInterviews.filter((i) => i.status === "Completed");
+
   const filteredInterviews = selectedRole
-    ? scheduledInterviews.filter((i) => i.role === selectedRole)
-    : scheduledInterviews;
+    ? statusFilteredInterviews.filter((i) => i.role === selectedRole)
+    : statusFilteredInterviews;
 
   const upcomingCount = scheduledInterviews.filter((i) => i.status !== "Completed").length;
   const evaluatedCount = scheduledInterviews.filter((i) => i.evaluations?.length > 0).length;
@@ -432,6 +440,35 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
           )}
         </div>
       )}
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: T.ink }}>
+          {statusFilter === "All" ? "All Interviews" : statusFilter === "Pending" ? "Pending Interviews" : "Completed Interviews"}
+          <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, marginLeft: 8 }}>({filteredInterviews.length})</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: T.inkLight }}>Status:</span>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{
+              border: `1.5px solid ${T.border}`,
+              borderRadius: 8,
+              padding: "6px 12px",
+              fontSize: 13,
+              fontWeight: 600,
+              color: T.inkMid,
+              background: "#fff",
+              cursor: "pointer",
+              outline: "none"
+            }}
+          >
+            <option value="All">All</option>
+            <option value="Pending">Pending</option>
+            <option value="Completed">Completed</option>
+          </select>
+        </div>
+      </div>
 
       {filteredInterviews.length === 0 ? (
         <div style={{ textAlign: "center", padding: "60px 24px", background: T.surface, borderRadius: 16, border: `1.5px dashed ${T.border}`, color: T.inkFaint, fontSize: 14 }}>
