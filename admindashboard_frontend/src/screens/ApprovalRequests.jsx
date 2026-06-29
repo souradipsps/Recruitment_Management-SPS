@@ -17,7 +17,7 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const scrollRef = useRef(null);
   const [comment, setComment] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("Pending");
   const [search, setSearch] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
 
