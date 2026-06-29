@@ -9,7 +9,12 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
       icon: "💼",
       desc: "Publish vacancies, evaluate applications, coordinate panel interviews, and manage onboarding for new academic and administrative staff.",
       status: "active",
-      badge: "Active Workspace",
+      badge: "ACTIVE WORKSPACE",
+      badgeBg: T.primary,
+      badgeColor: "#ffffff",
+      iconBg: "#fae8ff",
+      titleColor: T.primary,
+      linkColor: T.primary,
     },
     {
       id: "Academics",
@@ -17,7 +22,12 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
       icon: "📚",
       desc: "Configure syllabus frameworks, manage classroom timetables, track progression, and generate student gradebooks.",
       status: "locked",
-      badge: "Academics Desk",
+      badge: "ACADEMICS DESK",
+      badgeBg: "#f3e8ff",
+      badgeColor: "#6b21a8",
+      iconBg: "#ede9fe",
+      titleColor: "#1e3a8a",
+      linkColor: "#1e3a8a",
     },
     {
       id: "Students",
@@ -25,7 +35,12 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
       icon: "👥",
       desc: "Track student admissions, coordinate classroom allocations, log daily attendance, and manage guardian registries.",
       status: "locked",
-      badge: "Registry Desk",
+      badge: "REGISTRY DESK",
+      badgeBg: "#eff6ff",
+      badgeColor: "#1d4ed8",
+      iconBg: "#dbeafe",
+      titleColor: "#1e3a8a",
+      linkColor: "#1e3a8a",
     },
     {
       id: "Finance",
@@ -33,7 +48,12 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
       icon: "💳",
       desc: "Administer student fee collections, process payroll allocations, track receipts, and audit departmental budgets.",
       status: "locked",
-      badge: "Finance Desk",
+      badge: "FINANCE DESK",
+      badgeBg: "#f0fdf4",
+      badgeColor: "#15803d",
+      iconBg: "#dcfce7",
+      titleColor: "#14532d",
+      linkColor: "#14532d",
     },
   ];
 
@@ -44,7 +64,7 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        backgroundImage: "linear-gradient(rgba(92, 12, 33, 0.94) 0%, rgba(48, 6, 17, 0.97) 100%), url('/school_campus.jpg')",
+        backgroundImage: "linear-gradient(rgba(60, 5, 20, 0.88) 0%, rgba(30, 3, 10, 0.94) 100%), url('/school_campus.jpg')",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
@@ -62,11 +82,11 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
         .mis-card-active:hover {
           transform: translateY(-8px) scale(1.03) !important;
           border-color: ${T.accent} !important;
-          box-shadow: 0 20px 40px rgba(114, 16, 42, 0.25), 0 10px 20px rgba(201, 168, 76, 0.15) !important;
+          box-shadow: 0 20px 40px rgba(114, 16, 42, 0.25), 0 10px 20px rgba(201, 168, 76, 0.2) !important;
         }
         .mis-card-locked:hover {
-          transform: translateY(-2px) !important;
-          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important;
+          transform: translateY(-4px) scale(1.01) !important;
+          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12) !important;
         }
         
         @keyframes float-blob-1 {
@@ -113,7 +133,7 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
 
       {/* Content wrapper */}
       <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", minHeight: "100%", width: "100%", flex: 1 }}>
-        {/* Top bar */}
+        {/* Top bar (rounded panel) */}
         <div
           style={{
             display: "flex",
@@ -122,42 +142,95 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
             width: "100%",
             maxWidth: 1100,
             margin: "0 auto 40px",
+            background: "linear-gradient(135deg, #4c0519 0%, #31040f 100%)",
+            border: "1.5px solid rgba(201, 168, 76, 0.15)",
+            borderRadius: 20,
+            padding: "16px 24px",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.25)"
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <img
-              src="/images-removebg-preview.png"
-              alt="South Point School Logo"
-              style={{ height: 48, width: "auto" }}
-            />
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{
+              width: 52,
+              height: 52,
+              borderRadius: "50%",
+              background: "rgba(255,255,255,0.08)",
+              border: "1px solid rgba(255,255,255,0.15)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden"
+            }}>
+              <img
+                src="/images-removebg-preview.png"
+                alt="South Point School Logo"
+                style={{ height: 44, width: "auto", objectFit: "contain" }}
+              />
+            </div>
             <div>
-              <div style={{ fontSize: 16, fontWeight: 900, color: T.accent, fontFamily: font.heading }}>South Point School</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255, 255, 255, 0.6)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Management Information System (MIS) Portal</div>
+              <div style={{ fontSize: 22, fontWeight: "bold", color: T.accent, fontFamily: "Georgia, serif", letterSpacing: "0.01em" }}>
+                South Point School
+              </div>
+              <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255, 255, 255, 0.75)", textTransform: "uppercase", letterSpacing: "0.12em", marginTop: 2 }}>
+                Management Information System (MIS) Portal
+              </div>
             </div>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ textAlign: "right", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{currentUser?.name || "User"}</div>
-              <div style={{ fontSize: 11, color: "rgba(255, 255, 255, 0.6)" }}>{currentUser?.email || "user@school.edu"}</div>
+            <div style={{ color: "#fff", fontSize: 13, fontWeight: 500 }}>
+              {currentUser?.email || "f@gmail.com"}
             </div>
+            
+            <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.2)" }} />
+
+            {/* Notification Bell */}
+            <div style={{ position: "relative", cursor: "pointer", display: "flex", alignItems: "center" }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              </svg>
+              <span style={{
+                position: "absolute",
+                top: -2,
+                right: -2,
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: T.accent,
+                border: "1.5px solid #4c0519"
+              }} />
+            </div>
+
+            <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.2)" }} />
+
+            {/* Log Out Button */}
             <button
               onClick={onLogout}
               className="btn-hover"
               style={{
-                background: "rgba(255, 255, 255, 0.08)",
-                border: "1.5px solid rgba(255, 255, 255, 0.25)",
-                borderRadius: radius.md,
-                padding: "6px 14px",
+                background: "linear-gradient(135deg, #72102a 0%, #5c0c21 100%)",
+                border: "1px solid rgba(255, 255, 255, 0.2)",
+                borderRadius: 12,
+                padding: "8px 18px",
                 cursor: "pointer",
                 color: "#fff",
                 fontWeight: 700,
                 fontSize: 12,
                 fontFamily: font.body,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                 transition: "all 0.2s",
               }}
             >
-              Log Out
+              <span>Log Out</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
             </button>
           </div>
         </div>
@@ -175,22 +248,35 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
             margin: "0 auto",
           }}
         >
-          {/* Simple and clean header with text updates */}
-          <div style={{ textAlign: "center", marginBottom: 36 }} className="animate-fade-in-up">
+          {/* Section title and divider */}
+          <div style={{ textAlign: "center", marginBottom: 48 }} className="animate-fade-in-up">
             <h2
               style={{
-                fontSize: 28,
-                fontWeight: font.black,
-                color: T.accent,
+                fontSize: 36,
+                fontWeight: 900,
+                color: "#ffffff",
                 margin: 0,
-                fontFamily: font.heading,
-                letterSpacing: "-0.02em",
+                fontFamily: "Georgia, serif",
+                letterSpacing: "-0.01em",
               }}
             >
-              Management Information System
+              Management <span style={{ color: T.accent }}>Information System</span>
             </h2>
-            <p style={{ fontSize: 14, color: "rgba(255, 255, 255, 0.8)", marginTop: 8, maxWidth: 600, lineHeight: 1.5, margin: "8px auto 0" }}>
-              Welcome to the South Point School administrative console. Select an authorized department workspace below to manage institutional operations.
+            
+            {/* Shield divider */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, margin: "16px 0" }}>
+              <div style={{ width: 60, height: 1, background: `linear-gradient(to left, ${T.accent}, transparent)` }} />
+              <svg width="18" height="18" viewBox="0 0 24 24" fill={T.accent} stroke={T.accent} strokeWidth="1">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+              <div style={{ width: 60, height: 1, background: `linear-gradient(to right, ${T.accent}, transparent)` }} />
+            </div>
+            
+            <p style={{ fontSize: 14, color: "rgba(255, 255, 255, 0.85)", marginTop: 8, maxWidth: 600, lineHeight: 1.6, margin: "8px auto 0", fontWeight: 500 }}>
+              Welcome to the South Point School administrative console.
+            </p>
+            <p style={{ fontSize: 14, color: "rgba(255, 255, 255, 0.85)", marginTop: 4, maxWidth: 600, lineHeight: 1.6, margin: "0 auto", fontWeight: 500 }}>
+              Select an authorized department workspace below to manage institutional operations.
             </p>
           </div>
 
@@ -198,7 +284,7 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-              gap: 20,
+              gap: 24,
               width: "100%",
             }}
           >
@@ -210,80 +296,116 @@ export default function ModuleSelector({ currentUser, onSelectModule, onLogout }
                   onClick={() => isActive && onSelectModule(m.id)}
                   className={`mis-card ${isActive ? "mis-card-active card-hover" : "mis-card-locked"}`}
                   style={{
-                    background: isActive ? T.surface : T.primaryPale,
-                    borderRadius: 20,
-                    border: isActive ? `2px solid ${T.accent}88` : `1.5px solid ${T.border}`,
-                    padding: 28,
+                    background: "#FFFFFF",
+                    borderRadius: 24,
+                    border: isActive ? `2.5px solid ${T.accent}` : `1.5px solid rgba(0,0,0,0.08)`,
+                    padding: "32px 24px",
                     cursor: isActive ? "pointer" : "default",
                     display: "flex",
                     flexDirection: "column",
+                    alignItems: "center",
                     justifyContent: "space-between",
-                    boxShadow: isActive ? shadow.primary : shadow.sm,
-                    minHeight: 220,
-                    opacity: isActive ? 1 : 0.75,
+                    boxShadow: isActive 
+                      ? `0 20px 40px rgba(114, 16, 42, 0.25), 0 10px 20px rgba(201, 168, 76, 0.2), 0 0 0 1px ${T.accent}` 
+                      : shadow.sm,
+                    minHeight: 340,
                     animation: "fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both",
                     animationDelay: `${idx * 0.06}s`,
+                    position: "relative",
+                    overflow: "hidden"
                   }}
                 >
-                  <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-                      <span style={{ fontSize: 32 }}>{m.icon}</span>
-                      <span
-                        style={{
-                          fontSize: 9.5,
-                          fontWeight: 800,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.06em",
-                          borderRadius: 99,
-                          padding: "4px 10px",
-                          background: isActive ? T.primaryLight : "rgba(114, 16, 42, 0.05)",
-                          color: isActive ? T.primary : T.inkLight,
-                          border: isActive ? `1px solid ${T.primary}33` : `1px solid ${T.border}`,
-                        }}
-                      >
-                        {m.badge}
-                      </span>
+                  {/* Subtle Wave decoration at bottom */}
+                  <div style={{
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "40px",
+                    backgroundImage: `radial-gradient(ellipse at 50% 100%, ${m.iconBg}33 0%, transparent 70%)`,
+                    pointerEvents: "none"
+                  }} />
+
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
+                    {/* Badge */}
+                    <span
+                      style={{
+                        fontSize: 9.5,
+                        fontWeight: 800,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.06em",
+                        borderRadius: 99,
+                        padding: "6px 14px",
+                        background: m.badgeBg,
+                        color: m.badgeColor,
+                        marginBottom: 24,
+                        textAlign: "center"
+                      }}
+                    >
+                      {m.badge}
+                    </span>
+
+                    {/* Circular Icon Wrapper */}
+                    <div
+                      style={{
+                        width: 72,
+                        height: 72,
+                        borderRadius: "50%",
+                        background: m.iconBg,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 32,
+                        marginBottom: 24,
+                        boxShadow: `inset 0 2px 4px rgba(0,0,0,0.06)`
+                      }}
+                    >
+                      {m.icon}
                     </div>
 
+                    {/* Title */}
                     <h3
                       style={{
-                        fontSize: 17,
-                        fontWeight: 800,
-                        color: isActive ? T.ink : T.inkMid,
-                        margin: "0 0 8px 0",
-                        fontFamily: font.heading,
+                        fontSize: 18,
+                        fontWeight: "bold",
+                        color: m.titleColor,
+                        margin: "0 0 12px 0",
+                        fontFamily: "Georgia, serif",
+                        textAlign: "center"
                       }}
                     >
                       {m.title}
                     </h3>
+                    
+                    {/* Description */}
                     <p
                       style={{
                         fontSize: 12.5,
-                        lineHeight: 1.5,
-                        color: isActive ? T.inkLight : T.inkFaint,
+                        lineHeight: 1.6,
+                        color: "#4b5563",
                         margin: 0,
+                        textAlign: "center"
                       }}
                     >
                       {m.desc}
                     </p>
                   </div>
 
-                  {isActive && (
-                    <div
-                      style={{
-                        marginTop: 16,
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: T.primary,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 4,
-                        transition: "all 0.25s ease",
-                      }}
-                    >
-                      <span>Enter Module ➔</span>
-                    </div>
-                  )}
+                  {/* Enter Module Link */}
+                  <div
+                    style={{
+                      marginTop: 24,
+                      fontSize: 12.5,
+                      fontWeight: 800,
+                      color: m.linkColor,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                      transition: "all 0.25s ease",
+                    }}
+                  >
+                    <span>Enter Module ➔</span>
+                  </div>
                 </div>
               );
             })}
