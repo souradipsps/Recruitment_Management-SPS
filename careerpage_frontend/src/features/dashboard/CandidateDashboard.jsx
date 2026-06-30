@@ -26,6 +26,11 @@ import { ProfilePicturePopup } from "./components/popup/ProfilePicturePopup";
 import { JobDescriptionDrawer } from "./components/popup/JobDescriptionDrawer";
 import { UnsavedChangesModal } from "./components/popup/UnsavedChangesModal";
 
+// Tracks whether the dashboard has been loaded at least once since the last
+// page load / browser refresh. Module-level so it survives component re-mounts
+// (navigating away and back) but resets when the JS bundle is re-evaluated.
+let dashboardLoadedOnce = false;
+
 export function CandidateDashboard({
   onClose,
   userName = "Candidate",
@@ -45,12 +50,14 @@ export function CandidateDashboard({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedJobDesc, setSelectedJobDesc] = useState(null);
   const [pendingNavigation, setPendingNavigation] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!dashboardLoadedOnce);
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   useEffect(() => {
-    setLoading(true);
+    if (dashboardLoadedOnce) return;
     const timer = setTimeout(() => {
       setLoading(false);
+      dashboardLoadedOnce = true;
     }, 800);
     return () => clearTimeout(timer);
   }, []);
@@ -214,20 +221,20 @@ export function CandidateDashboard({
     prevTabRef.current = activeTab;
   }, [activeTab]);
 
-  // Handles auto scrolling to specific sections in Profile
+  // Handles auto scrolling to specific sections in Profile — fires after loading completes
   useEffect(() => {
-    if (initialTab === "resume") {
-      setTimeout(() => {
-        if (initialSection === "personal") {
-          personalSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        } else if (initialSection === "professional") {
-          professionalSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        } else {
-          resumeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      }, 300);
-    }
-  }, [initialTab, initialSection]);
+    if (loading || activeTab !== "resume" || !initialSection) return;
+    const timer = setTimeout(() => {
+      if (initialSection === "personal") {
+        personalSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else if (initialSection === "professional") {
+        professionalSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else if (initialSection === "resume") {
+        resumeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   // Keep refs in sync for popstate navigation logic
   const activeTabRef = useRef(activeTab);
@@ -236,6 +243,99 @@ export function CandidateDashboard({
   const unsavedChangesRef = useRef(false);
   const onCloseRef = useRef(onClose);
   const cameFromApplyRef = useRef(cameFromApply);
+
+  // Swipe-back gesture refs (mobile)
+  const swipeTouchStartX = useRef(null);
+  const swipeTouchStartY = useRef(null);
+  const swipeTouchStartTime = useRef(null);
+  // Guards against the browser firing popstate for the same edge-swipe that
+  // already triggered handleSwipeTouchEnd (double-back race condition).
+  // NOT cleared on touchstart — iOS fires extra touchstart events during its own
+  // back animation which would prematurely clear the flag.
+  const swipeJustHandledRef = useRef(false);
+  const swipeFlagTimerRef = useRef(null);
+
+  const handleSwipeTouchStart = (e) => {
+    swipeTouchStartX.current = e.touches[0].clientX;
+    swipeTouchStartY.current = e.touches[0].clientY;
+    swipeTouchStartTime.current = Date.now();
+  };
+
+  const handleSwipeTouchCancel = () => {
+    swipeTouchStartX.current = null;
+    swipeTouchStartY.current = null;
+    swipeTouchStartTime.current = null;
+  };
+
+  const handleSwipeTouchEnd = (e) => {
+    const startX = swipeTouchStartX.current;
+    const startY = swipeTouchStartY.current;
+    const startTime = swipeTouchStartTime.current;
+    swipeTouchStartX.current = null;
+    swipeTouchStartY.current = null;
+    swipeTouchStartTime.current = null;
+
+    if (startX === null) return;
+    const deltaX = e.changedTouches[0].clientX - startX;
+    const deltaY = Math.abs(e.changedTouches[0].clientY - startY);
+    const elapsed = Date.now() - startTime;
+
+    // iOS owns 0-~20px for its native back gesture (fires popstate, not touchend).
+    // Cover 0-80px so the remaining ~20-80px zone is reliably reachable on all devices.
+    // Require ≥60px rightward travel and more horizontal than vertical.
+    if (startX > 80 || deltaX < 60 || deltaY > deltaX * 0.8) return;
+
+    // Velocity > 0.5 px/ms (500 px/s) = hard swipe → exit dashboard immediately.
+    // This eliminates the flicker: a fast swipe never mutates tab state before
+    // popstate can see it with a stale "dashboard" value and close the portal.
+    const isHardSwipe = elapsed > 0 && (deltaX / elapsed) > 0.5;
+
+    const currentTab = activeTabRef.current;
+    const currentJobDesc = selectedJobDescRef.current;
+    const currentSidebarOpen = sidebarOpenRef.current;
+
+    if (currentJobDesc) {
+      setSelectedJobDesc(null);
+    } else if (currentSidebarOpen) {
+      setSidebarOpen(false);
+    } else if (isHardSwipe) {
+      // Hard swipe: exit dashboard immediately from any section
+      if (unsavedChangesRef.current) {
+        setPendingNavigation({ type: "close", bypassApplyModal: true });
+      } else {
+        onCloseRef.current(true);
+      }
+    } else {
+      // Soft swipe: one step back
+      if (cameFromApplyRef.current) {
+        if (currentTab !== "resume") {
+          setActiveTab("resume");
+        } else if (unsavedChangesRef.current) {
+          setPendingNavigation({ type: "close", bypassApplyModal: false });
+        } else {
+          onCloseRef.current(false);
+        }
+      } else {
+        if (currentTab !== "dashboard") {
+          if (currentTab === "resume" && unsavedChangesRef.current) {
+            setPendingNavigation({ type: "tab", targetId: "dashboard" });
+          } else {
+            setActiveTab("dashboard");
+          }
+        } else {
+          onCloseRef.current(true);
+        }
+      }
+    }
+
+    // Suppress the popstate that some browsers fire for the same edge-swipe.
+    // Cleared immediately by handlePopState, or by backup timer if popstate never fires.
+    swipeJustHandledRef.current = true;
+    clearTimeout(swipeFlagTimerRef.current);
+    swipeFlagTimerRef.current = setTimeout(() => {
+      swipeJustHandledRef.current = false;
+    }, 200);
+  };
 
   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
   useEffect(() => { selectedJobDescRef.current = selectedJobDesc; }, [selectedJobDesc]);
@@ -253,6 +353,14 @@ export function CandidateDashboard({
     window.history.pushState({ portal: "candidate-dashboard" }, "");
 
     const handlePopState = () => {
+      // Swipe gesture already handled this navigation — re-add state and bail
+      if (swipeJustHandledRef.current) {
+        swipeJustHandledRef.current = false;
+        clearTimeout(swipeFlagTimerRef.current);
+        window.history.pushState({ portal: "candidate-dashboard" }, "");
+        return;
+      }
+
       const currentTab = activeTabRef.current;
       const currentJobDesc = selectedJobDescRef.current;
       const currentSidebarOpen = sidebarOpenRef.current;
@@ -687,7 +795,10 @@ export function CandidateDashboard({
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      exit={{ opacity: 0, transition: { duration: 0 } }}
+      onTouchStart={handleSwipeTouchStart}
+      onTouchEnd={handleSwipeTouchEnd}
+      onTouchCancel={handleSwipeTouchCancel}
       style={{
         position: "fixed",
         inset: 0,
