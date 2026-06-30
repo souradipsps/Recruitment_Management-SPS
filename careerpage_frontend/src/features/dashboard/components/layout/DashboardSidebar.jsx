@@ -42,17 +42,16 @@ export function DashboardSidebar({
 
   return (
     <aside
-      className={`ds-sidebar fixed left-0 top-[76px] bottom-0 z-[999] shadow-lg flex transition-transform duration-300 ease-in-out ${
-        sidebarOpen ? "translate-x-0" : "-translate-x-full"
-      } md:relative md:top-0 md:shadow-none md:flex md:translate-x-0`}
+      className={`ds-sidebar fixed left-0 top-[76px] bottom-0 z-[999] shadow-lg flex transition-transform duration-300 ease-in-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } md:relative md:top-0 md:shadow-none md:flex md:translate-x-0`}
     >
       {loading ? (
         <>
           {/* User avatar skeleton */}
           <div className="ds-avatar-section">
-            <div className="skeleton animate-pulse" style={{ width: 64, height: 64, borderRadius: "50%", marginBottom: 12 }} />
-            <div className="skeleton animate-pulse" style={{ width: 100, height: 16, marginBottom: 6 }} />
-            <div className="skeleton animate-pulse" style={{ width: 80, height: 12 }} />
+            <div className="skeleton animate-pulse" style={{ width: 64, height: 64, borderRadius: "50%", marginBottom: 12, marginLeft: "auto", marginRight: "auto" }} />
+            <div className="skeleton animate-pulse" style={{ width: 100, height: 16, marginBottom: 6, marginLeft: "auto", marginRight: "auto" }} />
+            <div className="skeleton animate-pulse" style={{ width: 80, height: 12, marginLeft: "auto", marginRight: "auto" }} />
           </div>
 
           {/* Nav skeleton */}
@@ -111,9 +110,8 @@ export function DashboardSidebar({
               <button
                 key={id}
                 onClick={() => handleTabClick(id)}
-                className={`ds-nav-btn ${
-                  activeTab === id ? "ds-nav-btn--active" : "ds-nav-btn--inactive"
-                }`}
+                className={`ds-nav-btn ${activeTab === id ? "ds-nav-btn--active" : "ds-nav-btn--inactive"
+                  }`}
               >
                 <Icon size={16} />
                 {label}

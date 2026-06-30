@@ -511,11 +511,10 @@ export function CandidateDashboard({
                 </div>
                 <div class="meta-item">
                   <div class="meta-label">Professional Qualification</div>
-                  <div class="meta-value">${
-                    profile.professionalQualification === "Other"
-                      ? profile.professionalQualificationOther || "Other Qualification"
-                      : profile.professionalQualification || "None"
-                  }</div>
+                  <div class="meta-value">${profile.professionalQualification === "Other"
+        ? profile.professionalQualificationOther || "Other Qualification"
+        : profile.professionalQualification || "None"
+      }</div>
                 </div>
                 <div class="meta-item">
                   <div class="meta-label">Years of Experience</div>
@@ -527,66 +526,58 @@ export function CandidateDashboard({
                 </div>
                 <div class="meta-item">
                   <div class="meta-label">Extracurricular Activities</div>
-                  <div class="meta-value">${
-                    profile.extracurricular === "Other"
-                      ? profile.extracurricularOther || "Other Activities"
-                      : profile.extracurricular || "None"
-                  }</div>
+                  <div class="meta-value">${profile.extracurricular === "Other"
+        ? profile.extracurricularOther || "Other Activities"
+        : profile.extracurricular || "None"
+      }</div>
                 </div>
               </div>
             </div>
             <div class="section">
               <div class="section-title">Interested Roles</div>
               <div>
-                ${
-                  profile.roles && profile.roles.length > 0
-                    ? profile.roles.map((role) => `<span class="tag">${role}</span>`).join("")
-                    : '<span style="color: #9ca3af; font-style: italic; font-size: 14px;">No roles selected</span>'
-                }
+                ${profile.roles && profile.roles.length > 0
+        ? profile.roles.map((role) => `<span class="tag">${role}</span>`).join("")
+        : '<span style="color: #9ca3af; font-style: italic; font-size: 14px;">No roles selected</span>'
+      }
               </div>
             </div>
             <div class="section">
               <div class="section-title">Skills</div>
               <div>
-                ${
-                  profile.skills && profile.skills.length > 0
-                    ? profile.skills.map((skill) => `<span class="tag">${skill}</span>`).join("")
-                    : '<span style="color: #9ca3af; font-style: italic; font-size: 14px;">No skills listed</span>'
-                }
+                ${profile.skills && profile.skills.length > 0
+        ? profile.skills.map((skill) => `<span class="tag">${skill}</span>`).join("")
+        : '<span style="color: #9ca3af; font-style: italic; font-size: 14px;">No skills listed</span>'
+      }
               </div>
             </div>
-            ${
-              profile.linkedin || profile.portfolio
-                ? `
+            ${profile.linkedin || profile.portfolio
+        ? `
             <div class="section">
               <div class="section-title">Professional Links</div>
               <div class="grid-2">
-                ${
-                  profile.linkedin
-                    ? `
+                ${profile.linkedin
+          ? `
                 <div class="meta-item">
                   <div class="meta-label">LinkedIn Profile</div>
-                  <div class="meta-value"><a href="${
-                    profile.linkedin.startsWith("http") ? profile.linkedin : "https://" + profile.linkedin
-                  }" target="_blank" style="color: #72102a; text-decoration: none; font-weight: 600;">${profile.linkedin} ↗</a></div>
+                  <div class="meta-value"><a href="${profile.linkedin.startsWith("http") ? profile.linkedin : "https://" + profile.linkedin
+          }" target="_blank" style="color: #72102a; text-decoration: none; font-weight: 600;">${profile.linkedin} ↗</a></div>
                 </div>`
-                    : ""
-                }
-                ${
-                  profile.portfolio
-                    ? `
+          : ""
+        }
+                ${profile.portfolio
+          ? `
                 <div class="meta-item">
                   <div class="meta-label">Portfolio URL</div>
-                  <div class="meta-value"><a href="${
-                    profile.portfolio.startsWith("http") ? profile.portfolio : "https://" + profile.portfolio
-                  }" target="_blank" style="color: #72102a; text-decoration: none; font-weight: 600;">${profile.portfolio} ↗</a></div>
+                  <div class="meta-value"><a href="${profile.portfolio.startsWith("http") ? profile.portfolio : "https://" + profile.portfolio
+          }" target="_blank" style="color: #72102a; text-decoration: none; font-weight: 600;">${profile.portfolio} ↗</a></div>
                 </div>`
-                    : ""
-                }
+          : ""
+        }
               </div>
             </div>`
-                : ""
-            }
+        : ""
+      }
             <div class="alert-banner">
               This is a generated mockup preview representing the uploaded file: <strong>${resumeFile}</strong>.
             </div>
@@ -909,8 +900,8 @@ export function CandidateDashboard({
                 <div className="ov-stats-grid">
                   {Array.from({ length: 4 }).map((_, idx) => (
                     <div key={idx} className="ov-stat-card">
-                      <div className="skeleton animate-pulse" style={{ width: 40, height: 32, marginBottom: 8 }} />
-                      <div className="skeleton animate-pulse" style={{ width: 80, height: 16 }} />
+                      <div className="skeleton animate-pulse" style={{ width: 40, height: 32, marginBottom: 8, marginLeft: "auto", marginRight: "auto" }} />
+                      <div className="skeleton animate-pulse" style={{ width: 80, height: 16, marginLeft: "auto", marginRight: "auto" }} />
                     </div>
                   ))}
                 </div>
@@ -919,7 +910,7 @@ export function CandidateDashboard({
                     <div className="skeleton animate-pulse" style={{ width: 150, height: 24 }} />
                   </div>
                   {Array.from({ length: 2 }).map((_, idx) => (
-                    <div key={idx} style={{ display: "flex", justifyContent: "space-between", padding: "16px 0", borderBottom: "1px solid #e5e7eb" }}>
+                    <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 0", borderBottom: "1px solid #e5e7eb" }}>
                       <div>
                         <div className="skeleton animate-pulse" style={{ width: 180, height: 18, marginBottom: 6 }} />
                         <div className="skeleton animate-pulse" style={{ width: 120, height: 14 }} />

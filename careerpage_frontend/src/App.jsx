@@ -16,6 +16,15 @@ import { CandidateDashboard } from "./features/dashboard/CandidateDashboard";
 export default function App() {
   useKeepAwake();
 
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setInitialLoading(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     if ("scrollRestoration" in window.history) {
       window.history.scrollRestoration = "manual";
@@ -97,6 +106,15 @@ export default function App() {
     setShowDashboard(true);
   };
 
+  const handleLogout = () => {
+    setLoggedInUser("");
+    setShowDashboard(false);
+    setCameFromApply(false);
+    setCameFromSection(undefined);
+    setInitialLoading(true);
+    setTimeout(() => setInitialLoading(false), 1500);
+  };
+
   const mergedProfileData = useMemo(() => {
     if (!savedProfileData && !applicationDraft) return null;
     return {
@@ -137,15 +155,17 @@ export default function App() {
 
   return (
     <>
-      <CareerPage
-        loggedInUser={loggedInUser}
-        onLogin={() => openModal("login")}
-        onSignup={handleSignup}
-        onOpenDashboard={handleOpenDashboard}
-        onLogout={() => setLoggedInUser("")}
-        onApplyJob={handleApplyJob}
-        appliedJobIds={appliedJobIds}
-      />
+      {!initialLoading && (
+        <CareerPage
+          loggedInUser={loggedInUser}
+          onLogin={() => openModal("login")}
+          onSignup={handleSignup}
+          onOpenDashboard={handleOpenDashboard}
+          onLogout={handleLogout}
+          onApplyJob={handleApplyJob}
+          appliedJobIds={appliedJobIds}
+        />
+      )}
 
       <AnimatePresence>
         {deferredView === "login" && (
@@ -159,12 +179,16 @@ export default function App() {
               setLoggedInUser(name);
               setShowLogin(false);
               setShowDashboard(false);
+              setInitialLoading(true);
+              setTimeout(() => setInitialLoading(false), 1500);
             }}
             onSignupSuccess={(data) => {
               setLoggedInUser(data.name);
               setSignupData(data);
               setApplyAfterSignup(false);
               if (applyAfterSignup) setShowApply(true);
+              setInitialLoading(true);
+              setTimeout(() => setInitialLoading(false), 1500);
             }}
           />
         )}
@@ -184,12 +208,7 @@ export default function App() {
                 setCameFromSection(undefined);
               }
             }}
-            onLogout={() => {
-              setLoggedInUser("");
-              setShowDashboard(false);
-              setCameFromApply(false);
-              setCameFromSection(undefined);
-            }}
+            onLogout={handleLogout}
             userName={loggedInUser}
             signupData={signupData}
             appliedJobIds={appliedJobIds}
@@ -302,7 +321,7 @@ export default function App() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {isTransitioning && <Loader />}
+        {initialLoading && <Loader />}
       </AnimatePresence>
 
       <Toaster richColors position="top-right" />
