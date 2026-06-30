@@ -3,11 +3,11 @@ import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { LOADER_URL } from "../../lib/constants";
 
 // Full-screen loading overlay shown during page/view transitions. The dots
-// animation is a Lottie animation loaded from LottieFiles.
+// animation is a Lottie animation loaded locally.
 export function Loader() {
   return (
     <motion.div
-      initial={{ opacity: 0 }}
+      initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25 }}
@@ -18,9 +18,7 @@ export function Loader() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "rgba(255, 255, 255, 0.18)",
-        backdropFilter: "blur(6px)",
-        WebkitBackdropFilter: "blur(6px)",
+        background: "#ffffff",
       }}
     >
       <motion.div

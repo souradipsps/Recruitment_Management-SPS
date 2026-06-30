@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -17,6 +19,7 @@ body {
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
   }
@@ -27,5 +30,5 @@ body {
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite ease-in-out;
   border-radius: 4px;
-  display: inline-block;
+  display: block;
 }
