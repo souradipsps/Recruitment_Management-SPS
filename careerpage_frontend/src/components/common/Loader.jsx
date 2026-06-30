@@ -1,8 +1,9 @@
 import { motion } from "motion/react";
-import { LOADER_BG } from "../../lib/constants";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import { LOADER_URL } from "../../lib/constants";
 
 // Full-screen loading overlay shown during page/view transitions. The dots
-// animation is an inline SVG (see LOADER_BG) so it renders instantly.
+// animation is a Lottie animation loaded from LottieFiles.
 export function Loader() {
   return (
     <motion.div
@@ -28,14 +29,17 @@ export function Loader() {
         exit={{ scale: 0.85, opacity: 0 }}
         transition={{ delay: 0.05, duration: 0.2 }}
         style={{
-          width: 96,
-          height: 96,
-          backgroundImage: LOADER_BG,
-          backgroundSize: "contain",
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: "center",
+          width: 250,
+          height: 250,
         }}
-      />
+      >
+        <DotLottieReact
+          src={LOADER_URL}
+          loop
+          autoplay
+          style={{ width: '100%', height: '100%' }}
+        />
+      </motion.div>
     </motion.div>
   );
 }
