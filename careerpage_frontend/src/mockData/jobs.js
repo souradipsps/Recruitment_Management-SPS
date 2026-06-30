@@ -28,6 +28,7 @@ export const jobs = [
     deadline: "July 15, 2026",
     description:
       "We are looking for an experienced Mathematics teacher to join our secondary school team. The ideal candidate should be passionate about teaching and have a strong command of the subject.",
+    skills: ["Strong Communication", "Classroom Management", "Team Collaboration"],
     qualifications: [
       "Master's degree in Mathematics or related field",
       "B.Ed or equivalent teaching certification",
@@ -44,6 +45,7 @@ export const jobs = [
     deadline: "July 20, 2026",
     description:
       "Teach English literature and language skills to secondary students, foster critical thinking and expressive writing across all levels.",
+    skills: ["Strong Communication", "Classroom Management", "Team Collaboration"],
     qualifications: [
       "Degree in English Literature or Linguistics",
       "B.Ed or equivalent teaching certification",
@@ -60,6 +62,7 @@ export const jobs = [
     deadline: "July 18, 2026",
     description:
       "Deliver engaging physics lessons from foundational to advanced levels, guide students through experiments and STEM competitions.",
+    skills: ["Strong Communication", "Classroom Management", "Team Collaboration"],
     qualifications: [
       "M.Sc in Physics or related field",
       "B.Ed or equivalent teaching certification",
@@ -76,6 +79,7 @@ export const jobs = [
     deadline: "July 25, 2026",
     description:
       "Support students' emotional and academic well-being, coordinate with parents and teachers to nurture a positive school environment.",
+    skills: ["Strong Communication", "Classroom Management", "Team Collaboration"],
     qualifications: [
       "Degree in Psychology or Counselling",
       "Certification in school counselling",
@@ -92,6 +96,7 @@ export const jobs = [
     deadline: "August 1, 2026",
     description:
       "Teach programming, computational thinking, and digital literacy; lead the school's coding clubs and technology initiatives.",
+    skills: ["Strong Communication", "Classroom Management", "Team Collaboration"],
     qualifications: [
       "Degree in Computer Science or IT",
       "B.Ed or equivalent teaching certification",
@@ -108,6 +113,7 @@ export const jobs = [
     deadline: "August 5, 2026",
     description:
       "Develop and implement physical education programs, coach school sports teams, and promote overall student wellness.",
+    skills: ["Strong Communication", "Classroom Management", "Team Collaboration"],
     qualifications: [
       "Degree in Physical Education or Sports Science",
       "Coaching certification preferred",
@@ -124,6 +130,7 @@ export const jobs = [
     deadline: "August 10, 2026",
     description:
       "Oversee curriculum planning and coordination across departments, liaise between faculty and school leadership to ensure academic quality.",
+    skills: ["Strong Communication", "Classroom Management", "Team Collaboration"],
     qualifications: [
       "Postgraduate degree in Education",
       "Minimum 5 years teaching or admin experience",
@@ -140,6 +147,7 @@ export const jobs = [
     deadline: "August 12, 2026",
     description:
       "Manage day-to-day office operations, maintain school records, coordinate communications between staff, parents, and management.",
+    skills: ["Strong Communication", "Classroom Management", "Team Collaboration"],
     qualifications: [
       "Degree in Business Administration or related",
       "Proficiency in MS Office and school ERP",

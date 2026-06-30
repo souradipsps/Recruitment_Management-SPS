@@ -50,12 +50,25 @@ export function JobCard({ job, applied, onApply, showOverlay, onSeeMore }) {
 
       {/* ── Qualifications ──────────────────────────────────────────────── */}
       <div className="px-5 pb-4">
-        <div className="jc-qual-heading mb-2">Key Qualifications:</div>
+        <div className="jc-qual-heading mb-2">Educational Qualifications:</div>
         <ul className="flex flex-col gap-1">
           {job.qualifications.map((q) => (
             <li key={q} className="flex items-start gap-2">
               <span className="jc-qual-bullet">•</span>
               <span className="jc-qual-text">{q}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* ── Skills ──────────────────────────────────────────────────────── */}
+      <div className="px-5 pb-4">
+        <div className="jc-qual-heading mb-2">Required Skills & Strengths:</div>
+        <ul className="flex flex-col gap-1">
+          {(job.skills || ["Strong Communication", "Classroom Management", "Team Collaboration"]).map((s) => (
+            <li key={s} className="flex items-start gap-2">
+              <span className="jc-qual-bullet">•</span>
+              <span className="jc-qual-text">{s}</span>
             </li>
           ))}
         </ul>
