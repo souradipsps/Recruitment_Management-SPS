@@ -1,6 +1,6 @@
 import { toast } from "sonner";
-import { MapPin, Clock, Briefcase } from "lucide-react";
-import { experienceById } from "../../../mockData/jobs";
+import { MapPin, IndianRupee, Briefcase } from "lucide-react";
+import { experienceById, salaryRangeById } from "../../../mockData/jobs";
 import "./css/JobCard.css";
 
 // A single opportunity card. `showOverlay` renders the blurred "See More"
@@ -39,7 +39,7 @@ export function JobCard({ job, applied, onApply, showOverlay, onSeeMore }) {
           <Briefcase size={12} />{experienceById[job.id] ?? "2–5 yrs"}
         </span>
         <span className="jc-meta-item flex items-center gap-1">
-          <Clock size={12} />{job.type}
+          <IndianRupee size={12} />{salaryRangeById[job.id] ?? "30k – 50k"}
         </span>
       </div>
 
