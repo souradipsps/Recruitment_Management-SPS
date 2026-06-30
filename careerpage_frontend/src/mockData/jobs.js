@@ -162,6 +162,19 @@ export const experienceById = {
   10: "1–3 yrs",
 };
 
+export const salaryRangeById = {
+  1: "40k – 60k",
+  2: "35k – 50k",
+  3: "40k – 55k",
+  4: "30k – 45k",
+  5: "35k – 50k",
+  6: "30k – 45k",
+  7: "50k – 70k",
+  8: "25k – 40k",
+  9: "45k – 65k",
+  10: "25k – 40k",
+};
+
 export const benefits = [
   {
     icon: GraduationCap,
