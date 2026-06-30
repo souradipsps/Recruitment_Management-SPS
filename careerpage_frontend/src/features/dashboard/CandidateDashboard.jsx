@@ -45,6 +45,15 @@ export function CandidateDashboard({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedJobDesc, setSelectedJobDesc] = useState(null);
   const [pendingNavigation, setPendingNavigation] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Profile data states
   const [profile, setProfile] = useState({
@@ -880,6 +889,7 @@ export function CandidateDashboard({
           setPendingNavigation={setPendingNavigation}
           setShowPhotoPopup={setShowPhotoPopup}
           onLogout={onLogout}
+          loading={loading}
         />
 
         {/* Main Content Area */}
@@ -891,83 +901,163 @@ export function CandidateDashboard({
           }}
           className="p-4 md:p-6"
         >
-          {/* Dashboard Tab */}
-          {activeTab === "dashboard" && (
-            <OverviewSection
-              profile={profile}
-              dynamicApplications={dynamicApplications}
-              setActiveTab={setActiveTab}
-            />
-          )}
+          {loading ? (
+            activeTab === "dashboard" ? (
+              <div>
+                <div className="skeleton animate-pulse" style={{ width: 220, height: 28, marginBottom: 8 }} />
+                <div className="skeleton animate-pulse" style={{ width: 340, height: 16, marginBottom: 24 }} />
+                <div className="ov-stats-grid">
+                  {Array.from({ length: 4 }).map((_, idx) => (
+                    <div key={idx} className="ov-stat-card">
+                      <div className="skeleton animate-pulse" style={{ width: 40, height: 32, marginBottom: 8 }} />
+                      <div className="skeleton animate-pulse" style={{ width: 80, height: 16 }} />
+                    </div>
+                  ))}
+                </div>
+                <div className="ov-recent-card" style={{ marginTop: 24 }}>
+                  <div className="ov-recent-header" style={{ marginBottom: 16 }}>
+                    <div className="skeleton animate-pulse" style={{ width: 150, height: 24 }} />
+                  </div>
+                  {Array.from({ length: 2 }).map((_, idx) => (
+                    <div key={idx} style={{ display: "flex", justifyContent: "space-between", padding: "16px 0", borderBottom: "1px solid #e5e7eb" }}>
+                      <div>
+                        <div className="skeleton animate-pulse" style={{ width: 180, height: 18, marginBottom: 6 }} />
+                        <div className="skeleton animate-pulse" style={{ width: 120, height: 14 }} />
+                      </div>
+                      <div className="skeleton animate-pulse" style={{ width: 90, height: 24, borderRadius: 12 }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : activeTab === "applications" ? (
+              <div>
+                <div className="skeleton animate-pulse" style={{ width: 200, height: 28, marginBottom: 8 }} />
+                <div className="skeleton animate-pulse" style={{ width: 280, height: 16, marginBottom: 24 }} />
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  {Array.from({ length: 3 }).map((_, idx) => (
+                    <div key={idx} style={{ background: "#fff", padding: 20, borderRadius: 12, border: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <div className="skeleton animate-pulse" style={{ width: 200, height: 18, marginBottom: 8 }} />
+                        <div className="skeleton animate-pulse" style={{ width: 140, height: 14 }} />
+                      </div>
+                      <div className="skeleton animate-pulse" style={{ width: 100, height: 32, borderRadius: 6 }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : activeTab === "resume" ? (
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "280px 1fr", gap: 24 }}>
+                {/* Left card */}
+                <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #e5e7eb", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <div className="skeleton animate-pulse" style={{ width: 96, height: 96, borderRadius: "50%", marginBottom: 16 }} />
+                  <div className="skeleton animate-pulse" style={{ width: 140, height: 20, marginBottom: 8 }} />
+                  <div className="skeleton animate-pulse" style={{ width: 100, height: 14, marginBottom: 20 }} />
+                  <div className="skeleton animate-pulse" style={{ width: "100%", height: 36, borderRadius: 6 }} />
+                </div>
+                {/* Right details */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                  <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #e5e7eb" }}>
+                    <div className="skeleton animate-pulse" style={{ width: 150, height: 22, marginBottom: 20 }} />
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                      {Array.from({ length: 4 }).map((_, idx) => (
+                        <div key={idx}>
+                          <div className="skeleton animate-pulse" style={{ width: 80, height: 12, marginBottom: 8 }} />
+                          <div className="skeleton animate-pulse" style={{ width: "100%", height: 38, borderRadius: 6 }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #e5e7eb" }}>
+                <div className="skeleton animate-pulse" style={{ width: 180, height: 24, marginBottom: 16 }} />
+                <div className="skeleton animate-pulse" style={{ width: "90%", height: 16, marginBottom: 12 }} />
+                <div className="skeleton animate-pulse" style={{ width: "80%", height: 16, marginBottom: 12 }} />
+                <div className="skeleton animate-pulse" style={{ width: "50%", height: 16 }} />
+              </div>
+            )
+          ) : (
+            <>
+              {/* Dashboard Tab */}
+              {activeTab === "dashboard" && (
+                <OverviewSection
+                  profile={profile}
+                  dynamicApplications={dynamicApplications}
+                  setActiveTab={setActiveTab}
+                />
+              )}
 
-          {/* Applications Tab */}
-          {activeTab === "applications" && (
-            <ApplicationsSection
-              dynamicApplications={dynamicApplications}
-              allJobs={allJobs}
-              setSelectedJobDesc={setSelectedJobDesc}
-            />
-          )}
+              {/* Applications Tab */}
+              {activeTab === "applications" && (
+                <ApplicationsSection
+                  dynamicApplications={dynamicApplications}
+                  allJobs={allJobs}
+                  setSelectedJobDesc={setSelectedJobDesc}
+                />
+              )}
 
-          {/* Profile & Resume Tab */}
-          {activeTab === "resume" && (
-            <ProfileSection
-              profile={profile}
-              setProfile={setProfile}
-              resumeFile={resumeFile}
-              resumeUrl={resumeUrl}
-              fileSizeError={fileSizeError}
-              handleResumeUpload={handleResumeUpload}
-              handleViewResume={handleViewResume}
-              handleSave={handleSave}
-              saved={saved}
-              personalSectionRef={personalSectionRef}
-              professionalSectionRef={professionalSectionRef}
-              resumeSectionRef={resumeSectionRef}
-            />
-          )}
+              {/* Profile & Resume Tab */}
+              {activeTab === "resume" && (
+                <ProfileSection
+                  profile={profile}
+                  setProfile={setProfile}
+                  resumeFile={resumeFile}
+                  resumeUrl={resumeUrl}
+                  fileSizeError={fileSizeError}
+                  handleResumeUpload={handleResumeUpload}
+                  handleViewResume={handleViewResume}
+                  handleSave={handleSave}
+                  saved={saved}
+                  personalSectionRef={personalSectionRef}
+                  professionalSectionRef={professionalSectionRef}
+                  resumeSectionRef={resumeSectionRef}
+                />
+              )}
 
-          {/* Notifications Tab */}
-          {activeTab === "notifications" && (
-            <NotificationsSection notifications={dashboardNotifications} />
-          )}
+              {/* Notifications Tab */}
+              {activeTab === "notifications" && (
+                <NotificationsSection notifications={dashboardNotifications} />
+              )}
 
-          {/* Upcoming Interviews Tab */}
-          {activeTab === "interviews" && <InterviewsSection />}
+              {/* Upcoming Interviews Tab */}
+              {activeTab === "interviews" && <InterviewsSection />}
 
-          {/* Onboarding Tab */}
-          {activeTab === "onboarding" && (
-            <OnboardingSection
-              offerAccepted={offerAccepted}
-              setOfferAccepted={setOfferAccepted}
-              offerRejected={offerRejected}
-              setOfferRejected={setOfferRejected}
-              showOfferConfirm={showOfferConfirm}
-              setShowOfferConfirm={setShowOfferConfirm}
-              docs={docs}
-              setDocs={setDocs}
-              docUrls={docUrls}
-              setDocUrls={setDocUrls}
-              aadharNumber={aadharNumber}
-              setAadharNumber={setAadharNumber}
-              panNumber={panNumber}
-              setPanNumber={setPanNumber}
-              pfNumber={pfNumber}
-              setPfNumber={setPfNumber}
-              esiNumber={esiNumber}
-              setEsiNumber={setEsiNumber}
-              bankAccount={bankAccount}
-              setBankAccount={setBankAccount}
-              bankIfsc={bankIfsc}
-              setBankIfsc={setBankIfsc}
-              bankName={bankName}
-              setBankName={setBankName}
-              bankHolder={bankHolder}
-              setBankHolder={setBankHolder}
-              docsSubmitted={docsSubmitted}
-              startDocCamera={startDocCamera}
-              handleSubmitDocs={handleSubmitDocs}
-            />
+              {/* Onboarding Tab */}
+              {activeTab === "onboarding" && (
+                <OnboardingSection
+                  offerAccepted={offerAccepted}
+                  setOfferAccepted={setOfferAccepted}
+                  offerRejected={offerRejected}
+                  setOfferRejected={setOfferRejected}
+                  showOfferConfirm={showOfferConfirm}
+                  setShowOfferConfirm={setShowOfferConfirm}
+                  docs={docs}
+                  setDocs={setDocs}
+                  docUrls={docUrls}
+                  setDocUrls={setDocUrls}
+                  aadharNumber={aadharNumber}
+                  setAadharNumber={setAadharNumber}
+                  panNumber={panNumber}
+                  setPanNumber={setPanNumber}
+                  pfNumber={pfNumber}
+                  setPfNumber={setPfNumber}
+                  esiNumber={esiNumber}
+                  setEsiNumber={setEsiNumber}
+                  bankAccount={bankAccount}
+                  setBankAccount={setBankAccount}
+                  bankIfsc={bankIfsc}
+                  setBankIfsc={setBankIfsc}
+                  bankName={bankName}
+                  setBankName={setBankName}
+                  bankHolder={bankHolder}
+                  setBankHolder={setBankHolder}
+                  docsSubmitted={docsSubmitted}
+                  startDocCamera={startDocCamera}
+                  handleSubmitDocs={handleSubmitDocs}
+                />
+              )}
+            </>
           )}
         </main>
       </div>
