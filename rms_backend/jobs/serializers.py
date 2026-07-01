@@ -87,7 +87,7 @@ class ApprovalActionSerializer(serializers.Serializer):
 
 
 class JobPostingSerializer(serializers.ModelSerializer):
-    application_count = serializers.ReadOnlyField()
+    application_count = serializers.SerializerMethodField()
     category          = serializers.SlugRelatedField(
         slug_field="name",
         queryset=JobCategory.objects.all(),
@@ -99,6 +99,9 @@ class JobPostingSerializer(serializers.ModelSerializer):
         model  = JobPosting
         fields = "__all__"
         read_only_fields = ["posting_id", "created_at", "updated_at"]
+
+    def get_application_count(self, obj):
+        return getattr(obj, "annotated_application_count", obj.job_applications.count())
 
     def create(self, validated_data):
         validated_data["posting_id"] = auto_id("JP", JobPosting)

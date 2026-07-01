@@ -5,7 +5,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from users.permissions import IsHRAdmin
-from notifications.models import Notification
 from .models import Panelist, Interview
 from .serializers import PanelistSerializer, InterviewSerializer, InterviewScoreSerializer
 
@@ -44,9 +43,10 @@ class InterviewViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         if interview.application:
-            Notification.objects.create(
-                recipient=interview.application.candidate,
-                type="interview_scheduled",
+            from notifications.tasks import create_notification_task
+            create_notification_task.delay(
+                recipient_id=interview.application.candidate.id,
+                notification_type="interview_scheduled",
                 title=f"Interview Update — {interview.role}",
                 message=f"Your Round {interview.round} interview status is now '{interview.status}'.",
             )

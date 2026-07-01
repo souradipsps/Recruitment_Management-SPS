@@ -33,7 +33,7 @@ class JobApplicationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
     def mine(self, request):
-        apps = JobApplication.objects.filter(candidate=request.user).select_related("posting")
+        apps = JobApplication.objects.filter(candidate=request.user).select_related("posting", "candidate")
         serializer = JobApplicationSerializer(apps, many=True, context={"request": request})
         return Response(serializer.data)
 
@@ -44,9 +44,10 @@ class JobApplicationViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         if "status" in request.data:
-            Notification.objects.create(
-                recipient=instance.candidate,
-                type="application_status",
+            from notifications.tasks import create_notification_task
+            create_notification_task.delay(
+                recipient_id=instance.candidate.id,
+                notification_type="application_status",
                 title=f"Application Update: {instance.role}",
                 message=(
                     f"Your application for {instance.role} has been updated to "
@@ -78,5 +79,5 @@ class GeneralApplicationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
     def mine(self, request):
-        apps = GeneralApplication.objects.filter(candidate=request.user)
+        apps = GeneralApplication.objects.filter(candidate=request.user).select_related("candidate")
         return Response(GeneralApplicationSerializer(apps, many=True, context={"request": request}).data)
