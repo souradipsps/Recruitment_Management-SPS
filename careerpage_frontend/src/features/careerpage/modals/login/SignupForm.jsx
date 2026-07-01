@@ -50,7 +50,7 @@ export function SignupForm({ onSignupSuccess, onClose, onSwitchTab }) {
     try {
       await signupUser({
         name: signup.name, lastName: signup.lastName, email: signup.email,
-        phone: signup.phone, password: signup.password,
+        phone: signup.phone, password: signup.password, confirmPassword: signup.confirm,
       });
       setSuccess(true);
       redirectTimeoutRef.current = setTimeout(handleProceed, 5000);
