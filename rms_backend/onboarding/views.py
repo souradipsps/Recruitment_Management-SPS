@@ -4,7 +4,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from users.permissions import IsHRAdmin
-from notifications.models import Notification
 from .models import Offer, OnboardingRecord
 from .serializers import OfferSerializer, OnboardingSerializer, OnboardingTaskSerializer
 from users.utils import auto_id
@@ -39,9 +38,10 @@ class OfferViewSet(viewsets.ModelViewSet):
                 offer=offer,
                 candidate=offer.candidate,
             )
-        Notification.objects.create(
-            recipient=offer.candidate,
-            type="offer_accepted",
+        from notifications.tasks import create_notification_task
+        create_notification_task.delay(
+            recipient_id=offer.candidate.id,
+            notification_type="offer_accepted",
             title="Offer Accepted",
             message=f"You have accepted the offer for {offer.role}. Onboarding has been initiated.",
         )

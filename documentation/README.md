@@ -9,6 +9,7 @@ This folder contains detailed technical documentation regarding the backend arch
 |----------|-------------|
 | [API Integration Guide](./api_integration.md) | Details the REST API endpoints and how the `admindashboard` and `careerpage` frontends consume them. Includes details on authentication and data flow. |
 | [Database Schema](./database_schema.md) | Outlines the core database models, relationships, and tables used by the Django backend. |
+| [API Endpoint Reference](./api_endpoints.md) | Comprehensive reference for all API endpoints, including JSON requests, responses, and authorization roles. |
 
 ## Workflow Overview
 1. **Frontend Apps**: The system utilizes two independent React frontends. 

@@ -1,5 +1,6 @@
 from django.db.models import Count, Q
 from django.utils import timezone
+from django.core.cache import cache
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -59,7 +60,7 @@ class ExistingRoleViewSet(viewsets.ModelViewSet):
 
 
 class RoleRequestViewSet(viewsets.ModelViewSet):
-    queryset           = RoleRequest.objects.all()
+    queryset           = RoleRequest.objects.select_related("created_by").all()
     serializer_class   = RoleRequestSerializer
     permission_classes = [IsHRAdmin]
     search_fields      = ["role", "department", "request_id"]
@@ -145,9 +146,10 @@ class JobPostingViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        queryset = JobPosting.objects.select_related("category")
         if not user.is_authenticated or user.role == "candidate":
-            return JobPosting.objects.filter(status="Published")
-        return JobPosting.objects.all()
+            return queryset.filter(status="Published")
+        return queryset.annotate(annotated_application_count=Count("job_applications"))
 
     def get_serializer_class(self):
         user = self.request.user
@@ -162,15 +164,20 @@ class JobPostingViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], permission_classes=[AllowAny])
     def public(self, request):
-        qs = JobPosting.objects.filter(status="Published")
-        category = request.query_params.get("category")
-        if category and category != "All Positions":
-            qs = qs.filter(category__name=category)
-        q = request.query_params.get("q")
-        if q:
-            qs = qs.filter(Q(role__icontains=q) | Q(department__icontains=q))
-        serializer = JobPostingPublicSerializer(qs, many=True)
-        return Response(serializer.data)
+        category = request.query_params.get("category", "")
+        q = request.query_params.get("q", "")
+        cache_key = f"public_jobs_{category}_{q}"
+        data = cache.get(cache_key)
+        if not data:
+            qs = JobPosting.objects.select_related("category").filter(status="Published")
+            if category and category != "All Positions":
+                qs = qs.filter(category__name=category)
+            if q:
+                qs = qs.filter(Q(role__icontains=q) | Q(department__icontains=q))
+            serializer = JobPostingPublicSerializer(qs, many=True)
+            data = serializer.data
+            cache.set(cache_key, data, timeout=900) # Cache for 15 mins
+        return Response(data)
 
     @action(detail=True, methods=["post"])
     def publish(self, request, pk=None):
@@ -194,28 +201,32 @@ class DashboardStatsView(APIView):
     permission_classes = [IsHRAdmin]
 
     def get(self, request):
-        today = timezone.now().date()
-        data = {
-            "open_positions":        JobPosting.objects.filter(status="Published").count(),
-            "pending_approvals":     ApprovalRequest.objects.filter(status="Pending").count(),
-            "total_applicants":      JobApplication.objects.count() + GeneralApplication.objects.count(),
-            "interviews_scheduled":  Interview.objects.filter(status="Scheduled", date__gte=today).count(),
-            "offers_released":       Offer.objects.filter(status__in=["Sent", "Accepted"]).count(),
-            "new_joiners":           OnboardingRecord.objects.filter(
-                                         status="Completed",
-                                         joining_date__month=today.month,
-                                         joining_date__year=today.year,
-                                     ).count(),
-            "offer_acceptance_rate": _compute_offer_rate(),
-            "total_roles":           ExistingRole.objects.count(),
-            "active_roles":          ExistingRole.objects.filter(status="Active").count(),
-            "pipeline": {
-                "applied":     JobApplication.objects.filter(status="Applied").count(),
-                "shortlisted": JobApplication.objects.filter(status="Shortlisted").count(),
-                "selected":    JobApplication.objects.filter(status="Selected").count(),
-                "offered":     Offer.objects.count(),
-            },
-        }
+        cache_key = "dashboard_stats"
+        data = cache.get(cache_key)
+        if not data:
+            today = timezone.now().date()
+            data = {
+                "open_positions":        JobPosting.objects.filter(status="Published").count(),
+                "pending_approvals":     ApprovalRequest.objects.filter(status="Pending").count(),
+                "total_applicants":      JobApplication.objects.count() + GeneralApplication.objects.count(),
+                "interviews_scheduled":  Interview.objects.filter(status="Scheduled", date__gte=today).count(),
+                "offers_released":       Offer.objects.filter(status__in=["Sent", "Accepted"]).count(),
+                "new_joiners":           OnboardingRecord.objects.filter(
+                                             status="Completed",
+                                             joining_date__month=today.month,
+                                             joining_date__year=today.year,
+                                         ).count(),
+                "offer_acceptance_rate": _compute_offer_rate(),
+                "total_roles":           ExistingRole.objects.count(),
+                "active_roles":          ExistingRole.objects.filter(status="Active").count(),
+                "pipeline": {
+                    "applied":     JobApplication.objects.filter(status="Applied").count(),
+                    "shortlisted": JobApplication.objects.filter(status="Shortlisted").count(),
+                    "selected":    JobApplication.objects.filter(status="Selected").count(),
+                    "offered":     Offer.objects.count(),
+                },
+            }
+            cache.set(cache_key, data, timeout=300) # Cache for 5 mins
         return Response(data)
 
 
