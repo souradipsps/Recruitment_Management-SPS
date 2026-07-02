@@ -1,90 +1,132 @@
-import { MAROON, GOLD } from "../../../lib/constants";
+import { useState, useEffect } from "react";
 import logoImg from "../../../assets/logo.png";
+import "./css/Navbar.css";
 
 // Sticky top navigation. Shows Login/Sign Up when logged out, and
 // Dashboard/Log Out when logged in. Mirrors the same actions in a
-// <details> dropdown on mobile.
+// full-screen overlay on mobile.
 export function Navbar({ loggedInUser, onLogin, onSignup, onOpenDashboard, onLogout }) {
-  const closeMobileMenu = () =>
-    document.getElementById("mobile-nav-menu")?.removeAttribute("open");
+  const [isOpen, setIsOpen] = useState(false);
+
+  const toggleMobileMenu = () => setIsOpen((prev) => !prev);
+  const closeMobileMenu = () => setIsOpen(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 640) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    // Reset viewport meta tag to force the mobile browser to recalculate scales
+    // and layout width when returning from the external non-responsive site in the same tab.
+    let meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "viewport";
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=5.0");
+    const timer = setTimeout(() => {
+      meta.setAttribute("content", "width=device-width, initial-scale=1.0");
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
-    <nav
-      style={{
-        background: "rgba(114,16,42,0.85)",
-        backdropFilter: "blur(16px) saturate(180%)",
-        WebkitBackdropFilter: "blur(16px) saturate(180%)",
-        borderBottom: "1px solid rgba(255,255,255,0.08)",
-      }}
-      className="sticky top-0 z-50 shadow-lg"
-    >
-      <div className="max-w-7xl mx-auto px-8 py-4">
-        <div className="flex items-center justify-between">
-          <div
-            style={{ cursor: "pointer" }}
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="flex items-center gap-3.5"
-          >
-            <img
-              src={logoImg}
-              alt="South Point School Logo"
-              className="h-11 w-auto object-contain"
-            />
-            <div>
-              <div
-                style={{
-                  fontFamily: "'Playfair Display', serif",
-                  color: GOLD,
-                  fontSize: "1.1rem",
-                  fontWeight: 700,
-                  lineHeight: 1.2,
-                }}
-              >
-                South Point School
-              </div>
-              <div
-                style={{
-                  color: "rgba(250,248,245,0.7)",
-                  fontSize: "0.68rem",
-                  letterSpacing: "0.1em",
-                }}
-                className="uppercase"
-              >
-                Guwahati, Assam
+    <>
+      <nav className="navbar sticky top-0 z-50 shadow-lg">
+        <div className="max-w-7xl mx-auto px-8 py-4">
+          <div className="flex items-center justify-between">
+
+            {/* ── Brand ───────────────────────────────────────────────────── */}
+            <div
+              className="navbar-brand flex items-center gap-3.5"
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+                closeMobileMenu();
+              }}
+            >
+              <img src={logoImg} alt="South Point School Logo" className="h-11 w-auto object-contain" />
+              <div>
+                <div className="navbar-school-name">South Point School</div>
+                <div className="navbar-school-sub">Guwahati, Assam</div>
               </div>
             </div>
+
+            {/* ── Desktop buttons ──────────────────────────────────────────── */}
+            <div className="hidden sm:flex items-center gap-2">
+              <a
+                href="https://www.spsghy.co.in"
+                className="nb-btn nb-btn-outline px-3 py-1.5"
+                style={{ textDecoration: "none" }}
+              >
+                Home
+              </a>
+              {loggedInUser ? (
+                <>
+                  <button onClick={onOpenDashboard} className="nb-btn nb-btn-outline px-3 py-1.5">
+                    Dashboard
+                  </button>
+                  <button onClick={onLogout} className="nb-btn nb-btn-solid px-3 py-1.5">
+                    Log Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button onClick={onLogin} className="nb-btn nb-btn-outline px-3 py-1.5">
+                    Login
+                  </button>
+                  <button onClick={onSignup} className="nb-btn nb-btn-solid px-3 py-1.5">
+                    Sign Up
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* ── Mobile hamburger ─────────────────────────────────────────── */}
+            <button
+              type="button"
+              onClick={toggleMobileMenu}
+              className={`nb-hamburger sm:hidden ${isOpen ? "is-active" : ""}`}
+              aria-label="Toggle menu"
+            >
+              <span className="nb-hamburger-bar" />
+              <span className="nb-hamburger-bar" />
+              <span className="nb-hamburger-bar" />
+            </button>
+
           </div>
-          {/* Desktop buttons */}
-          <div className="hidden sm:flex items-center gap-2">
+        </div>
+      </nav>
+
+      {/* ── Mobile menu overlay and panel ───────────────────────────────── */}
+      <div className={`nb-mobile-panel-wrapper ${isOpen ? "is-open" : ""}`}>
+        <div className="nb-mobile-panel" onClick={(e) => e.stopPropagation()}>
+          <div className="nb-mobile-actions">
+            <a
+              href="https://www.spsghy.co.in"
+              className="nb-btn nb-btn-outline"
+              style={{ textDecoration: "none" }}
+              onClick={closeMobileMenu}
+            >
+              Home
+            </a>
             {loggedInUser ? (
               <>
                 <button
-                  onClick={onOpenDashboard}
-                  style={{
-                    border: `1.5px solid rgba(250,248,245,0.4)`,
-                    color: "#faf8f5",
-                    fontWeight: 500,
-                    fontSize: "0.78rem",
-                    letterSpacing: "0.05em",
-                    background: "transparent",
-                    cursor: "pointer",
-                  }}
-                  className="px-3 py-1.5 rounded-sm uppercase tracking-wider hover:border-white transition-colors text-center"
+                  onClick={() => { onOpenDashboard(); closeMobileMenu(); }}
+                  className="nb-btn nb-btn-outline"
                 >
                   Dashboard
                 </button>
                 <button
-                  onClick={onLogout}
-                  style={{
-                    background: GOLD,
-                    color: "#1a0a0a",
-                    fontWeight: 600,
-                    fontSize: "0.78rem",
-                    letterSpacing: "0.05em",
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                  className="px-3 py-1.5 rounded-sm uppercase tracking-wider hover:opacity-90 transition-opacity text-center"
+                  onClick={() => { onLogout(); closeMobileMenu(); }}
+                  className="nb-btn nb-btn-solid"
                 >
                   Log Out
                 </button>
@@ -92,130 +134,24 @@ export function Navbar({ loggedInUser, onLogin, onSignup, onOpenDashboard, onLog
             ) : (
               <>
                 <button
-                  onClick={onLogin}
-                  style={{
-                    border: `1.5px solid rgba(250,248,245,0.4)`,
-                    color: "#faf8f5",
-                    fontWeight: 500,
-                    fontSize: "0.78rem",
-                    letterSpacing: "0.05em",
-                    background: "transparent",
-                    cursor: "pointer",
-                  }}
-                  className="px-3 py-1.5 rounded-sm uppercase tracking-wider hover:border-white transition-colors text-center"
+                  onClick={() => { onLogin(); closeMobileMenu(); }}
+                  className="nb-btn nb-btn-outline"
                 >
                   Login
                 </button>
                 <button
-                  onClick={onSignup}
-                  style={{
-                    background: GOLD,
-                    color: "#1a0a0a",
-                    fontWeight: 600,
-                    fontSize: "0.78rem",
-                    letterSpacing: "0.05em",
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                  className="px-3 py-1.5 rounded-sm uppercase tracking-wider hover:opacity-90 transition-opacity text-center"
+                  onClick={() => { onSignup(); closeMobileMenu(); }}
+                  className="nb-btn nb-btn-solid"
                 >
                   Sign Up
                 </button>
               </>
             )}
           </div>
-          {/* Mobile toggle */}
-          <details
-            id="mobile-nav-menu"
-            className="sm:hidden"
-            style={{ position: "relative" }}
-          >
-            <summary
-              style={{
-                listStyle: "none",
-                cursor: "pointer",
-                color: "#faf8f5",
-                padding: "6px 8px",
-                border: "1.5px solid rgba(250,248,245,0.35)",
-                borderRadius: "4px",
-                userSelect: "none",
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-              }}
-            >
-              <span style={{ display: "block", width: "18px", height: "2px", background: "#faf8f5", borderRadius: "2px" }} />
-              <span style={{ display: "block", width: "18px", height: "2px", background: "#faf8f5", borderRadius: "2px" }} />
-              <span style={{ display: "block", width: "18px", height: "2px", background: "#faf8f5", borderRadius: "2px" }} />
-            </summary>
-            <div
-              style={{
-                position: "absolute",
-                right: 0,
-                top: "calc(100% + 8px)",
-                background: MAROON,
-                border: "1.5px solid rgba(250,248,245,0.15)",
-                borderRadius: "4px",
-                padding: "10px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "8px",
-                minWidth: "130px",
-                zIndex: 50,
-                animation: "slideDown 0.2s ease",
-              }}
-            >
-              {loggedInUser ? (
-                <>
-                  <button
-                    onClick={() => {
-                      onOpenDashboard();
-                      closeMobileMenu();
-                    }}
-                    style={{ border: `1.5px solid rgba(250,248,245,0.4)`, color: "#faf8f5", fontWeight: 500, fontSize: "0.78rem", letterSpacing: "0.05em", background: "transparent", cursor: "pointer" }}
-                    className="px-3 py-1.5 rounded-sm uppercase tracking-wider hover:border-white transition-colors text-center w-full"
-                  >
-                    Dashboard
-                  </button>
-                  <button
-                    onClick={() => {
-                      onLogout();
-                      closeMobileMenu();
-                    }}
-                    style={{ background: GOLD, color: "#1a0a0a", fontWeight: 600, fontSize: "0.78rem", letterSpacing: "0.05em", border: "none", cursor: "pointer" }}
-                    className="px-3 py-1.5 rounded-sm uppercase tracking-wider hover:opacity-90 transition-opacity text-center w-full"
-                  >
-                    Log Out
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => {
-                      onLogin();
-                      closeMobileMenu();
-                    }}
-                    style={{ border: `1.5px solid rgba(250,248,245,0.4)`, color: "#faf8f5", fontWeight: 500, fontSize: "0.78rem", letterSpacing: "0.05em", background: "transparent", cursor: "pointer" }}
-                    className="px-3 py-1.5 rounded-sm uppercase tracking-wider hover:border-white transition-colors text-center w-full"
-                  >
-                    Login
-                  </button>
-                  <button
-                    onClick={() => {
-                      onSignup();
-                      closeMobileMenu();
-                    }}
-                    style={{ background: GOLD, color: "#1a0a0a", fontWeight: 600, fontSize: "0.78rem", letterSpacing: "0.05em", border: "none", cursor: "pointer" }}
-                    className="px-3 py-1.5 rounded-sm uppercase tracking-wider hover:opacity-90 transition-opacity text-center w-full"
-                  >
-                    Sign Up
-                  </button>
-                </>
-              )}
-            </div>
-          </details>
         </div>
+        <div className="nb-mobile-backdrop" onClick={closeMobileMenu} />
       </div>
-    </nav>
+    </>
   );
 }
+

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { jobs } from "../../../data/jobs";
+import { jobs } from "../../../mockData/jobs";
 
 const JOBS_VISIBLE = 4;
 

@@ -1,47 +1,52 @@
 import { motion } from "motion/react";
-import { MAROON, GOLD, CREAM } from "../../../lib/constants";
-import { benefits } from "../../../data/jobs";
+import { benefits } from "../../../mockData/jobs";
+import "./css/BenefitsSection.css";
 
 // "Why Build Your Career at South Point School?" — grid of benefit cards.
 export function BenefitsSection() {
   return (
-    <section id="benefits" className="py-24 px-6" style={{ background: "#fff" }}>
+    <section id="benefits" className="benefits-section py-24 px-6">
       <div className="max-w-7xl mx-auto">
+
+        {/* ── Section header ─────────────────────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <div style={{ color: GOLD, fontSize: "0.7rem", letterSpacing: "0.25em", fontWeight: 700 }} className="uppercase mb-3">
-            What We Offer
-          </div>
-          <h2 style={{ fontFamily: "'Playfair Display', serif", color: MAROON, fontSize: "clamp(1.8rem, 4vw, 2.75rem)", fontWeight: 700 }}>
+          <p className="benefits-eyebrow">What We Offer</p>
+
+          <h2 className="benefits-heading">
             Why Build Your Career at South Point School?
           </h2>
-          <div style={{ width: "60px", height: "3px", background: GOLD }} className="mt-4 mb-12" />
+
+          <div className="benefits-divider" />
         </motion.div>
+
+        {/* ── Benefits grid ──────────────────────────────────────────────── */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {benefits.map(({ icon: Icon, title, desc }, i) => (
             <motion.div
               key={title}
+              className="benefit-card"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.08 }}
-              style={{ border: `1.5px solid rgba(107,26,26,0.1)`, background: CREAM }}
-              className="p-7 rounded-sm group hover:shadow-lg transition-all"
+              whileHover={{ boxShadow: "0 8px 32px rgba(107,26,26,0.12)", y: -3 }}
             >
-              <div style={{ background: `rgba(107,26,26,0.08)`, display: "inline-flex", borderRadius: "4px" }} className="p-3 mb-5">
-                <Icon size={22} style={{ color: MAROON }} />
+              <div className="benefit-icon-wrapper">
+                <Icon size={22} className="benefit-icon" />
               </div>
-              <h3 style={{ fontFamily: "'Playfair Display', serif", color: "#1a0a0a", fontSize: "1.05rem", fontWeight: 600 }} className="mb-3">
-                {title}
-              </h3>
-              <p style={{ color: "#6b5c5c", fontSize: "0.875rem", lineHeight: 1.7 }}>{desc}</p>
+
+              <h3 className="benefit-card-title">{title}</h3>
+
+              <p className="benefit-card-desc">{desc}</p>
             </motion.div>
           ))}
         </div>
+
       </div>
     </section>
   );
