@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Lock, User } from "lucide-react";
 import { MAROON } from "../../../../lib/constants";
 import { PasswordInput } from "./PasswordInput";
-import { loginUser } from "./authService";
+import { loginUser } from "../../services/authService";
 
 // Login tab: identifier (email or 10-digit phone) + password.
 export function LoginForm({ onLoginSuccess, onClose, onSwitchTab, onForgotPassword }) {
