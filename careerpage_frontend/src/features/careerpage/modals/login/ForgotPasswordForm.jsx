@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { Lock, Mail } from "lucide-react";
 import { PasswordInput } from "./PasswordInput";
-import { sendPasswordResetOtp, verifyPasswordResetOtp, resetPassword } from "./authService";
+import { sendPasswordResetOtp, verifyPasswordResetOtp, resetPassword } from "../../services/authService";
 
 // Forgot-password flow: 1) email → 2) OTP → 3) new password → 4) success.
 export function ForgotPasswordForm({ onBackToLogin }) {
