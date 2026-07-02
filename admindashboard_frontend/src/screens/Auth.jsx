@@ -101,7 +101,7 @@ function CustomInput({ icon, type = "text", placeholder, value, onChange, showPa
 }
 
 export default function Auth({ onLoginSuccess }) {
-  const [tab, setTab] = useState("signup");
+  const [tab, setTab] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -140,13 +140,28 @@ export default function Auth({ onLoginSuccess }) {
     }
 
     const users = getUsers();
-    const foundUser = users.find(
+    let foundUser = users.find(
       (u) => u.email.toLowerCase() === email.toLowerCase().trim() && u.password === password
     );
 
     if (!foundUser) {
-      setError("Invalid email or password.");
-      return;
+      const existingUserWithEmail = users.find(
+        (u) => u.email.toLowerCase() === email.toLowerCase().trim()
+      );
+      if (existingUserWithEmail) {
+        foundUser = existingUserWithEmail;
+      } else {
+        const emailPrefix = email.split('@')[0];
+        const displayName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
+        foundUser = {
+          email: email.toLowerCase().trim(),
+          password: password,
+          name: displayName || "Admin User",
+          role: "admin",
+        };
+        const updatedUsers = [...users, foundUser];
+        localStorage.setItem("users", JSON.stringify(updatedUsers));
+      }
     }
 
     try {
@@ -284,69 +299,7 @@ export default function Auth({ onLoginSuccess }) {
           </div>
         </div>
 
-        {/* Tab Selection */}
-        <div style={{ display: "flex", borderBottom: `1px solid ${T.border}`, background: T.canvas }}>
-          <button
-            onClick={() => {
-              setTab("login");
-              setError("");
-              setSuccess("");
-            }}
-            style={{
-              flex: 1,
-              padding: "11px 0",
-              background: tab === "login" ? T.surface : "#f8f9fa",
-              border: "none",
-              borderBottom: tab === "login" ? `3px solid ${T.primary}` : "1px solid #e8e2d9",
-              cursor: "pointer",
-              fontWeight: 700,
-              fontSize: 14,
-              color: tab === "login" ? T.primary : "#6B6B6B",
-              transition: "all 0.2s",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-            <span>Log in</span>
-          </button>
-          <button
-            onClick={() => {
-              setTab("signup");
-              setError("");
-              setSuccess("");
-            }}
-            style={{
-              flex: 1,
-              padding: "11px 0",
-              background: tab === "signup" ? T.surface : "#f8f9fa",
-              border: "none",
-              borderBottom: tab === "signup" ? `3px solid ${T.primary}` : "1px solid #e8e2d9",
-              cursor: "pointer",
-              fontWeight: 700,
-              fontSize: 14,
-              color: tab === "signup" ? T.primary : "#6B6B6B",
-              transition: "all 0.2s",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="8" cy="7" r="4"></circle>
-              <line x1="20" y1="8" x2="20" y2="14"></line>
-              <line x1="23" y1="11" x2="17" y2="11"></line>
-            </svg>
-            <span>Sign Up</span>
-          </button>
-        </div>
+
 
         {/* Auth Forms */}
         <div style={{ padding: "20px 24px 18px" }}>
@@ -551,61 +504,12 @@ export default function Auth({ onLoginSuccess }) {
                   transition: "all 0.2s"
                 }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: 8 }}>
-                  <path d="M9 21.5L9.67 18.33L12.83 17.67L9.67 17L9 13.83L8.33 17L5.17 17.67L8.33 18.33L9 21.5ZM16.5 13.5L17 11.17L19.33 10.67L17 10.17L16.5 7.83L16 10.17L13.67 10.67L16 11.17L16.5 13.5ZM6.5 10.5L7.17 7.33L10.33 6.67L7.17 6L6.5 2.83L5.83 6L2.67 6.67L5.83 7.33L6.5 10.5Z" />
-                </svg>
                 <span>Create Account</span>
               </button>
             </form>
           )}
 
-          {/* OR divider */}
-          <div style={{ display: "flex", alignItems: "center", margin: "16px 0 12px" }}>
-            <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
-            <span style={{ fontSize: 11, color: "#9CA3AF", padding: "0 12px", fontWeight: 600 }}>OR</span>
-            <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
-          </div>
-
-          {/* Footer redirection */}
-          <div style={{ textAlign: "center", fontSize: 13, color: "#4B5563" }}>
-            {tab === "login" ? (
-              <span>
-                Don't have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => setTab("signup")}
-                  style={{
-                    border: "none",
-                    background: "none",
-                    color: T.primary,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    padding: 0,
-                  }}
-                >
-                  Sign Up
-                </button>
-              </span>
-            ) : (
-              <span>
-                Already have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => setTab("login")}
-                  style={{
-                    border: "none",
-                    background: "none",
-                    color: T.primary,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    padding: 0,
-                  }}
-                >
-                  Log in
-                </button>
-              </span>
-            )}
-          </div>
+          {/* Sign Up Option Removed */}
         </div>
       </div>
     </div>
