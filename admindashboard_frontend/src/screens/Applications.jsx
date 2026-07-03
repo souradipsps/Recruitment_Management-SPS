@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { T, statusVariant } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
 import { Card, SectionTitle, Table, Mono, Badge, Input, Btn, Modal, ModalHeader, Select, FormField } from "../components/ui";
@@ -29,10 +29,22 @@ export default function Applications({
   const [selectedPostingId, setSelectedPostingId] = useState(null);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [filterActiveIndex, setFilterActiveIndex] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const hScroll = useHorizontalScroll();
   const scrollRef = useRef(null);
   const lastTapTimeRef = { current: {} };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [tab, filter, search, selectedPostingId]);
+
+  useEffect(() => {
+    setCurrentCardIndex(0);
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ left: 0 });
+    }
+  }, [currentPage]);
 
   const statuses = ["All", "Shortlisted", "Applied", "Rejected"];
   const isJob = tab === "job";
@@ -84,6 +96,14 @@ export default function Applications({
 
   const filtered = isJob ? filteredJobApplications : filteredGenApplications;
   const data = isJob ? baseJobData : baseGenData;
+
+  const ITEMS_PER_PAGE = 10;
+  const totalItems = filtered.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const activePage = Math.min(currentPage, Math.max(totalPages, 1));
+  const startIndex = (activePage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const displayFiltered = filtered.slice(startIndex, endIndex);
 
   const counts = statuses.slice(1).reduce((acc, s) => {
     acc[s] = data.filter((a) => a.status === s).length;
@@ -449,7 +469,7 @@ export default function Applications({
       {isMobile ? (
         <>
           <div style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, marginBottom: 8, textAlign: "center" }}>
-            {filtered.length} applicant{filtered.length !== 1 ? "s" : ""}
+            Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, totalItems)} of {totalItems} applicant{totalItems !== 1 ? "s" : ""}
           </div>
           <div
             ref={scrollRef}
@@ -467,7 +487,7 @@ export default function Applications({
               WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none",
               gap: 12, paddingBottom: 20, margin: "0 -12px", paddingLeft: 12, paddingRight: 12,
             }}>
-            {filtered.map((a, idx) => {
+            {displayFiltered.map((a, idx) => {
               const isShortlisted = a.status === "Shortlisted";
               const isRejected = a.status === "Rejected";
               const cardBackground = "linear-gradient(135deg, #72102a 0%, #3a0010 100%)";
@@ -484,7 +504,7 @@ export default function Applications({
                     cursor: "pointer", minHeight: 380,
                   }}>
                   <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", padding: "4px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.2)" }}>
-                    {idx + 1} of {filtered.length}
+                    {startIndex + idx + 1} of {totalItems}
                   </div>
 
                   <div>
@@ -538,14 +558,14 @@ export default function Applications({
                 </div>
               );
             })}
-            {filtered.length === 0 && (
+            {totalItems === 0 && (
               <div style={{ padding: "40px 24px", textAlign: "center", color: T.inkFaint, fontSize: 13 }}>No records found.</div>
             )}
           </div>
 
-          {filtered.length > 0 && (
+          {displayFiltered.length > 0 && (
             <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10, paddingBottom: 8 }}>
-              {filtered.map((_, i) => (
+              {displayFiltered.map((_, i) => (
                 <div
                   key={i}
                   onClick={() => {
@@ -558,6 +578,50 @@ export default function Applications({
               ))}
             </div>
           )}
+
+          {totalPages > 1 && (
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, marginTop: 10, marginBottom: 20 }}>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={activePage === 1}
+                style={{
+                  background: T.white,
+                  color: activePage === 1 ? T.inkFaint : accentColor,
+                  border: `1.5px solid ${activePage === 1 ? T.border : accentColor}`,
+                  borderRadius: 8,
+                  padding: "6px 12px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: activePage === 1 ? "not-allowed" : "pointer",
+                  opacity: activePage === 1 ? 0.5 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                &larr; Prev 10
+              </button>
+              <span style={{ fontSize: 12, color: T.inkMid, fontWeight: 600 }}>
+                {activePage} / {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={activePage === totalPages}
+                style={{
+                  background: activePage === totalPages ? T.white : accentColor,
+                  color: activePage === totalPages ? T.inkFaint : T.white,
+                  border: `1.5px solid ${activePage === totalPages ? T.border : accentColor}`,
+                  borderRadius: 8,
+                  padding: "6px 12px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: activePage === totalPages ? "not-allowed" : "pointer",
+                  opacity: activePage === totalPages ? 0.5 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                Next 10 &rarr;
+              </button>
+            </div>
+          )}
         </>
       ) : (
         <Card>
@@ -568,15 +632,17 @@ export default function Applications({
               onChange={(e) => setSearch(e.target.value)}
               style={{ maxWidth: 360, flex: 1, minWidth: 0 }}
             />
-            <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, whiteSpace: "nowrap" }}>{filtered.length} of {data.length}</span>
+            <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, whiteSpace: "nowrap" }}>
+              Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, totalItems)} of {totalItems}
+            </span>
           </div>
 
           {isJob ? (
             <Table
               cols={["App ID", "Candidate", "Role", "Job Post", "Experience", "Qualification", "Referred By", "Applied Date", "Status", "Actions"]}
-              onRowClick={(index) => setSelectedApp(filtered[index])}
-              onRowDoubleClick={isMobile ? (index) => updateStatus(filtered[index], "Shortlisted") : undefined}
-              rows={filtered.map((a) => [
+              onRowClick={(index) => setSelectedApp(displayFiltered[index])}
+              onRowDoubleClick={isMobile ? (index) => updateStatus(displayFiltered[index], "Shortlisted") : undefined}
+              rows={displayFiltered.map((a) => [
                 <Mono v={a.id} />,
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   {avatar(a.name)}
@@ -598,9 +664,9 @@ export default function Applications({
           ) : (
             <Table
               cols={["App ID", "Candidate", "Preferred Role", "Department", "Experience", "Qualification", "Applied Date", "Status", "Actions"]}
-              onRowClick={(index) => setSelectedApp(filtered[index])}
-              onRowDoubleClick={isMobile ? (index) => updateStatus(filtered[index], "Shortlisted") : undefined}
-              rows={filtered.map((a) => [
+              onRowClick={(index) => setSelectedApp(displayFiltered[index])}
+              onRowDoubleClick={isMobile ? (index) => updateStatus(displayFiltered[index], "Shortlisted") : undefined}
+              rows={displayFiltered.map((a) => [
                 <Mono v={a.id} />,
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   {avatar(a.name)}
@@ -618,6 +684,60 @@ export default function Applications({
                 </div>,
               ])}
             />
+          )}
+
+          {/* Desktop Pagination Control */}
+          {totalPages > 1 && (
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              padding: "16px 20px",
+              borderTop: `1px solid ${T.border}`,
+            }}>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={activePage === 1}
+                style={{
+                  background: T.white,
+                  color: activePage === 1 ? T.inkFaint : accentColor,
+                  border: `1.5px solid ${activePage === 1 ? T.border : accentColor}`,
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: activePage === 1 ? "not-allowed" : "pointer",
+                  opacity: activePage === 1 ? 0.5 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                &larr; Previous 10
+              </button>
+
+              <span style={{ fontSize: 13, color: T.inkMid, fontWeight: 600 }}>
+                Page {activePage} of {totalPages}
+              </span>
+
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={activePage === totalPages}
+                style={{
+                  background: activePage === totalPages ? T.white : accentColor,
+                  color: activePage === totalPages ? T.inkFaint : T.white,
+                  border: `1.5px solid ${activePage === totalPages ? T.border : accentColor}`,
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: activePage === totalPages ? "not-allowed" : "pointer",
+                  opacity: activePage === totalPages ? 0.5 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                Next 10 &rarr;
+              </button>
+            </div>
           )}
         </Card>
       )}
