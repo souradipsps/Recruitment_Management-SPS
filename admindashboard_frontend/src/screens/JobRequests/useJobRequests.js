@@ -85,8 +85,10 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
         String(apr.sourceId) === String(selectedRequest.id)
           ? {
               ...apr,
+              department: updated.department,
               role: updated.role,
               location: updated.location,
+              category: updated.category,
               salary: updated.salary,
               vacancies: updated.vacancies,
               exp: updated.exp,
@@ -94,6 +96,7 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
               empType: updated.type,
               just: updated.justification,
               description: updated.description,
+              skills: updated.skills,
               status: updated.status,
             }
           : apr
@@ -106,15 +109,18 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
   const hasChanges = () => {
     if (!selectedRequest || !originalRequest) return false;
     return (
+      selectedRequest.department !== originalRequest.department ||
       selectedRequest.role !== originalRequest.role ||
       selectedRequest.location !== originalRequest.location ||
+      selectedRequest.category !== originalRequest.category ||
       selectedRequest.vacancies !== originalRequest.vacancies ||
       selectedRequest.exp !== originalRequest.exp ||
       selectedRequest.qual !== originalRequest.qual ||
       selectedRequest.type !== originalRequest.type ||
       selectedRequest.salary !== originalRequest.salary ||
       selectedRequest.description !== originalRequest.description ||
-      selectedRequest.justification !== originalRequest.justification
+      selectedRequest.justification !== originalRequest.justification ||
+      JSON.stringify(selectedRequest.skills || []) !== JSON.stringify(originalRequest.skills || [])
     );
   };
 
@@ -204,8 +210,10 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
           String(apr.sourceId) === String(editingId)
             ? {
                 ...apr,
+                department: jobForms[0].department,
                 role: jobForms[0].role,
                 location: jobForms[0].location,
+                category: jobForms[0].category,
                 salary: jobForms[0].salary,
                 vacancies: jobForms[0].vacancies,
                 exp: jobForms[0].exp,
@@ -213,6 +221,7 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
                 empType: jobForms[0].type,
                 just: jobForms[0].justification,
                 description: jobForms[0].description,
+                skills: jobForms[0].skills,
               }
             : apr
         )
@@ -232,8 +241,9 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
         ...prev,
         ...newRequests.map((r) => ({
           id: `APR-${Date.now()}-${Math.random()}`,
-          dept: "N/A",
+          dept: r.department || "N/A",
           role: r.role,
+          category: r.category || "N/A",
           requestedBy: "Current User",
           date: now,
           location: r.location,
@@ -244,6 +254,7 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
           empType: r.type,
           just: r.justification,
           description: r.description,
+          skills: r.skills,
           status: "Pending",
           comment: "",
           history: [{ act: "Submitted", by: "Current User", date: now, note: "" }],

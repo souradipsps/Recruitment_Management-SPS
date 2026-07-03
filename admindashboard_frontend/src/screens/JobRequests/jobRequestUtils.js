@@ -12,6 +12,7 @@ export const getStatusStyle = (status) => {
 
 export const emptyForm = () => ({
   id: Date.now() + Math.random(),
+  department: "",
   role: "",
   vacancies: "",
   exp: "",
@@ -19,8 +20,10 @@ export const emptyForm = () => ({
   type: "",
   salary: "",
   location: "",
+  category: "",
   description: "",
   justification: "",
+  skills: [],
   status: "Pending",
   comment: "",
 });

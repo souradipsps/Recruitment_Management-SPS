@@ -1,6 +1,7 @@
 import { T } from "../../theme";
 import { Card, Btn, Input, Select, FormField } from "../../components/ui";
-import { VACANCY_OPTIONS, QUAL_OPTIONS, TYPE_OPTIONS } from "../../data";
+import { VACANCY_OPTIONS, QUAL_OPTIONS, TYPE_OPTIONS, DEPT_OPTIONS, CATEGORY_OPTIONS, ALL_SKILLS } from "../../data";
+import SkillsMultiSelect from "../../components/SkillsMultiSelect";
 import { emptyForm } from "./jobRequestUtils";
 
 export default function JobRequestForm({
@@ -31,6 +32,9 @@ export default function JobRequestForm({
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 14, marginBottom: 14 }}>
+            <FormField label="Department" required>
+              <Select value={form.department} onChange={(e) => updateForm(index, "department", e.target.value)} options={DEPT_OPTIONS} placeholder="Select department…" />
+            </FormField>
             <FormField label="Role" required>
               <Select value={form.role} onChange={(e) => handleRoleChange(index, e.target.value)} options={roleOptions} placeholder="Select role…" />
             </FormField>
@@ -40,7 +44,7 @@ export default function JobRequestForm({
             <FormField label="Salary Range" required>
               <Input placeholder="Enter salary range" value={form.salary} onChange={(e) => updateForm(index, "salary", e.target.value)} />
             </FormField>
-            <FormField label="Qualification" required>
+            <FormField label="Educational Qualification" required>
               <Select value={form.qual} onChange={(e) => updateForm(index, "qual", e.target.value)} options={QUAL_OPTIONS} placeholder="Select qualification…" />
             </FormField>
             <FormField label="Vacancies" required>
@@ -51,6 +55,20 @@ export default function JobRequestForm({
             </FormField>
             <FormField label="Location" required>
               <Input placeholder="Enter job location" value={form.location} onChange={(e) => updateForm(index, "location", e.target.value)} />
+            </FormField>
+            <FormField label="Category" required>
+              <Select value={form.category} onChange={(e) => updateForm(index, "category", e.target.value)} options={CATEGORY_OPTIONS} placeholder="Select category…" />
+            </FormField>
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <FormField label="Required Skills" required>
+              <SkillsMultiSelect
+                options={ALL_SKILLS}
+                selected={form.skills || []}
+                onChange={(v) => updateForm(index, "skills", v)}
+                placeholder="Select required skills…"
+              />
             </FormField>
           </div>
 

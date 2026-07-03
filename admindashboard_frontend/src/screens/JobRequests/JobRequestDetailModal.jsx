@@ -1,7 +1,8 @@
 import { T } from "../../theme";
 import { statusVariant } from "../../theme";
 import { Btn, Input, Select, Badge } from "../../components/ui";
-import { VACANCY_OPTIONS, QUAL_OPTIONS, TYPE_OPTIONS } from "../../data";
+import { VACANCY_OPTIONS, QUAL_OPTIONS, TYPE_OPTIONS, DEPT_OPTIONS, CATEGORY_OPTIONS, ALL_SKILLS } from "../../data";
+import SkillsMultiSelect from "../../components/SkillsMultiSelect";
 import JobRequestActivityTimeline from "./JobRequestActivityTimeline";
 
 const labelStyle = { fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 };
@@ -11,12 +12,14 @@ const textareaStyle = { width: "100%", minHeight: 80, padding: 10, border: `1px 
 
 // weight = font-weight used when the value is shown read-only
 const FIELDS = [
+  { key: "department", label: "Department", type: "select", options: DEPT_OPTIONS, placeholder: "Select department…", weight: 600 },
   { key: "role", label: "Role", type: "select", placeholder: "Select role…", weight: 700 },
-  { key: "location", label: "Location", type: "input", placeholder: "Enter job location", weight: 400 },
   { key: "vacancies", label: "Vacancies", type: "select", options: VACANCY_OPTIONS, placeholder: "Select count…", weight: 400 },
   { key: "exp", label: "Experience", type: "input", placeholder: "Enter experience", weight: 600 },
-  { key: "qual", label: "Qualification", type: "select", options: QUAL_OPTIONS, placeholder: "Select qualification…", weight: 600 },
+  { key: "qual", label: "Educational Qualification", type: "select", options: QUAL_OPTIONS, placeholder: "Select qualification…", weight: 600 },
   { key: "type", label: "Employment Type", type: "select", options: TYPE_OPTIONS, placeholder: "Select type…", weight: 400 },
+  { key: "location", label: "Location", type: "input", placeholder: "Enter job location", weight: 400 },
+  { key: "category", label: "Category", type: "select", options: CATEGORY_OPTIONS, placeholder: "Select category…", weight: 600 },
   { key: "salary", label: "Salary Range", type: "input", placeholder: "Enter salary range", weight: 700, span2: true },
 ];
 
@@ -75,6 +78,7 @@ export default function JobRequestDetailModal({
               {selectedRequest.role || "Job Request Details"}
             </div>
             <div style={{ fontSize: 12, color: T.inkLight, marginTop: 3 }}>
+              {selectedRequest.department ? `${selectedRequest.department} · ` : ""}
               {selectedRequest.location ? `${selectedRequest.location}` : ""}
               {selectedRequest.date ? ` · ${selectedRequest.date}` : ""}
             </div>
@@ -113,6 +117,35 @@ export default function JobRequestDetailModal({
                   </div>
                 );
               })}
+            </div>
+
+            {/* Required Skills */}
+            <div>
+              <Label>Required Skills</Label>
+              {isEditable ? (
+                <SkillsMultiSelect
+                  options={ALL_SKILLS}
+                  selected={selectedRequest.skills || []}
+                  onChange={(v) => patch("skills", v)}
+                  placeholder="Select required skills…"
+                />
+              ) : (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                  {(selectedRequest.skills || []).length > 0
+                    ? (selectedRequest.skills || []).map((s) => (
+                        <span key={s} style={{
+                          background: T.primaryLight || "#EDE9FE",
+                          color: T.primary,
+                          padding: "3px 8px",
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                        }}>{s}</span>
+                      ))
+                    : <span style={{ fontSize: 13, color: T.inkFaint }}>—</span>
+                  }
+                </div>
+              )}
             </div>
 
             {TEXT_FIELDS.map((f) => (
