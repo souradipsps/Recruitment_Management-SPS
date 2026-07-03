@@ -28,7 +28,7 @@ export const normalizeJobRequest = (r) => ({
   salary: r.salary_range || "",
   status: r.status || "Pending",
   department: r.department || "",
-  category: r.category || "",
+  category: (r.category || "").replace(/\s*Positions$/, ""),
   description: r.description || "",
   justification: r.justification || "",
   skills: toSkillsArray(r.skills_required),
@@ -70,7 +70,7 @@ export async function createJobRequest(formData, submittedBy) {
     type: formData.type,
     educational_qualifications: formData.qual, // Backend field name
     department: formData.department,
-    category: formData.category,
+    category: formData.category ? (formData.category.endsWith("Positions") ? formData.category : `${formData.category} Positions`) : "",
     location: formData.location,
     description: formData.description,
     justification: formData.justification,

@@ -89,6 +89,7 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
             history: updated.history,
             salaryRange: r.salary ? r.salary.replace(/^₹/, "") : item.salaryRange,
             experience: r.experience || item.experience,
+            category: r.category || item.category,
           };
           delete updated2.minSalary;
           delete updated2.maxSalary;
@@ -126,6 +127,7 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
           headcount: 1, filled: 0, currentFilled: 0, status: "Inactive", currentStatus: "Inactive",
           experience: r.experience || "—",
           salaryRange: cleanedSalary || "—",
+          category: r.category || "—",
         }];
       });
       if (onNavigateToExistingRoles) {
@@ -275,6 +277,24 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
                       />
                     ) : (
                       <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{sel.role || "—"}</div>
+                    )}
+                  </div>
+                )}
+
+                {sel.type === "Role Request" && (
+                  <div>
+                    <div style={labelCss}>Category</div>
+                    {sel.status === "Pending" ? (
+                      <Select
+                        value={sel.category || ""}
+                        onChange={(e) => setSel({ ...sel, category: e.target.value })}
+                        options={CATEGORY_OPTIONS}
+                        placeholder="Select Category"
+                      />
+                    ) : (
+                      <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>
+                        {CATEGORY_OPTIONS.find((c) => c.value === sel.category)?.label || sel.category || "—"}
+                      </div>
                     )}
                   </div>
                 )}
@@ -741,6 +761,7 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
                       { icon: "🆔", label: "Request ID", value: String(r.sourceId).substring(0, 16) },
                       { icon: "📋", label: "Type", value: r.type || "Request" },
                       { icon: "📅", label: "Date", value: r.date },
+                      ...(r.category ? [{ icon: "🏷️", label: "Category", value: CATEGORY_OPTIONS.find((c) => c.value === r.category)?.label || r.category }] : []),
                       ...(r.salary ? [{ icon: "💰", label: "Salary", value: r.salary }] : []),
                       ...(r.experience ? [{ icon: "⏳", label: "Experience", value: `${r.experience} yrs` }] : []),
                       ...(r.vacancies ? [{ icon: "👥", label: "Vacancies", value: String(r.vacancies) }] : []),
@@ -887,7 +908,7 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
                   </div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{r.role}</div>
                   <div style={{ fontSize: 12, color: T.inkLight, marginTop: 3 }}>
-                    {r.dept && r.dept !== "N/A" ? `${r.dept} · ` : ""}{r.requestedBy} · {r.date}
+                    {r.dept && r.dept !== "N/A" ? `${r.dept} · ` : ""}{r.category ? `${CATEGORY_OPTIONS.find(c => c.value === r.category)?.label || r.category} · ` : ""}{r.requestedBy} · {r.date}
                   </div>
                   {r.comment && (
                     <div style={{ marginTop: 6, fontSize: 12, color: T.amber, background: T.amberLight, padding: "3px 8px", borderRadius: 6, display: "inline-block", border: `1px solid #FDE68A` }}>

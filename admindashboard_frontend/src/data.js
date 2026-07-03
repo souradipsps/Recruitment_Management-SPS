@@ -17,26 +17,26 @@ export const NAV = [
 ];
 
 export const EXISTING_ROLES = [
-  { id: "ROL-001", dept: "Science", role: "Mathematics Teacher", type: "Full-time", headcount: 4, filled: 3, status: "Active", experience: "3-5", salaryRange: "40,000-60,000" },
-  { id: "ROL-002", dept: "Science", role: "Physics Teacher", type: "Full-time", headcount: 2, filled: 2, status: "Active", experience: "3-5", salaryRange: "40,000-60,000" },
-  { id: "ROL-003", dept: "Science", role: "Chemistry Teacher", type: "Full-time", headcount: 2, filled: 1, status: "Inactive", experience: "2-4", salaryRange: "35,000-50,000" },
-  { id: "ROL-004", dept: "Science", role: "Lab Assistant", type: "Part-time", headcount: 3, filled: 0, status: "Inactive", experience: "1-2", salaryRange: "18,000-25,000" },
-  { id: "ROL-005", dept: "Commerce", role: "Accountancy Teacher", type: "Full-time", headcount: 3, filled: 3, status: "Active", experience: "3-5", salaryRange: "40,000-60,000" },
-  { id: "ROL-006", dept: "Commerce", role: "Business Studies Teacher", type: "Full-time", headcount: 2, filled: 1, status: "Inactive", experience: "3-5", salaryRange: "40,000-60,000" },
-  { id: "ROL-007", dept: "Arts", role: "Drawing Teacher", type: "Full-time", headcount: 2, filled: 2, status: "Active", experience: "2-4", salaryRange: "30,000-45,000" },
-  { id: "ROL-008", dept: "Arts", role: "Music Teacher", type: "Part-time", headcount: 1, filled: 0, status: "Inactive", experience: "2-4", salaryRange: "25,000-35,000" },
-  { id: "ROL-009", dept: "Administration", role: "Office Coordinator", type: "Full-time", headcount: 2, filled: 1, status: "Inactive", experience: "2-4", salaryRange: "25,000-35,000" },
-  { id: "ROL-010", dept: "Administration", role: "Receptionist", type: "Full-time", headcount: 1, filled: 1, status: "Active", experience: "1-3", salaryRange: "20,000-30,000" },
-  { id: "ROL-011", dept: "Sports", role: "Physical Education Teacher", type: "Full-time", headcount: 2, filled: 2, status: "Active", experience: "2-4", salaryRange: "35,000-50,000" },
-  { id: "ROL-012", dept: "Languages", role: "Hindi Teacher", type: "Full-time", headcount: 3, filled: 2, status: "Inactive", experience: "3-5", salaryRange: "38,000-55,000" },
-  { id: "ROL-013", dept: "Languages", role: "English Teacher", type: "Full-time", headcount: 4, filled: 4, status: "Active", experience: "3-5", salaryRange: "40,000-60,000" },
+  { id: "ROL-001", dept: "Science", role: "Mathematics Teacher", type: "Full-time", headcount: 4, filled: 3, status: "Active", experience: "3-5", salaryRange: "40,000-60,000", category: "Academic" },
+  { id: "ROL-002", dept: "Science", role: "Physics Teacher", type: "Full-time", headcount: 2, filled: 2, status: "Active", experience: "3-5", salaryRange: "40,000-60,000", category: "Academic" },
+  { id: "ROL-003", dept: "Science", role: "Chemistry Teacher", type: "Full-time", headcount: 2, filled: 1, status: "Inactive", experience: "2-4", salaryRange: "35,000-50,000", category: "Academic" },
+  { id: "ROL-004", dept: "Science", role: "Lab Assistant", type: "Part-time", headcount: 3, filled: 0, status: "Inactive", experience: "1-2", salaryRange: "18,000-25,000", category: "Operations & Support" },
+  { id: "ROL-005", dept: "Commerce", role: "Accountancy Teacher", type: "Full-time", headcount: 3, filled: 3, status: "Active", experience: "3-5", salaryRange: "40,000-60,000", category: "Academic" },
+  { id: "ROL-006", dept: "Commerce", role: "Business Studies Teacher", type: "Full-time", headcount: 2, filled: 1, status: "Inactive", experience: "3-5", salaryRange: "40,000-60,000", category: "Academic" },
+  { id: "ROL-007", dept: "Arts", role: "Drawing Teacher", type: "Full-time", headcount: 2, filled: 2, status: "Active", experience: "2-4", salaryRange: "30,000-45,000", category: "Academic" },
+  { id: "ROL-008", dept: "Arts", role: "Music Teacher", type: "Part-time", headcount: 1, filled: 0, status: "Inactive", experience: "2-4", salaryRange: "25,000-35,000", category: "Academic" },
+  { id: "ROL-009", dept: "Administration", role: "Office Coordinator", type: "Full-time", headcount: 2, filled: 1, status: "Inactive", experience: "2-4", salaryRange: "25,000-35,000", category: "Administrative" },
+  { id: "ROL-010", dept: "Administration", role: "Receptionist", type: "Full-time", headcount: 1, filled: 1, status: "Active", experience: "1-3", salaryRange: "20,000-30,000", category: "Administrative" },
+  { id: "ROL-011", dept: "Sports", role: "Physical Education Teacher", type: "Full-time", headcount: 2, filled: 2, status: "Active", experience: "2-4", salaryRange: "35,000-50,000", category: "Academic" },
+  { id: "ROL-012", dept: "Languages", role: "Hindi Teacher", type: "Full-time", headcount: 3, filled: 2, status: "Inactive", experience: "3-5", salaryRange: "38,000-55,000", category: "Academic" },
+  { id: "ROL-013", dept: "Languages", role: "English Teacher", type: "Full-time", headcount: 4, filled: 4, status: "Active", experience: "3-5", salaryRange: "40,000-60,000", category: "Academic" },
 ];
 
 export const ROLE_REQUESTS = [
-  { id: "RR-2026-0001", dept: "Science", role: "Mathematics Teacher", just: "Teacher resigned effective 30 Jun", status: "Pending", date: "2026-06-01" },
-  { id: "RR-2026-0002", dept: "Administration", role: "Office Coordinator", just: "New branch opening — workload increase", status: "Approved", date: "2026-05-28" },
-  { id: "RR-2026-0003", dept: "Commerce", role: "Accountancy Teacher", just: "Batch enrollment exceeds faculty capacity", status: "Rejected", date: "2026-05-20" },
-  { id: "RR-2026-0004", dept: "Arts", role: "Drawing Teacher", just: "Existing teacher retiring in July", status: "Pending", date: "2026-06-08" },
+  { id: "RR-2026-0001", dept: "Science", role: "Mathematics Teacher", just: "Teacher resigned effective 30 Jun", status: "Pending", date: "2026-06-01", category: "Academic", minExperience: "3", maxExperience: "5", minSalary: "40,000", maxSalary: "60,000", experience: "3-5", salaryRange: "40,000-60,000" },
+  { id: "RR-2026-0002", dept: "Administration", role: "Office Coordinator", just: "New branch opening — workload increase", status: "Approved", date: "2026-05-28", category: "Administrative", minExperience: "2", maxExperience: "4", minSalary: "25,000", maxSalary: "35,000", experience: "2-4", salaryRange: "25,000-35,000" },
+  { id: "RR-2026-0003", dept: "Commerce", role: "Accountancy Teacher", just: "Batch enrollment exceeds faculty capacity", status: "Rejected", date: "2026-05-20", category: "Academic", minExperience: "3", maxExperience: "5", minSalary: "40,000", maxSalary: "60,000", experience: "3-5", salaryRange: "40,000-60,000" },
+  { id: "RR-2026-0004", dept: "Arts", role: "Drawing Teacher", just: "Existing teacher retiring in July", status: "Pending", date: "2026-06-08", category: "Academic", minExperience: "2", maxExperience: "4", minSalary: "30,000", maxSalary: "45,000", experience: "2-4", salaryRange: "30,000-45,000" },
 ];
 
 export const JOB_REQUESTS = [
@@ -157,9 +157,9 @@ export const TYPE_OPTIONS = [
   { value: "Internship", label: "Internship" },
 ];
 export const CATEGORY_OPTIONS = [
-  { value: "Academic Positions", label: "Academic" },
-  { value: "Administrative Positions", label: "Administrative" },
-  { value: "Operations & Support Positions", label: "Operations & Support" },
+  { value: "Academic", label: "Academic" },
+  { value: "Administrative", label: "Administrative" },
+  { value: "Operations & Support", label: "Operations & Support" },
 ];
 export const SALARY_OPTIONS = [
   { value: "₹10K–₹15K", label: "₹10,000 – ₹15,000" },

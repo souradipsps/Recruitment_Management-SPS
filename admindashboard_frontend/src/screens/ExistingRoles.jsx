@@ -98,7 +98,7 @@ export default function ExistingRoles({ roles, setRoles }) {
         </div>
 
         <RolesTable
-          cols={["Role ID", "Department", "Role Name", "Experience", "Salary Range", "Type", "Status", "Action"]}
+          cols={["Role ID", "Department", "Role Name", "Category", "Experience", "Salary Range", "Type", "Status", "Action"]}
           rows={filtered}
           onStatusChange={handleStatusChange}
           onDelete={handleDeleteRole}
@@ -209,6 +209,7 @@ function RolesTable({
           {[
             { label: "Role ID", value: <span style={{ fontFamily: font.mono, fontWeight: 700 }}>{sel.id}</span> },
             { label: "Department", value: sel.dept },
+            { label: "Category", value: sel.category || "—" },
             { label: "Employment Type", value: sel.type },
             { label: "Work Experience Required", value: sel.experience ? `${sel.experience} years` : "No experience required" },
             { label: "Salary Budget (Annual)", value: <strong style={{ color: T.tealDark }}>{sel.salaryRange || "—"}</strong> },
@@ -271,6 +272,7 @@ function RolesTable({
       <Mono v={r.id} />,
       <span style={{ fontSize: 12, color: T.inkMid }}>{r.dept}</span>,
       <strong style={{ color: T.ink }}>{r.role}</strong>,
+      <span style={{ fontSize: 12, color: T.inkMid }}>{r.category || "—"}</span>,
       <span style={{ fontSize: 13, color: T.ink }}>{r.experience ? `${r.experience} yrs` : "—"}</span>,
       <span style={{ fontSize: 13, color: T.ink, fontWeight: 600 }}>{r.salaryRange ? `₹${r.salaryRange}` : "—"}</span>,
       <Badge label={r.type} variant={r.type === "Full-time" ? "blue" : "teal"} />,
@@ -402,6 +404,7 @@ function RolesTable({
                 >
                   {[
                     { icon: "🆔", label: "Role ID", value: r.id },
+                    { icon: "🏷️", label: "Category", value: r.category || "—" },
                     { icon: "⏳", label: "Experience", value: r.experience ? `${r.experience} yrs` : "—" },
                     { icon: "💰", label: "Salary Range", value: r.salaryRange ? `₹${r.salaryRange}` : "—" },
                     { icon: "💼", label: "Type", value: r.type },
