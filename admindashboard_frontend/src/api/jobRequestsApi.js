@@ -1,7 +1,8 @@
 // Job Requests API client.
 // Uses the access token from .env (no login flow yet).
 
-const API_URL = import.meta.env.VITE_JOB_REQUESTS_API_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_URL = `${API_BASE_URL}/job-requests/`;
 const ACCESS_TOKEN = import.meta.env.VITE_API_ACCESS_TOKEN;
 
 // Backend returns skills as a comma- or newline-separated string; the UI wants an array.
