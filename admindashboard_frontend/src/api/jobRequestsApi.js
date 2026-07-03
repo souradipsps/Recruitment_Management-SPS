@@ -1,0 +1,96 @@
+// Job Requests API client.
+// Uses the access token from .env (no login flow yet).
+
+const API_URL = import.meta.env.VITE_JOB_REQUESTS_API_URL;
+const ACCESS_TOKEN = import.meta.env.VITE_API_ACCESS_TOKEN;
+
+// Backend returns skills as a comma- or newline-separated string; the UI wants an array.
+const toSkillsArray = (val) => {
+  if (Array.isArray(val)) return val;
+  if (!val) return [];
+  return String(val)
+    .split(/[\n,]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+};
+
+// Map one API record -> the shape the table / cards / modal expect.
+export const normalizeJobRequest = (r) => ({
+  id: r.request_id || String(r.id),      // human id shown in the table (e.g. "JR-2026-0006")
+  backendId: r.id,                       // numeric pk, kept for future PATCH/DELETE
+  role: r.role || "",
+  location: r.location || "",
+  vacancies: r.vacancies ?? "",
+  exp: r.experience || "",
+  qual: r.educational_qualifications || r.qualification || "", // backend is educational_qualifications
+  type: r.type || "",
+  salary: r.salary_range || "",
+  status: r.status || "Pending",
+  department: r.department || "",
+  category: r.category || "",
+  description: r.description || "",
+  justification: r.justification || "",
+  skills: toSkillsArray(r.skills_required),
+  history: Array.isArray(r.history) ? r.history : [],
+  submittedBy: r.submitted_by || "",
+  date: r.created_at ? new Date(r.created_at).toLocaleDateString() : "",
+});
+
+// GET /api/job-requests/ -> normalized array.
+export async function fetchJobRequests() {
+  const res = await fetch(API_URL, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${ACCESS_TOKEN}`,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to load job requests (${res.status} ${res.statusText})`);
+  }
+
+  const data = await res.json();
+  const list = Array.isArray(data) ? data : data.results || []; // handle DRF pagination
+  return list.map(normalizeJobRequest);
+}
+
+// POST /api/job-requests/
+export async function createJobRequest(formData, submittedBy) {
+  if (!ACCESS_TOKEN) {
+    throw new Error("Missing VITE_API_ACCESS_TOKEN in .env");
+  }
+
+  // Map frontend form data (using UI keys like qual, exp, etc.) to backend API payload keys
+  const payload = {
+    role: formData.role,
+    vacancies: parseInt(formData.vacancies) || 1,
+    experience: formData.exp,
+    salary_range: formData.salary,
+    type: formData.type,
+    educational_qualifications: formData.qual, // Backend field name
+    department: formData.department,
+    category: formData.category,
+    location: formData.location,
+    description: formData.description,
+    justification: formData.justification,
+    skills_required: (formData.skills || []).join(", "), // Backend expects comma-separated string
+    submitted_by: submittedBy,
+  };
+
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${ACCESS_TOKEN}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`API Error: ${res.status} - ${errText}`);
+  }
+
+  const data = await res.json();
+  return normalizeJobRequest(data);
+}

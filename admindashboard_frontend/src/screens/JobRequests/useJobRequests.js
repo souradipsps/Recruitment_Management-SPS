@@ -1,11 +1,14 @@
 import { useState, useRef } from "react";
 import { emptyForm } from "./jobRequestUtils";
+import { createJobRequest } from "../../api/jobRequestsApi";
 
 const STATUSES = ["All", "Pending", "Approved", "Rejected", "Cancelled", "Sent Back"];
 
-export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequests, setJobPostings, existingRoles, onNavigateToApplications }) {
+export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequests, setJobPostings, existingRoles, onNavigateToApplications, currentUser }) {
   const [showForm, setShowForm] = useState(false);
   const [jobForms, setJobForms] = useState([emptyForm()]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [originalRequest, setOriginalRequest] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -202,7 +205,7 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     setJobForms([emptyForm()]);
   };
 
-  const submitRequests = () => {
+  const submitRequests = async () => {
     if (editingId !== null) {
       setJobRequests((prev) => prev.map((r) => r.id === editingId ? { ...r, ...jobForms[0] } : r));
       setApprovalRequests((prev) =>
@@ -226,16 +229,32 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
             : apr
         )
       );
-    } else {
+      setJobForms([emptyForm()]);
+      setShowForm(false);
+      setEditingId(null);
+      return;
+    }
+
+    const submittedBy = currentUser?.name || currentUser?.email || "Admin";
+    setSubmitError("");
+    setSubmitting(true);
+    
+    try {
       const now = new Date().toLocaleDateString();
+      // Send all forms to backend via API concurrently
+      const created = await Promise.all(jobForms.map(f => createJobRequest(f, submittedBy)));
+      
       const newRequests = jobForms.map((f, i) => ({
         ...f,
-        id: `JR-${Date.now()}-${i}`,
-        status: "Pending",
+        id: created[i].id || `JR-${Date.now()}-${i}`,
+        requestId: created[i].request_id,
+        status: created[i].status || "Pending",
+        submittedBy: created[i].submittedBy || submittedBy,
         comment: "",
         date: now,
-        history: [{ act: "Submitted", by: "Current User", date: now, note: "" }],
+        history: [{ act: "Submitted", by: submittedBy, date: now, note: "" }],
       }));
+
       setJobRequests((prev) => [...prev, ...newRequests]);
       setApprovalRequests((prev) => [
         ...prev,
@@ -244,7 +263,7 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
           dept: r.department || "N/A",
           role: r.role,
           category: r.category || "N/A",
-          requestedBy: "Current User",
+          requestedBy: r.submittedBy || submittedBy,
           date: now,
           location: r.location,
           salary: r.salary,
@@ -255,17 +274,22 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
           just: r.justification,
           description: r.description,
           skills: r.skills,
-          status: "Pending",
+          status: r.status || "Pending",
           comment: "",
-          history: [{ act: "Submitted", by: "Current User", date: now, note: "" }],
+          history: r.history || [{ act: "Submitted", by: submittedBy, date: now, note: "" }],
           sourceId: r.id,
           type: "Job Request",
         })),
       ]);
+      setJobForms([emptyForm()]);
+      setShowForm(false);
+      setEditingId(null);
+    } catch (err) {
+      console.error("Submit error:", err);
+      setSubmitError(err.message || "Failed to submit job request. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
-    setJobForms([emptyForm()]);
-    setShowForm(false);
-    setEditingId(null);
   };
 
   return {
@@ -285,6 +309,8 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     openNew,
     cancelForm,
     submitRequests,
+    submitting,
+    submitError,
     updateForm,
     handleRoleChange,
     roleOptions,
