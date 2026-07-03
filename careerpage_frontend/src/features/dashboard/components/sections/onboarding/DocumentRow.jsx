@@ -71,7 +71,7 @@ export function DocumentRow({
                     window.open(url, "_blank");
                   }
                 }}
-                className="dr-btn-view hover:bg-[#f0f0f0]"
+                className="dr-btn-view"
               >
                 <Eye size={12} /> View
               </button>
@@ -118,7 +118,7 @@ export function DocumentRow({
               </label>
               <button
                 onClick={() => startDocCamera(docKey)}
-                className="dr-btn-camera hover:bg-[#f0f0f0]"
+                className="dr-btn-camera"
               >
                 <Camera size={12} /> Take Photo
               </button>

@@ -135,11 +135,15 @@
   border-radius: 8px;
   padding: 10px 24px;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: background-color 0.2s;
 }
 
 .rd-btn-submit:hover {
-  opacity: 0.9;
+  background: #5a0d21;
+}
+
+.rd-btn-submit:active {
+  background: #430a18;
 }
 
 .rd-banner-icon {
