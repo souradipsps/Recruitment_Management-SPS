@@ -1,11 +1,48 @@
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { MapPin, IndianRupee, Briefcase } from "lucide-react";
-import { experienceById, salaryRangeById } from "../../../mockData/jobs";
 import "./css/JobCard.css";
 
 // A single opportunity card. `showOverlay` renders the blurred "See More"
 // gate on the last visible card when more results are hidden.
 export function JobCard({ job, applied, onApply, showOverlay, onSeeMore }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+  const [heights, setHeights] = useState({ collapsedHeight: "2.75rem", expandedHeight: "auto" });
+  const descRef = useRef(null);
+
+  useEffect(() => {
+    const element = descRef.current;
+    if (!element) return;
+
+    const checkOverflowAndHeights = () => {
+      const computedStyle = window.getComputedStyle(element);
+      const lineHeightVal = parseFloat(computedStyle.lineHeight);
+      const fontSizeVal = parseFloat(computedStyle.fontSize);
+      const lineHeight = isNaN(lineHeightVal) ? fontSizeVal * 1.65 : lineHeightVal;
+      const isOver = element.scrollHeight > lineHeight * 2.2;
+      
+      setIsOverflowing(isOver);
+      if (isOver) {
+        setHeights({
+          collapsedHeight: `${lineHeight * 2}px`,
+          expandedHeight: `${element.scrollHeight}px`
+        });
+      }
+    };
+
+    checkOverflowAndHeights();
+
+    const resizeObserver = new ResizeObserver(() => {
+      checkOverflowAndHeights();
+    });
+    resizeObserver.observe(element);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [job.description]);
+
   const handleShare = () => {
     const text = `${job.title} at South Point School, Guwahati — ${job.type} | ${job.department}`;
     if (navigator.share) {
@@ -36,16 +73,35 @@ export function JobCard({ job, applied, onApply, showOverlay, onSeeMore }) {
           <MapPin size={12} />{job.location}
         </span>
         <span className="jc-meta-item flex items-center gap-1">
-          <Briefcase size={12} />{experienceById[job.id] ?? "2–5 yrs"}
+          <Briefcase size={12} />{job.experience ?? "2–5 yrs"}
         </span>
         <span className="jc-meta-item flex items-center gap-1">
-          <IndianRupee size={12} />{salaryRangeById[job.id] ?? "30k – 50k"}
+          <IndianRupee size={12} />{job.salaryRange ?? "30k – 50k"}
         </span>
       </div>
 
       {/* ── Description ─────────────────────────────────────────────────── */}
       <div className="px-5 pb-3">
-        <p className="jc-description">{job.description}</p>
+        <div
+          className={`jc-description-container ${isOverflowing ? "interactive" : ""} ${isExpanded ? "expanded" : "collapsed"}`}
+          onClick={() => isOverflowing && setIsExpanded(!isExpanded)}
+          style={{
+            height: isOverflowing 
+              ? (isExpanded ? heights.expandedHeight : heights.collapsedHeight)
+              : "auto"
+          }}
+          title={isOverflowing ? (isExpanded ? "Click to collapse" : "Click to view full description") : undefined}
+        >
+          <p ref={descRef} className="jc-description">
+            {job.description}
+          </p>
+          {isOverflowing && (
+            <div className="jc-description-fade">
+              <span className="jc-ellipsis">&nbsp;...</span>
+              <span className="jc-read-more-badge">Read more</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Qualifications & Skills ───────────────────────────────────────── */}

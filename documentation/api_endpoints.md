@@ -493,6 +493,8 @@ GET https://rms1-1-suhq.onrender.com/api/job-postings/public/?q=Mathematics
     "location": "Guwahati, Assam",
     "description": "We are looking for an experienced Mathematics teacher to join our secondary school team.",
     "qualifications": ["Master's degree in Mathematics", "B.Ed or equivalent", "Experience in CBSE curriculum"],
+    "educational_qualifications": "Master's degree in Mathematics\nB.Ed or equivalent teaching certification",
+    "skills_required": "Classroom Management\nAlgebra & Calculus proficiency\nStudent mentoring",
     "experience": "3–5 yrs",
     "salary_range": "₹40K–₹60K",
     "deadline": "July 15, 2026",
@@ -509,6 +511,8 @@ GET https://rms1-1-suhq.onrender.com/api/job-postings/public/?q=Mathematics
     "location": "Guwahati, Assam",
     "description": "Manage day-to-day office operations and coordinate communications.",
     "qualifications": ["Graduate", "Proficiency in MS Office", "Strong communication skills"],
+    "educational_qualifications": "Graduate in any discipline",
+    "skills_required": "Office administration\nMS Office Suite\nGood communication",
     "experience": "2–4 yrs",
     "salary_range": "₹25K–₹35K",
     "deadline": "June 30, 2026",
@@ -1090,14 +1094,20 @@ https://rms1-1-suhq.onrender.com/api/job-requests/
 
 **Request Body (JSON)**
 
-| Field         | Type    | Required | Description                      | Example                         |
-|---------------|---------|----------|----------------------------------|---------------------------------|
-| role          | String  | Yes      | Job role title                   | Physics Teacher                 |
-| vacancies     | Integer | No       | Number of vacancies (default 1)  | 2                               |
-| experience    | String  | No       | Experience requirement           | 3+ years                        |
-| salary_range  | String  | No       | Salary range                     | ₹40K–₹50K                      |
-| type          | String  | No       | Employment type (default Full-time) | Full-time, Part-time         |
-| qualification | String  | No       | Required qualification           | M.Sc Physics, B.Ed              |
+| Field                      | Type    | Required | Description                          | Example                         |
+|----------------------------|---------|----------|--------------------------------------|---------------------------------|
+| role                       | String  | Yes      | Job role title                       | Physics Teacher                 |
+| department                 | String  | Yes      | Department name                      | Science                         |
+| vacancies                  | Integer | No       | Number of vacancies (default 1)      | 2                               |
+| experience                 | String  | No       | Experience requirement               | 3+ years                        |
+| salary_range               | String  | No       | Salary range                         | ₹40K–₹50K                       |
+| type                       | String  | No       | Employment type (default Full-time)  | Full-time, Part-time            |
+| location                   | String  | No       | Job location                         | Guwahati, Assam                 |
+| category                   | String  | No       | Job category                         | Academic Positions              |
+| description                | String  | No       | Job description                      | Detailed description text...    |
+| justification              | String  | No       | Justification note                   | Needed due to workload...       |
+| educational_qualifications | String  | No       | Required educational qualification   | M.Sc Physics, B.Ed              |
+| skills_required            | String  | No       | Required skills (comma-separated)    | Classroom Management, Physics   |
 
 **Example Request**
 
@@ -1107,12 +1117,18 @@ Authorization: Bearer <access_token>
 Content-Type: application/json
 
 {
-  "role": "Physics Teacher",
-  "vacancies": 2,
-  "experience": "3+ years",
-  "salary_range": "₹40K–₹50K",
+  "category": "Academic Positions",
+  "department": "IT DEP",
+  "role": "Dev1",
+  "vacancies": 6,
+  "experience": "2-3",
+  "salary_range": "1000-2000",
   "type": "Full-time",
-  "qualification": "M.Sc Physics, B.Ed"
+  "description": "evwmlm;lrvfm;m;d\nsvndlkm;das'\ndclm/\nelkncnlk;",
+  "justification": "ok sir",
+  "location": "Guwahati",
+  "educational_qualifications": "",
+  "skills_required": "Data Analysis, IT Support"
 }
 ```
 
@@ -1120,18 +1136,24 @@ Content-Type: application/json
 
 ```json
 {
-  "id": 1,
-  "request_id": "JR-2026-0001",
-  "role": "Physics Teacher",
-  "vacancies": 2,
-  "experience": "3+ years",
-  "salary_range": "₹40K–₹50K",
+  "id": 6,
+  "category": "Academic Positions",
+  "request_id": "JR-2026-0006",
+  "department": "IT DEP",
+  "role": "Dev1",
+  "vacancies": 6,
+  "experience": "2-3",
+  "salary_range": "1000-2000",
   "type": "Full-time",
-  "qualification": "M.Sc Physics, B.Ed",
-  "status": "Pending",
-  "submitted_by": "",
-  "created_at": "2026-06-30T13:50:00+05:30",
-  "updated_at": "2026-06-30T13:50:00+05:30",
+  "description": "evwmlm;lrvfm;m;d\nsvndlkm;das'\ndclm/\nelkncnlk;",
+  "justification": "ok sir",
+  "location": "Guwahati",
+  "educational_qualifications": "",
+  "skills_required": "Data Analysis, IT Support",
+  "status": "Approved",
+  "submitted_by": "HR Admin",
+  "created_at": "2026-07-03T13:18:14.685459+05:30",
+  "updated_at": "2026-07-03T13:39:50.658280+05:30",
   "created_by": 1
 }
 ```
@@ -1241,18 +1263,24 @@ Authorization: Bearer <access_token>
   "previous": null,
   "results": [
     {
-      "id": 1,
-      "request_id": "JR-2026-0001",
-      "role": "Physics Teacher",
-      "vacancies": 2,
-      "experience": "3+ years",
-      "salary_range": "₹40K–₹50K",
+      "id": 6,
+      "category": "Academic Positions",
+      "request_id": "JR-2026-0006",
+      "department": "IT DEP",
+      "role": "Dev1",
+      "vacancies": 6,
+      "experience": "2-3",
+      "salary_range": "1000-2000",
       "type": "Full-time",
-      "qualification": "M.Sc Physics, B.Ed",
-      "status": "Pending",
-      "submitted_by": "",
-      "created_at": "2026-06-30T13:50:00+05:30",
-      "updated_at": "2026-06-30T13:50:00+05:30",
+      "description": "evwmlm;lrvfm;m;d\nsvndlkm;das'\ndclm/\nelkncnlk;",
+      "justification": "ok sir",
+      "location": "Guwahati",
+      "educational_qualifications": "",
+      "skills_required": "Data Analysis, IT Support",
+      "status": "Approved",
+      "submitted_by": "HR Admin",
+      "created_at": "2026-07-03T13:18:14.685459+05:30",
+      "updated_at": "2026-07-03T13:39:50.658280+05:30",
       "created_by": 1
     }
   ]

@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { Phone, User, Mail } from "lucide-react";
 import logoImg from "../../../../assets/logo.png";
 import { PasswordInput } from "./PasswordInput";
-import { signupUser } from "./authService";
+import { signupUser } from "../../services/authService";
 
 const capitalizeWords = (str) => str.replace(/\b\w/g, (char) => char.toUpperCase());
 

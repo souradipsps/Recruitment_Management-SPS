@@ -9,6 +9,8 @@ import "./css/OpportunitiesSection.css";
 // with progressive "See More" paging.
 export function OpportunitiesSection({ onApplyJob, appliedJobIds }) {
   const {
+    loading,
+    error,
     search,
     activeCategory,
     showAll,
@@ -75,7 +77,23 @@ export function OpportunitiesSection({ onApplyJob, appliedJobIds }) {
           </div>
         </div>
 
+        {/* ── Loading / error states ──────────────────────────────────────── */}
+        {loading && (
+          <div className="py-16 text-center">
+            <p className="os-empty-msg">Loading opportunities…</p>
+          </div>
+        )}
+
+        {!loading && error && (
+          <div className="py-16 text-center">
+            <p className="os-empty-msg">
+              {error} Please refresh the page or try again later.
+            </p>
+          </div>
+        )}
+
         {/* ── Job listings ────────────────────────────────────────────────── */}
+        {!loading && !error && (
         <div className="grid sm:grid-cols-2 gap-4">
           <AnimatePresence mode="popLayout">
             {visibleJobs.length > 0 ? (
@@ -105,9 +123,10 @@ export function OpportunitiesSection({ onApplyJob, appliedJobIds }) {
             )}
           </AnimatePresence>
         </div>
+        )}
 
         {/* ── Show Less ───────────────────────────────────────────────────── */}
-        {filteredJobs.length > JOBS_VISIBLE && showAll && (
+        {!loading && !error && filteredJobs.length > JOBS_VISIBLE && showAll && (
           <div className="mt-8 text-center">
             <button
               onClick={() => {

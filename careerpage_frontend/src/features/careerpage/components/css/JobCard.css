@@ -65,6 +65,71 @@
   line-height : 1.65;
 }
 
+.jc-description-container {
+  position   : relative;
+  overflow   : hidden;
+  transition : height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.jc-description-container.interactive {
+  cursor : pointer;
+}
+
+.jc-description-fade {
+  position        : absolute;
+  bottom          : 0;
+  right           : 0;
+  height          : 1.45rem;
+  width           : 6.8rem;
+  background      : linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 18%);
+  display         : flex;
+  align-items     : center;
+  justify-content : flex-end;
+  pointer-events  : none;
+  opacity         : 0;
+  transition      : opacity 0.2s ease;
+}
+
+.jc-description-container.collapsed .jc-description-fade {
+  opacity          : 1;
+  transition-delay : 0.15s;
+}
+
+.jc-description-container.expanded .jc-description-fade {
+  opacity          : 0;
+  transition-delay : 0s;
+}
+
+.jc-ellipsis {
+  font-size    : 0.82rem;
+  font-weight  : 600;
+  color        : var(--jc-body);
+  margin-right : 5px;
+}
+
+.jc-read-more-badge {
+  font-size     : 0.68rem;
+  font-weight   : 700;
+  color         : var(--jc-maroon);
+  background    : rgba(255, 255, 255, 0.9);
+  padding       : 1px 6px;
+  border-radius : 4px;
+  border        : 1px solid rgba(114, 16, 42, 0.15);
+  box-shadow    : 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-right  : 2px;
+  transition    : background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.jc-description-container.interactive:hover .jc-description {
+  color : var(--jc-maroon);
+}
+
+.jc-description-container.interactive:hover .jc-read-more-badge {
+  background   : var(--jc-maroon);
+  color        : #fff;
+  border-color : var(--jc-maroon);
+}
+
 /* ── Qualifications ──────────────────────────────────────────────────────── */
 .jc-qual-heading {
   color       : var(--jc-ink);

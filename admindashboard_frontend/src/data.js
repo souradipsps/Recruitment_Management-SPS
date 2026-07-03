@@ -140,6 +140,11 @@ export const TYPE_OPTIONS = [
   { value: "Contract", label: "Contract" },
   { value: "Internship", label: "Internship" },
 ];
+export const CATEGORY_OPTIONS = [
+  { value: "Academic", label: "Academic" },
+  { value: "Administrative", label: "Administrative" },
+  { value: "Operations & Support", label: "Operations & Support" },
+];
 export const SALARY_OPTIONS = [
   { value: "₹10K–₹15K", label: "₹10,000 – ₹15,000" },
   { value: "₹15K–₹20K", label: "₹15,000 – ₹20,000" },
@@ -152,4 +157,12 @@ export const SALARY_OPTIONS = [
   { value: "₹60K–₹80K", label: "₹60,000 – ₹80,000" },
   { value: "₹80K–₹1L", label: "₹80,000 – ₹1,00,000" },
   { value: "₹1L+", label: "₹1,00,000+" },
+];
+export const ALL_SKILLS = [
+  "Curriculum Development", "Classroom Management", "Student Assessment",
+  "Communication", "Leadership", "Team Collaboration", "Microsoft Office",
+  "Data Analysis", "Project Management", "Problem Solving",
+  "CBSE Curriculum", "Digital Literacy", "Research & Development",
+  "Counselling", "Event Management", "Administration", "IT Support",
+  "Sports Coaching", "Content Creation", "Public Speaking",
 ];

@@ -69,6 +69,19 @@
   align-items: center;
   gap: 4px;
   cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.dr-btn-view:hover {
+  background: var(--dr-maroon);
+  color: #fff;
+  border-color: var(--dr-maroon);
+}
+
+.dr-btn-view:active {
+  background: #5a0d21;
+  color: #fff;
+  border-color: #5a0d21;
 }
 
 .dr-btn-remove {
@@ -79,6 +92,18 @@
   display: flex;
   align-items: center;
   padding: 4px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.dr-btn-remove:hover {
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 4px;
+}
+
+.dr-btn-remove:active {
+  background: #fca5a5;
+  color: #7f1d1d;
 }
 
 .dr-btn-upload-wrap {
@@ -93,6 +118,19 @@
   align-items: center;
   gap: 4px;
   white-space: nowrap;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.dr-pointer-label:hover .dr-btn-upload-wrap {
+  background: var(--dr-maroon);
+  color: #fff;
+  border-color: var(--dr-maroon);
+}
+
+.dr-pointer-label:active .dr-btn-upload-wrap {
+  background: #5a0d21;
+  color: #fff;
+  border-color: #5a0d21;
 }
 
 .dr-btn-camera {
@@ -108,6 +146,19 @@
   gap: 4px;
   white-space: nowrap;
   cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.dr-btn-camera:hover {
+  background: var(--dr-maroon);
+  color: #fff;
+  border-color: var(--dr-maroon);
+}
+
+.dr-btn-camera:active {
+  background: #5a0d21;
+  color: #fff;
+  border-color: #5a0d21;
 }
 
 .dr-missing-text {
