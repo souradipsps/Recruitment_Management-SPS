@@ -141,9 +141,9 @@ export const TYPE_OPTIONS = [
   { value: "Internship", label: "Internship" },
 ];
 export const CATEGORY_OPTIONS = [
-  { value: "Academic", label: "Academic" },
-  { value: "Administrative", label: "Administrative" },
-  { value: "Operations & Support", label: "Operations & Support" },
+  { value: "Academic Positions", label: "Academic" },
+  { value: "Administrative Positions", label: "Administrative" },
+  { value: "Operations & Support Positions", label: "Operations & Support" },
 ];
 export const SALARY_OPTIONS = [
   { value: "₹10K–₹15K", label: "₹10,000 – ₹15,000" },

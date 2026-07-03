@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { T } from "../theme";
 import { statusVariant } from "../theme";
 import { useBreakpoint } from "../hooks";
@@ -21,6 +22,17 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
   const [statusFilter, setStatusFilter] = useState("Pending");
   const [search, setSearch] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
+
+  useEffect(() => {
+    if (sel) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [sel]);
 
   const avatar = (name, size = 48, fs = 16) => {
     const val = name || "RQ";
@@ -181,7 +193,7 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
     <div>
       <SectionTitle title="Approve Request" sub="Review, approve, or return pending role and job requests" />
 
-      {sel && (
+      {sel && createPortal(
         <div
           onClick={closeModal}
           style={{
@@ -189,7 +201,7 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
             background: "rgba(15,23,42,0.45)",
             display: "flex", alignItems: "center", justifyContent: "center",
             padding: 16,
-            backdropFilter: "blur(2px)",
+            backdropFilter: "blur(4px)", // Increased blur slightly for better premium effect
           }}
         >
           <div
@@ -595,7 +607,8 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <Card>

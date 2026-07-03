@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { T } from "../../theme";
 import { statusVariant } from "../../theme";
 import { Btn, Input, Select, Badge } from "../../components/ui";
@@ -42,7 +44,15 @@ export default function JobRequestDetailModal({
   const isEditable = selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back";
   const patch = (key, value) => setSelectedRequest({ ...selectedRequest, [key]: value });
 
-  return (
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  return createPortal(
     <div
       onClick={onClose}
       style={{
@@ -50,7 +60,7 @@ export default function JobRequestDetailModal({
         background: "rgba(15,23,42,0.45)",
         display: "flex", alignItems: "center", justifyContent: "center",
         padding: 16,
-        backdropFilter: "blur(2px)",
+        backdropFilter: "blur(4px)", // Increased blur slightly for better premium effect
       }}
     >
       <div
@@ -185,6 +195,7 @@ export default function JobRequestDetailModal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

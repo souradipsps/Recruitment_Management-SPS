@@ -13,6 +13,8 @@ export default function JobRequestForm({
   handleRoleChange,
   updateForm,
   submitRequests,
+  submitting,
+  submitError,
   onCancel,
 }) {
   return (
@@ -93,10 +95,20 @@ export default function JobRequestForm({
         </Card>
       ))}
 
+      {submitError && (
+        <div style={{ marginBottom: 16, padding: "12px 16px", borderRadius: 8, background: "#FEE2E2", color: "#DC2626", fontSize: 13, fontWeight: 600, border: "1px solid #FCA5A5" }}>
+          {submitError}
+        </div>
+      )}
+
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
-        <Btn label="Submit Request" onClick={submitRequests} />
-        {!editingId && <Btn label="+ Add More" variant="outline" onClick={() => setJobForms((p) => [...p, emptyForm()])} />}
-        <Btn label="Cancel" variant="ghost" onClick={onCancel} />
+        <Btn
+          label={submitting ? "Submitting…" : "Submit Request"}
+          onClick={submitRequests}
+          style={submitting ? { opacity: 0.6, pointerEvents: "none" } : {}}
+        />
+        {!editingId && <Btn label="+ Add More" variant="outline" onClick={() => setJobForms((p) => [...p, emptyForm()])} disabled={submitting} />}
+        <Btn label="Cancel" variant="ghost" onClick={onCancel} disabled={submitting} />
       </div>
     </div>
   );

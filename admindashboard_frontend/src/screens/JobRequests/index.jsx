@@ -51,6 +51,8 @@ export default function JobRequests(props) {
           handleRoleChange={s.handleRoleChange}
           updateForm={s.updateForm}
           submitRequests={s.submitRequests}
+          submitting={s.submitting}
+          submitError={s.submitError}
           onCancel={s.cancelForm}
         />
       )}
