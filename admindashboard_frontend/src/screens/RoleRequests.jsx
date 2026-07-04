@@ -4,6 +4,7 @@ import { statusVariant } from "../theme";
 import { useBreakpoint } from "../hooks";
 import { Card, SectionTitle, Table, Mono, Btn, Input, Badge, FormField, Modal, ModalHeader, Textarea, Select } from "../components/ui";
 import { CATEGORY_OPTIONS } from "../data";
+import { createRoleRequest } from "../api/roleRequestsApi";
 
 const getStatusStyle = (status) => {
   switch (status) {
@@ -36,6 +37,8 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
 
   const [showForm, setShowForm] = useState(false);
   const [roleForms, setRoleForms] = useState([emptyForm()]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [originalRequest, setOriginalRequest] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -134,7 +137,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
     setShowForm(true);
   };
 
-  const submitRequests = () => {
+  const submitRequests = async () => {
     if (!validateForms()) return;
     const updatedForms = roleForms.map((f) => {
       const combinedSalary = f.minSalary && f.maxSalary ? `${f.minSalary}-${f.maxSalary}` : (f.minSalary || f.maxSalary || "");
@@ -163,13 +166,35 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
             : apr
         )
       );
-    } else {
+      setRoleForms([emptyForm()]);
+      setShowForm(false);
+      setEditingId(null);
+      return;
+    }
+
+    // --- New submission: call the backend API ---
+    const submittedBy = "HR Admin";
+    setSubmitError("");
+    setSubmitting(true);
+
+    try {
+      const now = new Date().toLocaleDateString();
+      // Submit all forms to the backend concurrently
+      const created = await Promise.all(
+        updatedForms.map((f) => createRoleRequest(f, submittedBy))
+      );
+
       const newRequests = updatedForms.map((f, i) => ({
         ...f,
-        id: `RR-${Date.now()}-${i}`,
+        id: created[i].id,
+        backendId: created[i].backendId,
+        status: created[i].status || "Pending",
+        submittedBy: created[i].submittedBy || submittedBy,
+        date: created[i].date || now,
         requestType: "Role",
-        history: [{ act: "Submitted", by: "Current User", date: f.date || new Date().toLocaleDateString(), note: "" }],
+        history: [{ act: "Submitted", by: submittedBy, date: now, note: "" }],
       }));
+
       setRoleRequests((prev) => [...prev, ...newRequests]);
       setApprovalRequests((prev) => [
         ...prev,
@@ -178,22 +203,28 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
           dept: r.dept,
           role: r.role,
           experience: r.experience,
-          requestedBy: "Current User",
+          requestedBy: submittedBy,
           date: r.date,
           salary: r.salaryRange ? `₹${r.salaryRange}` : "",
           just: r.just,
           status: "Pending",
           comment: "",
-          history: [{ act: "Submitted", by: "Current User", date: r.date, note: "" }],
+          history: r.history,
           sourceId: r.id,
           type: "Role Request",
           category: r.category,
         })),
       ]);
+
+      setRoleForms([emptyForm()]);
+      setShowForm(false);
+      setEditingId(null);
+    } catch (err) {
+      console.error("Submit role request error:", err);
+      setSubmitError(err.message || "Failed to submit. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
-    setRoleForms([emptyForm()]);
-    setShowForm(false);
-    setEditingId(null);
   };
 
   const saveRoleRequestEdits = (submitAsPending) => {
@@ -548,7 +579,16 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", marginTop: 20, paddingTop: 16, borderTop: `1px solid ${T.border}` }}>
           {!editingId && <Btn label="+ Add More" variant="outline" onClick={() => setRoleForms((p) => [...p, emptyForm()])} style={{ marginRight: "auto" }} />}
           <Btn label="Cancel" variant="ghost" onClick={() => { setShowForm(false); setEditingId(null); setRoleForms([emptyForm()]); }} />
-          <Btn label="Submit Request" onClick={submitRequests} />
+          {submitError && (
+            <div style={{ width: "100%", color: "#DC2626", fontSize: 12, fontWeight: 600, background: "#FEE2E2", border: "1px solid #FECACA", borderRadius: 8, padding: "8px 12px" }}>
+              ⚠ {submitError}
+            </div>
+          )}
+          <Btn
+            label={submitting ? "Submitting…" : "Submit Request"}
+            onClick={submitRequests}
+            disabled={submitting}
+          />
         </div>
       </Modal>
 

@@ -3,6 +3,7 @@ import { T, font } from "./theme";
 import { useBreakpoint, usePersistentState, useSessionState } from "./hooks";
 import { NAV, EXISTING_ROLES, POSTINGS, JOB_APPLICATIONS, GENERAL_APPLICATIONS, INTERVIEWS, OFFERS } from "./data";
 import { fetchJobRequests } from "./api/jobRequestsApi";
+import { fetchRoleRequests } from "./api/roleRequestsApi";
 
 import Auth from "./screens/Auth";
 import ModuleSelector from "./screens/ModuleSelector";
@@ -50,6 +51,15 @@ export default function App() {
       .catch((err) => console.error("Failed to load job requests:", err));
     return () => { active = false; };
   }, [setJobRequests]);
+
+  // Load role requests from the API on mount.
+  useEffect(() => {
+    let active = true;
+    fetchRoleRequests()
+      .then((data) => { if (active) setRoleRequests(data); })
+      .catch((err) => console.error("Failed to load role requests:", err));
+    return () => { active = false; };
+  }, [setRoleRequests]);
 
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
