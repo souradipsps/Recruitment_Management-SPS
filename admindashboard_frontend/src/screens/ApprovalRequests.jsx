@@ -6,6 +6,7 @@ import { useBreakpoint } from "../hooks";
 import { Card, SectionTitle, Btn, Input, Badge, Mono, Select } from "../components/ui";
 import { QUAL_OPTIONS, TYPE_OPTIONS, VACANCY_OPTIONS, DEPT_OPTIONS, CATEGORY_OPTIONS, ALL_SKILLS } from "../data";
 import SkillsMultiSelect from "../components/SkillsMultiSelect";
+import { takeApprovalAction } from "../api/approvalsApi";
 
 const labelCss = {
   fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase",
@@ -69,7 +70,18 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
   const openModal = (r) => { setSel(r); setComment(""); setFieldErrors({}); };
   const closeModal = () => { setSel(null); setComment(""); setFieldErrors({}); };
 
-  const performAction = (r, action, customComment) => {
+  const performAction = async (r, action, customComment) => {
+    // Persist to the backend first when this approval came from the API.
+    if (r.backendId != null) {
+      try {
+        await takeApprovalAction(r.backendId, action, customComment || "");
+      } catch (err) {
+        console.error("Failed to submit approval action:", err);
+        alert(`Could not submit action: ${err.message}`);
+        return false;
+      }
+    }
+
     const now = new Date().toLocaleDateString();
     const entry = { act: action, by: "HR Admin", date: now, note: customComment || "" };
     const updated = { ...r, status: action, comment: customComment || "", history: [...(r.history || []), entry] };
@@ -159,9 +171,10 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
     if (sel && sel.id === r.id) {
       setSel(updated);
     }
+    return true;
   };
 
-  const takeAction = (action) => {
+  const takeAction = async (action) => {
     if (!sel) return;
     let updatedSel = { ...sel };
     if (sel.type === "Role Request") {
@@ -185,8 +198,8 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
       updatedSel.description = sel.description;
     }
     setFieldErrors({});
-    performAction(updatedSel, action, comment);
-    if (action !== "Sent Back") closeModal();
+    const ok = await performAction(updatedSel, action, comment);
+    if (ok && action !== "Sent Back") closeModal();
   };
 
   const isPending = sel?.status === "Pending";
