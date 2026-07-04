@@ -47,7 +47,6 @@ export const normalizeApproval = (r) => ({
   location: r.location || "",
   category: (r.category || "").replace(/\s*Positions$/, ""),
   description: r.description || "",
-  justification: r.justification || "",
   skills: toSkillsArray(r.skills_required),
   comment: "",
   history: toHistory(r.history),
@@ -71,12 +70,8 @@ export async function fetchApprovals() {
   return list.map(normalizeApproval);
 }
 
-// POST /api/approvals/{id}/action/ -> normalized approval.
-// `status` is the UI label ("Approved" | "Rejected" | "Sent Back").
+// POST /api/approvals/{id}/action/. `status` is the UI label ("Approved" | "Rejected" | "Sent Back").
 export async function takeApprovalAction(backendId, status, note = "", actedBy = "HR Admin") {
-  if (!ACCESS_TOKEN) {
-    throw new Error("Missing VITE_API_ACCESS_TOKEN in .env");
-  }
   const action = ACTION_VERB[status];
   if (!action) {
     throw new Error(`Unsupported approval status: ${status}`);
@@ -92,6 +87,4 @@ export async function takeApprovalAction(backendId, status, note = "", actedBy =
     const errText = await res.text();
     throw new Error(`API Error: ${res.status} - ${errText}`);
   }
-
-  return normalizeApproval(await res.json());
 }
