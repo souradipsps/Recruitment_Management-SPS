@@ -37,7 +37,7 @@ class ExistingRole(models.Model):
     ]
 
     role_id      = models.CharField(max_length=30, unique=True)
-    department   = models.CharField(max_length=100, choices=DEPT_CHOICES)
+    department   = models.CharField(max_length=100)
     role         = models.CharField(max_length=200)
     type         = models.CharField(max_length=50, choices=TYPE_CHOICES, default="Full-time")
     headcount    = models.PositiveIntegerField(default=1)
@@ -62,15 +62,19 @@ class ExistingRole(models.Model):
 
 class RoleRequest(models.Model):
     STATUS_CHOICES = [
-        ("Pending",  "Pending"),
-        ("Approved", "Approved"),
-        ("Rejected", "Rejected"),
+        ("Pending",   "Pending"),
+        ("Approved",  "Approved"),
+        ("Rejected",  "Rejected"),
+        ("Sent Back", "Sent Back"),
+        ("Cancelled", "Cancelled"),
     ]
 
     request_id    = models.CharField(max_length=30, unique=True)
     department    = models.CharField(max_length=100)
     role          = models.CharField(max_length=200)
-    justification = models.TextField()
+    justification = models.TextField(blank=True)
+    salary_range  = models.CharField(max_length=100, blank=True)
+    experience    = models.CharField(max_length=50, blank=True)
     status        = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Pending")
     submitted_by  = models.CharField(max_length=200, blank=True)
     date          = models.DateField(auto_now_add=True)
@@ -91,18 +95,29 @@ class RoleRequest(models.Model):
 
 class JobRequest(models.Model):
     STATUS_CHOICES = [
-        ("Pending",  "Pending"),
-        ("Approved", "Approved"),
-        ("Rejected", "Rejected"),
+        ("Pending",   "Pending"),
+        ("Approved",  "Approved"),
+        ("Rejected",  "Rejected"),
+        ("Sent Back", "Sent Back"),
+        ("Cancelled", "Cancelled"),
     ]
 
     request_id    = models.CharField(max_length=30, unique=True)
+    department    = models.CharField(max_length=100, blank=True)
     role          = models.CharField(max_length=200)
     vacancies     = models.PositiveIntegerField(default=1)
     experience    = models.CharField(max_length=50, blank=True)
     salary_range  = models.CharField(max_length=100, blank=True)
     type          = models.CharField(max_length=50, default="Full-time")
-    qualification = models.CharField(max_length=200, blank=True)
+    description   = models.TextField(blank=True)
+    justification = models.TextField(blank=True)
+    location      = models.CharField(max_length=200, blank=True)
+    category      = models.ForeignKey(
+        JobCategory, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="job_requests"
+    )
+    educational_qualifications = models.CharField(max_length=200, blank=True)
+    skills_required            = models.TextField(blank=True)
     status        = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Pending")
     submitted_by  = models.CharField(max_length=200, blank=True)
     created_at    = models.DateTimeField(auto_now_add=True)
@@ -198,6 +213,8 @@ class JobPosting(models.Model):
     experience     = models.CharField(max_length=50, blank=True)
     salary_range   = models.CharField(max_length=100, blank=True)
     qualification  = models.CharField(max_length=200, blank=True)
+    educational_qualifications = models.TextField(blank=True)
+    skills_required            = models.TextField(blank=True)
     channel        = models.CharField(max_length=20, choices=CHANNEL_CHOICES, default="External")
     status         = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Unpublished")
     posted_date    = models.DateField(null=True, blank=True)

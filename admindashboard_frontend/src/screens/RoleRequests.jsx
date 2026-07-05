@@ -2,7 +2,12 @@ import { useState, useRef } from "react";
 import { T } from "../theme";
 import { statusVariant } from "../theme";
 import { useBreakpoint } from "../hooks";
+<<<<<<< HEAD
 import { Card, SectionTitle, Table, Mono, Btn, Input, Badge, FormField, Modal, ModalHeader, Textarea } from "../components/ui";
+=======
+import { Card, SectionTitle, Table, Mono, Btn, Input, Badge, FormField, Modal, ModalHeader, Textarea, Select } from "../components/ui";
+import { CATEGORY_OPTIONS } from "../data";
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
 
 const getStatusStyle = (status) => {
   switch (status) {
@@ -18,6 +23,10 @@ const emptyForm = () => ({
   id: Date.now() + Math.random(),
   dept: "",
   role: "",
+<<<<<<< HEAD
+=======
+  category: "",
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
   minExperience: "",
   maxExperience: "",
   minSalary: "",
@@ -156,6 +165,10 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                 experience: updatedForms[0].experience,
                 salary: updatedForms[0].salaryRange ? `₹${updatedForms[0].salaryRange}` : "",
                 just: updatedForms[0].just,
+<<<<<<< HEAD
+=======
+                category: updatedForms[0].category,
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
               }
             : apr
         )
@@ -184,6 +197,10 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
           history: [{ act: "Submitted", by: "Current User", date: r.date, note: "" }],
           sourceId: r.id,
           type: "Role Request",
+<<<<<<< HEAD
+=======
+          category: r.category,
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
         })),
       ]);
     }
@@ -227,6 +244,10 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
               salary: updated.salaryRange ? `₹${updated.salaryRange}` : "",
               just: updated.just,
               status: updated.status,
+<<<<<<< HEAD
+=======
+              category: updated.category || "",
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
             }
           : apr
       )
@@ -291,6 +312,10 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
           headcount: 1, filled: 0, currentFilled: 0, status: "Inactive", currentStatus: "Inactive",
           experience: selectedRequest.experience || "—",
           salaryRange: cleanedSalary || "—",
+<<<<<<< HEAD
+=======
+          category: selectedRequest.category || "—",
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
         }];
       });
     }
@@ -462,6 +487,17 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                 <FormField label="Role Name" required>
                   <Input placeholder="Enter role" value={form.role} onChange={(e) => updateForm(index, "role", e.target.value)} />
                 </FormField>
+<<<<<<< HEAD
+=======
+                <FormField label="Category" required>
+                  <Select
+                    value={form.category}
+                    onChange={(e) => updateForm(index, "category", e.target.value)}
+                    options={CATEGORY_OPTIONS}
+                    placeholder="Select Category"
+                  />
+                </FormField>
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <FormField label="Min Experience (Yrs)" required>
                     <Input
@@ -632,6 +668,13 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                         <div style={{ fontSize: 12, fontWeight: 600 }}>{typeof r.id === "string" ? r.id.substring(0, 18) : String(r.id)}</div>
                       </div>
                       <div>
+<<<<<<< HEAD
+=======
+                        <div style={{ fontSize: 10, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>Category</div>
+                        <div style={{ fontSize: 12, fontWeight: 600 }}>{CATEGORY_OPTIONS.find((c) => c.value === r.category)?.label || r.category || "—"}</div>
+                      </div>
+                      <div>
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
                         <div style={{ fontSize: 10, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>Experience</div>
                         <div style={{ fontSize: 12, fontWeight: 600 }}>{r.experience ? `${r.experience} yrs` : "—"}</div>
                       </div>
@@ -698,13 +741,21 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
               setOriginalRequest(filteredRequests[index]);
               setShowViewModal(true);
             }}
+<<<<<<< HEAD
             cols={["Request ID", "Department", "Role", "Experience", "Salary Range", "Justification", "Date", "Status"]}
+=======
+            cols={["Request ID", "Department", "Role", "Category", "Experience", "Salary Range", "Justification", "Date", "Status"]}
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
             rows={filteredRequests.map((r) => {
               const ss = getStatusStyle(r.status);
               return [
                 <Mono v={typeof r.id === "string" ? r.id.substring(0, 18) : String(r.id)} />,
                 r.dept || "—",
                 <strong>{r.role || "—"}</strong>,
+<<<<<<< HEAD
+=======
+                CATEGORY_OPTIONS.find((c) => c.value === r.category)?.label || r.category || "—",
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
                 r.experience ? `${r.experience} yrs` : "—",
                 r.salaryRange ? `₹${r.salaryRange}` : "—",
                 <span style={{ fontSize: 12, color: T.inkLight, maxWidth: 180, display: "inline-block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.just || "—"}</span>,
@@ -797,6 +848,25 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                 </div>
 
                 <div>
+<<<<<<< HEAD
+=======
+                  <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Category</div>
+                  {selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back" ? (
+                    <Select
+                      value={selectedRequest.category || ""}
+                      onChange={(e) => setSelectedRequest({ ...selectedRequest, category: e.target.value })}
+                      options={CATEGORY_OPTIONS}
+                      placeholder="Select Category"
+                    />
+                  ) : (
+                    <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>
+                      {CATEGORY_OPTIONS.find((c) => c.value === selectedRequest.category)?.label || selectedRequest.category || "—"}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
                   <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Salary Range</div>
                   {selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back" ? (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>

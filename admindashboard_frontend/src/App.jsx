@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+<<<<<<< HEAD
 import { T, font, radius, shadow, transition } from "./theme";
 import { useBreakpoint } from "./hooks";
 import { NAV, EXISTING_ROLES, POSTINGS, JOB_APPLICATIONS, GENERAL_APPLICATIONS, INTERVIEWS, OFFERS } from "./data";
@@ -34,11 +35,31 @@ const loadSession = (key, fallback) => {
     return fallback;
   }
 };
+=======
+import { T, font } from "./theme";
+import { useBreakpoint, usePersistentState, useSessionState } from "./hooks";
+import { NAV, EXISTING_ROLES, POSTINGS, JOB_APPLICATIONS, GENERAL_APPLICATIONS, INTERVIEWS, OFFERS } from "./data";
+import { fetchJobRequests } from "./api/jobRequestsApi";
+
+import Auth from "./screens/Auth";
+import ModuleSelector from "./screens/ModuleSelector";
+import Sidebar from "./components/Sidebar";
+import TopBar from "./components/TopBar";
+import ScreenRouter from "./components/ScreenRouter";
+
+const defaultPanelists = () =>
+  ["Dr. Roy", "Mr. Patel", "Ms. Nisha", "Mr. Kumar", "Mr. Rajan", "Dr. Ananya"].map((name) => ({
+    name,
+    email: `${name.toLowerCase().replace(". ", "_").replace(" ", "_")}@school.edu`,
+    phone: "9876543210",
+  }));
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
 
 export default function App() {
   const [active, setActive] = useState("applications");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+<<<<<<< HEAD
   const [roleRequests, setRoleRequests] = useState(() => load("roleRequests", []));
   const [jobRequests, setJobRequests] = useState(() => load("jobRequests", []));
   const [approvalRequests, setApprovalRequests] = useState(() => load("approvalRequests", []));
@@ -88,6 +109,37 @@ export default function App() {
   useEffect(() => { localStorage.setItem("selectedPanelists", JSON.stringify(selectedPanelists)); }, [selectedPanelists]);
   useEffect(() => { sessionStorage.setItem("currentUser", JSON.stringify(currentUser)); }, [currentUser]);
   useEffect(() => { sessionStorage.setItem("selectedModule", JSON.stringify(selectedModule)); }, [selectedModule]);
+=======
+  // Persisted app data (each mirrors itself to localStorage).
+  const [roleRequests, setRoleRequests] = usePersistentState("roleRequests", []);
+  const [jobRequests, setJobRequests] = usePersistentState("jobRequests", []);
+  const [approvalRequests, setApprovalRequests] = usePersistentState("approvalRequests", []);
+  const [existingRoles, setExistingRoles] = usePersistentState("existingRoles", () =>
+    EXISTING_ROLES.map((r) => ({ ...r, currentStatus: r.status, currentFilled: r.filled })),
+  );
+  const [jobPostings, setJobPostings] = usePersistentState("jobPostings", () =>
+    POSTINGS.map((p) => ({ ...p, status: p.status || "Published" })),
+  );
+  const [jobApplications, setJobApplications] = usePersistentState("jobApplications", JOB_APPLICATIONS);
+  const [generalApplications, setGeneralApplications] = usePersistentState("generalApplications", GENERAL_APPLICATIONS);
+  const [offers, setOffers] = usePersistentState("offers", OFFERS);
+  const [interviews, setInterviews] = usePersistentState("interviews", INTERVIEWS);
+  const [panelists, setPanelists] = usePersistentState("panelists", defaultPanelists);
+  const [selectedPanelists] = usePersistentState("selectedPanelists", ["Dr. Roy", "Mr. Patel", "Ms. Nisha"]);
+
+  // Session-scoped auth/module selection.
+  const [currentUser, setCurrentUser] = useSessionState("currentUser", null);
+  const [selectedModule, setSelectedModule] = useSessionState("selectedModule", null);
+
+  // Load job requests from the API on mount (uses the access token in .env; no login flow yet).
+  useEffect(() => {
+    let active = true;
+    fetchJobRequests()
+      .then((data) => { if (active) setJobRequests(data); })
+      .catch((err) => console.error("Failed to load job requests:", err));
+    return () => { active = false; };
+  }, [setJobRequests]);
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
 
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
@@ -102,6 +154,7 @@ export default function App() {
   const pendingCount = approvalRequests.filter((r) => r.status === "Pending").length;
   const pageLabel = NAV.find((n) => n.id === active)?.label || "";
 
+<<<<<<< HEAD
   const handleGiveOffer = (candidate) => {
     const exists = offers.some((o) => o.candidate === candidate.name && o.role === candidate.role);
     if (!exists) {
@@ -116,10 +169,28 @@ export default function App() {
         status: "Draft",
       };
       setOffers((prev) => [...prev, newOffer]);
+=======
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setSelectedModule(null);
+  };
+
+  const handleGiveOffer = (candidate) => {
+    const exists = offers.some((o) => o.candidate === candidate.name && o.role === candidate.role);
+    if (!exists) {
+      setOffers((prev) => [...prev, {
+        id: `OFR-${Date.now()}`,
+        candidate: candidate.name,
+        role: candidate.role,
+        ctc: "", issued: "", expiry: "", joining: "",
+        status: "Draft",
+      }]);
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
     }
     setActive("offer-management");
   };
 
+<<<<<<< HEAD
   const renderScreen = () => {
     switch (active) {
       case "dashboard":
@@ -343,6 +414,10 @@ export default function App() {
         }}
       />
     );
+=======
+  if (!currentUser) {
+    return <Auth onLoginSuccess={(user) => setCurrentUser(user)} />;
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
   }
 
   if (!selectedModule) {
@@ -351,6 +426,7 @@ export default function App() {
         currentUser={currentUser}
         onSelectModule={(mod) => {
           setSelectedModule(mod);
+<<<<<<< HEAD
           if (currentUser.role === "admin") {
             setActive("dashboard");
           } else {
@@ -361,10 +437,16 @@ export default function App() {
           setCurrentUser(null);
           setSelectedModule(null);
         }}
+=======
+          setActive(currentUser.role === "admin" ? "dashboard" : "panelist");
+        }}
+        onLogout={handleLogout}
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
       />
     );
   }
 
+<<<<<<< HEAD
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: T.canvas, fontFamily: font.body }}>
       {/* Top bar (fits the entire header) */}
@@ -473,6 +555,37 @@ export default function App() {
           </button>
         </div>
       </div>
+=======
+  // State bag passed to the screen router (avoids threading ~20 props through App's JSX).
+  const screenState = {
+    roleRequests, setRoleRequests,
+    jobRequests, setJobRequests,
+    approvalRequests, setApprovalRequests,
+    existingRoles, setExistingRoles,
+    jobPostings, setJobPostings,
+    jobApplications, setJobApplications,
+    generalApplications, setGeneralApplications,
+    offers, setOffers,
+    interviews, setInterviews,
+    panelists, setPanelists,
+    selectedPanelists,
+    currentUser,
+  };
+
+  const sidebarBg = `linear-gradient(180deg, ${T.primary} 0%, ${T.primaryDark} 100%)`;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: T.canvas, fontFamily: font.body }}>
+      <TopBar
+        isMobile={isMobile}
+        isCompact={isCompact}
+        pageLabel={pageLabel}
+        pendingCount={pendingCount}
+        onOpenSidebar={() => setSidebarOpen(true)}
+        onNavPending={() => handleNav("approval-requests")}
+        onBackToModules={() => setSelectedModule(null)}
+      />
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
 
       {/* Main layout container (Sidebar + Screen Content) */}
       <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
@@ -480,11 +593,25 @@ export default function App() {
         {!isCompact && (
           <div style={{
             width: 240,
+<<<<<<< HEAD
             background: `linear-gradient(180deg, ${T.primary} 0%, ${T.primaryDark} 100%)`,
             display: "flex", flexDirection: "column", flexShrink: 0,
             boxShadow: "4px 0 20px rgba(0,0,0,0.15)",
           }}>
             <SidebarContent />
+=======
+            background: sidebarBg,
+            display: "flex", flexDirection: "column", flexShrink: 0,
+            boxShadow: "4px 0 20px rgba(0,0,0,0.15)",
+          }}>
+            <Sidebar
+              active={active}
+              currentUser={currentUser}
+              pendingCount={pendingCount}
+              onNav={handleNav}
+              onLogout={handleLogout}
+            />
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
           </div>
         )}
 
@@ -500,12 +627,26 @@ export default function App() {
               className="sidebar-slide-in"
               style={{
                 position: "fixed", top: 0, left: 0, bottom: 0, width: 270,
+<<<<<<< HEAD
                 background: `linear-gradient(180deg, ${T.primary} 0%, ${T.primaryDark} 100%)`,
+=======
+                background: sidebarBg,
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
                 display: "flex", flexDirection: "column", zIndex: 201,
                 boxShadow: "8px 0 32px rgba(0,0,0,0.25)",
               }}
             >
+<<<<<<< HEAD
               <SidebarContent />
+=======
+              <Sidebar
+                active={active}
+                currentUser={currentUser}
+                pendingCount={pendingCount}
+                onNav={handleNav}
+                onLogout={handleLogout}
+              />
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
             </div>
           </>
         )}
@@ -516,7 +657,16 @@ export default function App() {
           className="animate-fade-in-up"
           style={{ flex: 1, overflowY: "auto", padding: isMobile ? "18px 14px" : "28px 32px" }}
         >
+<<<<<<< HEAD
           {renderScreen()}
+=======
+          <ScreenRouter
+            active={active}
+            s={screenState}
+            navigate={setActive}
+            onGiveOffer={handleGiveOffer}
+          />
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
         </div>
       </div>
     </div>

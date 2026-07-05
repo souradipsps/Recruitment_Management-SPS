@@ -1,5 +1,38 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
+<<<<<<< HEAD
+=======
+const read = (storage, key, fallback) => {
+  try {
+    const saved = storage.getItem(key);
+    return saved ? JSON.parse(saved) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+// State that mirrors itself to a Web Storage backend (localStorage by default).
+// `fallback` may be a value or a lazy initializer function.
+export function usePersistentState(key, fallback, storage = localStorage) {
+  const [value, setValue] = useState(() =>
+    read(storage, key, typeof fallback === "function" ? fallback() : fallback),
+  );
+  useEffect(() => {
+    try {
+      storage.setItem(key, JSON.stringify(value));
+    } catch {
+      /* ignore write failures (quota, private mode) */
+    }
+  }, [key, value, storage]);
+  return [value, setValue];
+}
+
+// Same contract, backed by sessionStorage.
+export function useSessionState(key, fallback) {
+  return usePersistentState(key, fallback, sessionStorage);
+}
+
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
 export const useBreakpoint = () => {
   const [bp, setBp] = useState(() => {
     if (typeof window === "undefined") return "desktop";

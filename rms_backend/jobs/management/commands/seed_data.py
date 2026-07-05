@@ -3,6 +3,8 @@ from django.contrib.auth import get_user_model
 
 from jobs.models import ExistingRole, JobCategory, JobPosting
 from interviews.models import Panelist
+from users.models import CandidateProfile
+from applications.models import GeneralApplication
 
 User = get_user_model()
 
@@ -95,8 +97,10 @@ class Command(BaseCommand):
             ("Dr. Ananya", "dr_ananya@school.edu", "9876543215"),
         ]
         for name, email, phone in PANELISTS:
-            Panelist.objects.get_or_create(email=email, defaults={"name": name, "phone": phone})
-        self.stdout.write(f"  [OK] {len(PANELISTS)} panelists seeded")
+            p, created = Panelist.objects.get_or_create(email=email, defaults={"name": name, "phone": phone})
+            if not created:
+                p.save()
+        self.stdout.write(f"  [OK] {len(PANELISTS)} panelists seeded and user accounts synchronized")
 
         # ── Job Categories ─────────────────────────────────────────────────────
         academic_cat, _ = JobCategory.objects.get_or_create(name="Academic Positions")
@@ -177,6 +181,34 @@ class Command(BaseCommand):
         if created:
             candidate.set_password("Priya@123")
             candidate.save()
+
+        # Seed profile for Priya Sharma
+        CandidateProfile.objects.get_or_create(
+            user=candidate,
+            defaults={
+                "current_location": "Guwahati, Assam",
+                "educational_qualification": "Master's",
+                "degree_name": "M.Sc in Mathematics",
+                "years_of_experience": "3-5",
+                "roles_interested": ["Senior Mathematics Teacher"],
+                "skills": ["Curriculum Development", "Classroom Management"],
+                "salary_expectation": "50,000",
+                "resume": "resumes/priya_sharma_resume.pdf"
+            }
+        )
+
+        # Seed general application (profile) for Priya Sharma
+        GeneralApplication.objects.get_or_create(
+            candidate=candidate,
+            defaults={
+                "app_id": "GAPP-2026-0001",
+                "preferred_role": "Senior Mathematics Teacher",
+                "preferred_dept": "Academic Department",
+                "experience": "3–5 yrs",
+                "qualification": "Master's (M.Sc in Mathematics)",
+                "status": "Applied"
+            }
+        )
 
         self.stdout.write("\n[DONE] Database seeded successfully!")
         self.stdout.write("\nTest credentials:")

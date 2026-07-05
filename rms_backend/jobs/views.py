@@ -119,6 +119,54 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
         acted_by   = serializer.validated_data.get("acted_by") or request.user.get_full_name()
         note       = serializer.validated_data.get("note", "")
 
+        # Update RoleRequest if type is Role Request
+        if approval.type == "Role Request" and approval.role_request:
+            role_req = approval.role_request
+            if "role" in serializer.validated_data:
+                role_req.role = serializer.validated_data["role"]
+                approval.title = serializer.validated_data["role"]
+            if "department" in serializer.validated_data:
+                role_req.department = serializer.validated_data["department"]
+                approval.department = serializer.validated_data["department"]
+            if "salary_range" in serializer.validated_data:
+                role_req.salary_range = serializer.validated_data["salary_range"]
+            if "experience" in serializer.validated_data:
+                role_req.experience = serializer.validated_data["experience"]
+            role_req.save()
+
+        # Update JobRequest if type is Job Request
+        if approval.type == "Job Request" and approval.job_request:
+            job_req = approval.job_request
+            if "role" in serializer.validated_data:
+                job_req.role = serializer.validated_data["role"]
+                approval.title = serializer.validated_data["role"]
+            if "department" in serializer.validated_data:
+                job_req.department = serializer.validated_data["department"]
+                approval.department = serializer.validated_data["department"]
+            if "salary_range" in serializer.validated_data:
+                job_req.salary_range = serializer.validated_data["salary_range"]
+            if "experience" in serializer.validated_data:
+                job_req.experience = serializer.validated_data["experience"]
+            if "location" in serializer.validated_data:
+                job_req.location = serializer.validated_data["location"]
+            if "category" in serializer.validated_data:
+                from .models import JobCategory
+                cat_name = serializer.validated_data["category"]
+                cat_obj = JobCategory.objects.filter(name=cat_name).first()
+                if cat_obj:
+                    job_req.category = cat_obj
+            if "vacancies" in serializer.validated_data:
+                job_req.vacancies = serializer.validated_data["vacancies"]
+            if "employment_type" in serializer.validated_data:
+                job_req.type = serializer.validated_data["employment_type"]
+            if "description" in serializer.validated_data:
+                job_req.description = serializer.validated_data["description"]
+            if "educational_qualifications" in serializer.validated_data:
+                job_req.educational_qualifications = serializer.validated_data["educational_qualifications"]
+            if "skills_required" in serializer.validated_data:
+                job_req.skills_required = serializer.validated_data["skills_required"]
+            job_req.save()
+
         approval.status = new_status
         approval.save()
 
@@ -135,6 +183,18 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
         if new_status == "Approved" and approval.type == "Role Request" and approval.role_request:
             approval.role_request.status = "Approved"
             approval.role_request.save()
+        if new_status == "Sent Back" and approval.type == "Role Request" and approval.role_request:
+            approval.role_request.status = "Sent Back"
+            approval.role_request.save()
+        if new_status == "Sent Back" and approval.type == "Job Request" and approval.job_request:
+            approval.job_request.status = "Sent Back"
+            approval.job_request.save()
+        if new_status == "Rejected" and approval.type == "Job Request" and approval.job_request:
+            approval.job_request.status = "Rejected"
+            approval.job_request.save()
+        if new_status == "Rejected" and approval.type == "Role Request" and approval.role_request:
+            approval.role_request.status = "Rejected"
+            approval.role_request.save()
 
         return Response(ApprovalRequestSerializer(approval).data)
 
@@ -148,8 +208,8 @@ class JobPostingViewSet(viewsets.ModelViewSet):
         user = self.request.user
         queryset = JobPosting.objects.select_related("category")
         if not user.is_authenticated or user.role == "candidate":
-            return queryset.filter(status="Published")
-        return queryset.annotate(annotated_application_count=Count("job_applications"))
+            return queryset.filter(status="Published").order_by("-created_at")
+        return queryset.annotate(annotated_application_count=Count("job_applications")).order_by("-created_at")
 
     def get_serializer_class(self):
         user = self.request.user

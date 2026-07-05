@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useState, useMemo, useEffect, useLayoutEffect, useRef } from "react";
 import { Toaster } from "sonner";
 import { AnimatePresence } from "motion/react";
@@ -13,15 +14,40 @@ import { CandidateDashboard } from "./features/dashboard/CandidateDashboard";
 // App shell: owns the cross-cutting auth / apply / dashboard state and wires
 // the public CareerPage together with the modals and candidate dashboard.
 // these are the changes git commit
+=======
+import { useState, useMemo, useEffect } from "react";
+import { Toaster } from "sonner";
+import { AnimatePresence } from "motion/react";
+import { useKeepAwake } from "./lib/keepAwake";
+import { useViewTransition } from "./lib/useViewTransition";
+import { buildMergedProfileData } from "./lib/profileData";
+import { Loader } from "./components/common/Loader";
+import { CareerPage } from "./features/careerpage/CareerPage";
+import AppModals from "./features/careerpage/AppModals";
+
+// App shell: owns the cross-cutting auth / apply / dashboard state and wires
+// the public CareerPage together with the modals and candidate dashboard.
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
 export default function App() {
   useKeepAwake();
 
   const [initialLoading, setInitialLoading] = useState(true);
 
+<<<<<<< HEAD
   useEffect(() => {
     const timer = setTimeout(() => {
       setInitialLoading(false);
     }, 1500);
+=======
+  // Show the branded loader for 1.5s, e.g. after login/signup or on logout.
+  const reloadWithLoader = () => {
+    setInitialLoading(true);
+    setTimeout(() => setInitialLoading(false), 1500);
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => setInitialLoading(false), 1500);
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
     return () => clearTimeout(timer);
   }, []);
 
@@ -58,6 +84,7 @@ export default function App() {
           ? "login"
           : "career";
 
+<<<<<<< HEAD
   const [deferredView, setDeferredView] = useState(view);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const prevView = useRef(view);
@@ -80,6 +107,9 @@ export default function App() {
       clearTimeout(transitionTimeout);
     };
   }, [view]);
+=======
+  const { deferredView } = useViewTransition(view);
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
 
   const openModal = (tab) => {
     setLoginTab(tab);
@@ -111,6 +141,7 @@ export default function App() {
     setShowDashboard(false);
     setCameFromApply(false);
     setCameFromSection(undefined);
+<<<<<<< HEAD
     setInitialLoading(true);
     setTimeout(() => setInitialLoading(false), 1500);
   };
@@ -138,6 +169,15 @@ export default function App() {
       portfolio: applicationDraft?.portfolio ?? savedProfileData?.portfolio ?? "",
     };
   }, [savedProfileData, applicationDraft, signupData, loggedInUser]);
+=======
+    reloadWithLoader();
+  };
+
+  const mergedProfileData = useMemo(
+    () => buildMergedProfileData({ savedProfileData, applicationDraft, signupData, loggedInUser }),
+    [savedProfileData, applicationDraft, signupData, loggedInUser],
+  );
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
 
   useEffect(() => {
     if (!showDashboard && !showLogin && !showApply && !showJobApplicationModal) {
@@ -153,6 +193,43 @@ export default function App() {
     }
   }, [showDashboard, showLogin, showApply, showJobApplicationModal]);
 
+<<<<<<< HEAD
+=======
+  // Everything the overlay modals need to read and mutate.
+  const modalApp = {
+    deferredView,
+    loginTab,
+    applyAfterSignup,
+    cameFromApply,
+    cameFromSection,
+    dashboardInitialTab,
+    loggedInUser,
+    signupData,
+    appliedJobIds,
+    applicationsData,
+    selectedJob,
+    savedProfileData,
+    applicationDraft,
+    mergedProfileData,
+    reloadWithLoader,
+    handleLogout,
+    setShowLogin,
+    setApplyAfterSignup,
+    setLoggedInUser,
+    setShowDashboard,
+    setSignupData,
+    setShowApply,
+    setShowJobApplicationModal,
+    setCameFromApply,
+    setCameFromSection,
+    setAppliedJobIds,
+    setApplicationsData,
+    setApplicationDraft,
+    setSavedProfileData,
+    setDashboardInitialTab,
+  };
+
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
   return (
     <>
       {!initialLoading && (
@@ -167,6 +244,7 @@ export default function App() {
         />
       )}
 
+<<<<<<< HEAD
       <AnimatePresence>
         {deferredView === "login" && (
           <LoginModal
@@ -319,6 +397,9 @@ export default function App() {
           />
         )}
       </AnimatePresence>
+=======
+      <AppModals app={modalApp} />
+>>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
 
       <AnimatePresence>
         {initialLoading && <Loader />}
