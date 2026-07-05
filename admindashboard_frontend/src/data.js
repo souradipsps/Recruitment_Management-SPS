@@ -17,28 +17,6 @@ export const NAV = [
 ];
 
 export const EXISTING_ROLES = [
-<<<<<<< HEAD
-  { id: "ROL-001", dept: "Science", role: "Mathematics Teacher", type: "Full-time", headcount: 4, filled: 3, status: "Active", experience: "3-5", salaryRange: "40,000-60,000" },
-  { id: "ROL-002", dept: "Science", role: "Physics Teacher", type: "Full-time", headcount: 2, filled: 2, status: "Active", experience: "3-5", salaryRange: "40,000-60,000" },
-  { id: "ROL-003", dept: "Science", role: "Chemistry Teacher", type: "Full-time", headcount: 2, filled: 1, status: "Inactive", experience: "2-4", salaryRange: "35,000-50,000" },
-  { id: "ROL-004", dept: "Science", role: "Lab Assistant", type: "Part-time", headcount: 3, filled: 0, status: "Inactive", experience: "1-2", salaryRange: "18,000-25,000" },
-  { id: "ROL-005", dept: "Commerce", role: "Accountancy Teacher", type: "Full-time", headcount: 3, filled: 3, status: "Active", experience: "3-5", salaryRange: "40,000-60,000" },
-  { id: "ROL-006", dept: "Commerce", role: "Business Studies Teacher", type: "Full-time", headcount: 2, filled: 1, status: "Inactive", experience: "3-5", salaryRange: "40,000-60,000" },
-  { id: "ROL-007", dept: "Arts", role: "Drawing Teacher", type: "Full-time", headcount: 2, filled: 2, status: "Active", experience: "2-4", salaryRange: "30,000-45,000" },
-  { id: "ROL-008", dept: "Arts", role: "Music Teacher", type: "Part-time", headcount: 1, filled: 0, status: "Inactive", experience: "2-4", salaryRange: "25,000-35,000" },
-  { id: "ROL-009", dept: "Administration", role: "Office Coordinator", type: "Full-time", headcount: 2, filled: 1, status: "Inactive", experience: "2-4", salaryRange: "25,000-35,000" },
-  { id: "ROL-010", dept: "Administration", role: "Receptionist", type: "Full-time", headcount: 1, filled: 1, status: "Active", experience: "1-3", salaryRange: "20,000-30,000" },
-  { id: "ROL-011", dept: "Sports", role: "Physical Education Teacher", type: "Full-time", headcount: 2, filled: 2, status: "Active", experience: "2-4", salaryRange: "35,000-50,000" },
-  { id: "ROL-012", dept: "Languages", role: "Hindi Teacher", type: "Full-time", headcount: 3, filled: 2, status: "Inactive", experience: "3-5", salaryRange: "38,000-55,000" },
-  { id: "ROL-013", dept: "Languages", role: "English Teacher", type: "Full-time", headcount: 4, filled: 4, status: "Active", experience: "3-5", salaryRange: "40,000-60,000" },
-];
-
-export const ROLE_REQUESTS = [
-  { id: "RR-2026-0001", dept: "Science", role: "Mathematics Teacher", just: "Teacher resigned effective 30 Jun", status: "Pending", date: "2026-06-01" },
-  { id: "RR-2026-0002", dept: "Administration", role: "Office Coordinator", just: "New branch opening — workload increase", status: "Approved", date: "2026-05-28" },
-  { id: "RR-2026-0003", dept: "Commerce", role: "Accountancy Teacher", just: "Batch enrollment exceeds faculty capacity", status: "Rejected", date: "2026-05-20" },
-  { id: "RR-2026-0004", dept: "Arts", role: "Drawing Teacher", just: "Existing teacher retiring in July", status: "Pending", date: "2026-06-08" },
-=======
   { id: "ROL-001", dept: "Science", role: "Mathematics Teacher", type: "Full-time", headcount: 4, filled: 3, status: "Active", experience: "3-5", salaryRange: "40,000-60,000", category: "Academic" },
   { id: "ROL-002", dept: "Science", role: "Physics Teacher", type: "Full-time", headcount: 2, filled: 2, status: "Active", experience: "3-5", salaryRange: "40,000-60,000", category: "Academic" },
   { id: "ROL-003", dept: "Science", role: "Chemistry Teacher", type: "Full-time", headcount: 2, filled: 1, status: "Inactive", experience: "2-4", salaryRange: "35,000-50,000", category: "Academic" },
@@ -59,7 +37,6 @@ export const ROLE_REQUESTS = [
   { id: "RR-2026-0002", dept: "Administration", role: "Office Coordinator", just: "New branch opening — workload increase", status: "Approved", date: "2026-05-28", category: "Administrative", minExperience: "2", maxExperience: "4", minSalary: "25,000", maxSalary: "35,000", experience: "2-4", salaryRange: "25,000-35,000" },
   { id: "RR-2026-0003", dept: "Commerce", role: "Accountancy Teacher", just: "Batch enrollment exceeds faculty capacity", status: "Rejected", date: "2026-05-20", category: "Academic", minExperience: "3", maxExperience: "5", minSalary: "40,000", maxSalary: "60,000", experience: "3-5", salaryRange: "40,000-60,000" },
   { id: "RR-2026-0004", dept: "Arts", role: "Drawing Teacher", just: "Existing teacher retiring in July", status: "Pending", date: "2026-06-08", category: "Academic", minExperience: "2", maxExperience: "4", minSalary: "30,000", maxSalary: "45,000", experience: "2-4", salaryRange: "30,000-45,000" },
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
 ];
 
 export const JOB_REQUESTS = [
@@ -100,8 +77,6 @@ export const JOB_APPLICATIONS = [
   { id: "JAPP-2026-0002", name: "Arjun Das", email: "arjun.das@email.com", phone: "9876543211", role: "Mathematics Teacher", jobPostingId: "JP-2026-0001", exp: "3 yrs", qualification: "M.Sc + B.Ed", applied: "2026-06-06", status: "Applied", referredBy: "None", resume: "https://example.com/resumes/arjun-das.pdf" },
   { id: "JAPP-2026-0005", name: "Sonal Verma", email: "sonal.verma@email.com", phone: "9876543214", role: "Office Coordinator", jobPostingId: "JP-2026-0002", exp: "3 yrs", qualification: "MBA", applied: "2026-06-02", status: "Selected", referredBy: "Mr. Patel", resume: "https://example.com/resumes/sonal-verma.pdf" },
   { id: "JAPP-2026-0006", name: "Deepak Nair", email: "deepak.nair@email.com", phone: "9876543215", role: "Mathematics Teacher", jobPostingId: "JP-2026-0001", exp: "1 yr", qualification: "M.Sc", applied: "2026-06-08", status: "Rejected", referredBy: "None", resume: "https://example.com/resumes/deepak-nair.pdf" },
-<<<<<<< HEAD
-=======
   { id: "JAPP-2026-0007", name: "Karan Johar", email: "karan.j@email.com", phone: "9876543216", role: "Mathematics Teacher", jobPostingId: "JP-2026-0001", exp: "5 yrs", qualification: "M.Sc + B.Ed", applied: "2026-06-10", status: "Applied", referredBy: "None", resume: "https://example.com/resumes/karan-johar.pdf" },
   { id: "JAPP-2026-0008", name: "Meera Sen", email: "meera.sen@email.com", phone: "9876543217", role: "Office Coordinator", jobPostingId: "JP-2026-0002", exp: "2 yrs", qualification: "B.Com", applied: "2026-06-11", status: "Applied", referredBy: "None", resume: "https://example.com/resumes/meera-sen.pdf" },
   { id: "JAPP-2026-0009", name: "Rahul Dravid", email: "rahul.d@email.com", phone: "9876543218", role: "Mathematics Teacher", jobPostingId: "JP-2026-0001", exp: "7 yrs", qualification: "M.Sc + B.Ed", applied: "2026-06-12", status: "Shortlisted", referredBy: "Dr. Roy", resume: "https://example.com/resumes/rahul-dravid.pdf" },
@@ -110,7 +85,6 @@ export const JOB_APPLICATIONS = [
   { id: "JAPP-2026-0012", name: "Sushmita Sen", email: "sush.sen@email.com", phone: "9876543221", role: "Office Coordinator", jobPostingId: "JP-2026-0002", exp: "6 yrs", qualification: "MBA", applied: "2026-06-15", status: "Rejected", referredBy: "None", resume: "https://example.com/resumes/sushmita-sen.pdf" },
   { id: "JAPP-2026-0013", name: "Amitabh Bachchan", email: "amitabh.b@email.com", phone: "9876543222", role: "Mathematics Teacher", jobPostingId: "JP-2026-0001", exp: "15 yrs", qualification: "M.Sc + B.Ed", applied: "2026-06-16", status: "Shortlisted", referredBy: "Dr. Roy", resume: "https://example.com/resumes/amitabh-b.pdf" },
   { id: "JAPP-2026-0014", name: "Jaya Bhaduri", email: "jaya.b@email.com", phone: "9876543223", role: "Office Coordinator", jobPostingId: "JP-2026-0002", exp: "8 yrs", qualification: "M.A", applied: "2026-06-17", status: "Applied", referredBy: "Mr. Patel", resume: "https://example.com/resumes/jaya-b.pdf" },
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
 ];
 
 export const GENERAL_APPLICATIONS = [
@@ -118,8 +92,6 @@ export const GENERAL_APPLICATIONS = [
   { id: "GAPP-2026-0003", name: "Anita Deshmukh", email: "anita.d@email.com", phone: "9123456782", preferredRole: "English Teacher", preferredDept: "Languages", exp: "8 yrs", qualification: "M.A + B.Ed", applied: "2026-06-05", status: "Shortlisted", resume: "https://example.com/resumes/anita-deshmukh.pdf" },
   { id: "GAPP-2026-0004", name: "Suresh Menon", email: "suresh.m@email.com", phone: "9123456783", preferredRole: "Physical Education Teacher", preferredDept: "Sports", exp: "3 yrs", qualification: "B.P.Ed", applied: "2026-06-09", status: "Applied", resume: "https://example.com/resumes/suresh-menon.pdf" },
   { id: "GAPP-2026-0005", name: "Nisha Agarwal", email: "nisha.a@email.com", phone: "9123456784", preferredRole: "Music Teacher", preferredDept: "Arts", exp: "5 yrs", qualification: "M.A Music", applied: "2026-06-10", status: "Applied", resume: "https://example.com/resumes/nisha-agarwal.pdf" },
-<<<<<<< HEAD
-=======
   { id: "GAPP-2026-0006", name: "Rohan Gavaskar", email: "rohan.g@email.com", phone: "9123456785", preferredRole: "Physics Teacher", preferredDept: "Science", exp: "2 yrs", qualification: "M.Sc", applied: "2026-06-11", status: "Applied", resume: "https://example.com/resumes/rohan-gavaskar.pdf" },
   { id: "GAPP-2026-0007", name: "Kunal Kapoor", email: "kunal.k@email.com", phone: "9123456786", preferredRole: "Chemistry Teacher", preferredDept: "Science", exp: "4 yrs", qualification: "M.Sc + B.Ed", applied: "2026-06-12", status: "Shortlisted", resume: "https://example.com/resumes/kunal-kapoor.pdf" },
   { id: "GAPP-2026-0008", name: "Preity Zinta", email: "preity.z@email.com", phone: "9123456787", preferredRole: "English Teacher", preferredDept: "Languages", exp: "5 yrs", qualification: "M.A + B.Ed", applied: "2026-06-13", status: "Applied", resume: "https://example.com/resumes/preity-zinta.pdf" },
@@ -128,7 +100,6 @@ export const GENERAL_APPLICATIONS = [
   { id: "GAPP-2026-0011", name: "Sourav Ganguly", email: "sourav.g@email.com", phone: "9123456790", preferredRole: "Physical Education Teacher", preferredDept: "Sports", exp: "10 yrs", qualification: "B.P.Ed", applied: "2026-06-16", status: "Applied", resume: "https://example.com/resumes/sourav-ganguly.pdf" },
   { id: "GAPP-2026-0012", name: "Kapil Dev", email: "kapil.d@email.com", phone: "9123456791", preferredRole: "Physical Education Teacher", preferredDept: "Sports", exp: "18 yrs", qualification: "B.P.Ed", applied: "2026-06-17", status: "Rejected", resume: "https://example.com/resumes/kapil-dev.pdf" },
   { id: "GAPP-2026-0013", name: "Zakir Hussain", email: "zakir.h@email.com", phone: "9123456792", preferredRole: "Music Teacher", preferredDept: "Arts", exp: "20 yrs", qualification: "Ph.D Music", applied: "2026-06-18", status: "Applied", resume: "https://example.com/resumes/zakir-hussain.pdf" },
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
 ];
 
 export const INTERVIEWS = [

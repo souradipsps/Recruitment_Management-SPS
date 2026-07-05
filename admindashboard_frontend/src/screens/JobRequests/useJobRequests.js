@@ -1,13 +1,5 @@
 import { useState, useRef } from "react";
 import { emptyForm } from "./jobRequestUtils";
-<<<<<<< HEAD
-
-const STATUSES = ["All", "Pending", "Approved", "Rejected", "Cancelled", "Sent Back"];
-
-export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequests, setJobPostings, existingRoles, onNavigateToApplications }) {
-  const [showForm, setShowForm] = useState(false);
-  const [jobForms, setJobForms] = useState([emptyForm()]);
-=======
 import { createJobRequest } from "../../api/jobRequestsApi";
 
 const STATUSES = ["All", "Pending", "Approved", "Rejected", "Cancelled", "Sent Back"];
@@ -17,7 +9,6 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
   const [jobForms, setJobForms] = useState([emptyForm()]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [originalRequest, setOriginalRequest] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -214,11 +205,7 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     setJobForms([emptyForm()]);
   };
 
-<<<<<<< HEAD
-  const submitRequests = () => {
-=======
   const submitRequests = async () => {
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
     if (editingId !== null) {
       setJobRequests((prev) => prev.map((r) => r.id === editingId ? { ...r, ...jobForms[0] } : r));
       setApprovalRequests((prev) =>
@@ -242,18 +229,6 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
             : apr
         )
       );
-<<<<<<< HEAD
-    } else {
-      const now = new Date().toLocaleDateString();
-      const newRequests = jobForms.map((f, i) => ({
-        ...f,
-        id: `JR-${Date.now()}-${i}`,
-        status: "Pending",
-        comment: "",
-        date: now,
-        history: [{ act: "Submitted", by: "Current User", date: now, note: "" }],
-      }));
-=======
       setJobForms([emptyForm()]);
       setShowForm(false);
       setEditingId(null);
@@ -280,7 +255,6 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
         history: [{ act: "Submitted", by: submittedBy, date: now, note: "" }],
       }));
 
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
       setJobRequests((prev) => [...prev, ...newRequests]);
       setApprovalRequests((prev) => [
         ...prev,
@@ -289,11 +263,7 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
           dept: r.department || "N/A",
           role: r.role,
           category: r.category || "N/A",
-<<<<<<< HEAD
-          requestedBy: "Current User",
-=======
           requestedBy: r.submittedBy || submittedBy,
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
           date: now,
           location: r.location,
           salary: r.salary,
@@ -304,25 +274,13 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
           just: r.justification,
           description: r.description,
           skills: r.skills,
-<<<<<<< HEAD
-          status: "Pending",
-          comment: "",
-          history: [{ act: "Submitted", by: "Current User", date: now, note: "" }],
-=======
           status: r.status || "Pending",
           comment: "",
           history: r.history || [{ act: "Submitted", by: submittedBy, date: now, note: "" }],
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
           sourceId: r.id,
           type: "Job Request",
         })),
       ]);
-<<<<<<< HEAD
-    }
-    setJobForms([emptyForm()]);
-    setShowForm(false);
-    setEditingId(null);
-=======
       setJobForms([emptyForm()]);
       setShowForm(false);
       setEditingId(null);
@@ -332,7 +290,6 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     } finally {
       setSubmitting(false);
     }
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
   };
 
   return {
@@ -352,11 +309,8 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     openNew,
     cancelForm,
     submitRequests,
-<<<<<<< HEAD
-=======
     submitting,
     submitError,
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
     updateForm,
     handleRoleChange,
     roleOptions,

@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-<<<<<<< HEAD
-=======
 const read = (storage, key, fallback) => {
   try {
     const saved = storage.getItem(key);
@@ -32,7 +30,6 @@ export function useSessionState(key, fallback) {
   return usePersistentState(key, fallback, sessionStorage);
 }
 
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
 export const useBreakpoint = () => {
   const [bp, setBp] = useState(() => {
     if (typeof window === "undefined") return "desktop";

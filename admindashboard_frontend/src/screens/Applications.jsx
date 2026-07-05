@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import { useState, useRef } from "react";
-=======
 import { useState, useRef, useEffect } from "react";
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
 import { T, statusVariant } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
 import { Card, SectionTitle, Table, Mono, Badge, Input, Btn, Modal, ModalHeader, Select, FormField } from "../components/ui";
@@ -33,17 +29,12 @@ export default function Applications({
   const [selectedPostingId, setSelectedPostingId] = useState(null);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [filterActiveIndex, setFilterActiveIndex] = useState(0);
-<<<<<<< HEAD
-=======
   const [currentPage, setCurrentPage] = useState(1);
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
 
   const hScroll = useHorizontalScroll();
   const scrollRef = useRef(null);
   const lastTapTimeRef = { current: {} };
 
-<<<<<<< HEAD
-=======
   useEffect(() => {
     setCurrentPage(1);
   }, [tab, filter, search, selectedPostingId]);
@@ -55,7 +46,6 @@ export default function Applications({
     }
   }, [currentPage]);
 
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
   const statuses = ["All", "Shortlisted", "Applied", "Rejected"];
   const isJob = tab === "job";
 
@@ -107,8 +97,6 @@ export default function Applications({
   const filtered = isJob ? filteredJobApplications : filteredGenApplications;
   const data = isJob ? baseJobData : baseGenData;
 
-<<<<<<< HEAD
-=======
   const ITEMS_PER_PAGE = 10;
   const totalItems = filtered.length;
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
@@ -117,7 +105,6 @@ export default function Applications({
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const displayFiltered = filtered.slice(startIndex, endIndex);
 
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
   const counts = statuses.slice(1).reduce((acc, s) => {
     acc[s] = data.filter((a) => a.status === s).length;
     return acc;
@@ -482,11 +469,7 @@ export default function Applications({
       {isMobile ? (
         <>
           <div style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, marginBottom: 8, textAlign: "center" }}>
-<<<<<<< HEAD
-            {filtered.length} applicant{filtered.length !== 1 ? "s" : ""}
-=======
             Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, totalItems)} of {totalItems} applicant{totalItems !== 1 ? "s" : ""}
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
           </div>
           <div
             ref={scrollRef}
@@ -504,11 +487,7 @@ export default function Applications({
               WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none",
               gap: 12, paddingBottom: 20, margin: "0 -12px", paddingLeft: 12, paddingRight: 12,
             }}>
-<<<<<<< HEAD
-            {filtered.map((a, idx) => {
-=======
             {displayFiltered.map((a, idx) => {
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
               const isShortlisted = a.status === "Shortlisted";
               const isRejected = a.status === "Rejected";
               const cardBackground = "linear-gradient(135deg, #72102a 0%, #3a0010 100%)";
@@ -525,11 +504,7 @@ export default function Applications({
                     cursor: "pointer", minHeight: 380,
                   }}>
                   <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", padding: "4px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.2)" }}>
-<<<<<<< HEAD
-                    {idx + 1} of {filtered.length}
-=======
                     {startIndex + idx + 1} of {totalItems}
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
                   </div>
 
                   <div>
@@ -583,24 +558,14 @@ export default function Applications({
                 </div>
               );
             })}
-<<<<<<< HEAD
-            {filtered.length === 0 && (
-=======
             {totalItems === 0 && (
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
               <div style={{ padding: "40px 24px", textAlign: "center", color: T.inkFaint, fontSize: 13 }}>No records found.</div>
             )}
           </div>
 
-<<<<<<< HEAD
-          {filtered.length > 0 && (
-            <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10, paddingBottom: 8 }}>
-              {filtered.map((_, i) => (
-=======
           {displayFiltered.length > 0 && (
             <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10, paddingBottom: 8 }}>
               {displayFiltered.map((_, i) => (
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
                 <div
                   key={i}
                   onClick={() => {
@@ -613,8 +578,6 @@ export default function Applications({
               ))}
             </div>
           )}
-<<<<<<< HEAD
-=======
 
           {totalPages > 1 && (
             <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, marginTop: 10, marginBottom: 20 }}>
@@ -659,7 +622,6 @@ export default function Applications({
               </button>
             </div>
           )}
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
         </>
       ) : (
         <Card>
@@ -670,27 +632,17 @@ export default function Applications({
               onChange={(e) => setSearch(e.target.value)}
               style={{ maxWidth: 360, flex: 1, minWidth: 0 }}
             />
-<<<<<<< HEAD
-            <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, whiteSpace: "nowrap" }}>{filtered.length} of {data.length}</span>
-=======
             <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, whiteSpace: "nowrap" }}>
               Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, totalItems)} of {totalItems}
             </span>
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
           </div>
 
           {isJob ? (
             <Table
               cols={["App ID", "Candidate", "Role", "Job Post", "Experience", "Qualification", "Referred By", "Applied Date", "Status", "Actions"]}
-<<<<<<< HEAD
-              onRowClick={(index) => setSelectedApp(filtered[index])}
-              onRowDoubleClick={isMobile ? (index) => updateStatus(filtered[index], "Shortlisted") : undefined}
-              rows={filtered.map((a) => [
-=======
               onRowClick={(index) => setSelectedApp(displayFiltered[index])}
               onRowDoubleClick={isMobile ? (index) => updateStatus(displayFiltered[index], "Shortlisted") : undefined}
               rows={displayFiltered.map((a) => [
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
                 <Mono v={a.id} />,
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   {avatar(a.name)}
@@ -712,15 +664,9 @@ export default function Applications({
           ) : (
             <Table
               cols={["App ID", "Candidate", "Preferred Role", "Department", "Experience", "Qualification", "Applied Date", "Status", "Actions"]}
-<<<<<<< HEAD
-              onRowClick={(index) => setSelectedApp(filtered[index])}
-              onRowDoubleClick={isMobile ? (index) => updateStatus(filtered[index], "Shortlisted") : undefined}
-              rows={filtered.map((a) => [
-=======
               onRowClick={(index) => setSelectedApp(displayFiltered[index])}
               onRowDoubleClick={isMobile ? (index) => updateStatus(displayFiltered[index], "Shortlisted") : undefined}
               rows={displayFiltered.map((a) => [
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
                 <Mono v={a.id} />,
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   {avatar(a.name)}
@@ -739,8 +685,6 @@ export default function Applications({
               ])}
             />
           )}
-<<<<<<< HEAD
-=======
 
           {/* Desktop Pagination Control */}
           {totalPages > 1 && (
@@ -795,7 +739,6 @@ export default function Applications({
               </button>
             </div>
           )}
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
         </Card>
       )}
 

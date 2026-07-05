@@ -1,9 +1,5 @@
-<<<<<<< HEAD
-import { useState, useRef } from "react";
-=======
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
 import { T } from "../theme";
 import { statusVariant } from "../theme";
 import { useBreakpoint } from "../hooks";
@@ -27,8 +23,6 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
   const [search, setSearch] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
 
-<<<<<<< HEAD
-=======
   useEffect(() => {
     if (sel) {
       document.body.style.overflow = "hidden";
@@ -40,7 +34,6 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
     };
   }, [sel]);
 
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
   const avatar = (name, size = 48, fs = 16) => {
     const val = name || "RQ";
     return (
@@ -96,10 +89,7 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
             history: updated.history,
             salaryRange: r.salary ? r.salary.replace(/^₹/, "") : item.salaryRange,
             experience: r.experience || item.experience,
-<<<<<<< HEAD
-=======
             category: r.category || item.category,
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
           };
           delete updated2.minSalary;
           delete updated2.maxSalary;
@@ -137,10 +127,7 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
           headcount: 1, filled: 0, currentFilled: 0, status: "Inactive", currentStatus: "Inactive",
           experience: r.experience || "—",
           salaryRange: cleanedSalary || "—",
-<<<<<<< HEAD
-=======
           category: r.category || "—",
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
         }];
       });
       if (onNavigateToExistingRoles) {
@@ -208,11 +195,7 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
     <div>
       <SectionTitle title="Approve Request" sub="Review, approve, or return pending role and job requests" />
 
-<<<<<<< HEAD
-      {sel && (
-=======
       {sel && createPortal(
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
         <div
           onClick={closeModal}
           style={{
@@ -220,11 +203,7 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
             background: "rgba(15,23,42,0.45)",
             display: "flex", alignItems: "center", justifyContent: "center",
             padding: 16,
-<<<<<<< HEAD
-            backdropFilter: "blur(2px)",
-=======
             backdropFilter: "blur(4px)", // Increased blur slightly for better premium effect
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
           }}
         >
           <div
@@ -302,8 +281,6 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
                   </div>
                 )}
 
-<<<<<<< HEAD
-=======
                 {sel.type === "Role Request" && (
                   <div>
                     <div style={labelCss}>Category</div>
@@ -322,7 +299,6 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
                   </div>
                 )}
 
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
                 {(sel.salary || sel.type === "Role Request") && (
                   <div>
                     <div style={labelCss}>Salary Range</div>
@@ -651,12 +627,8 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
               </div>
             )}
           </div>
-<<<<<<< HEAD
-        </div>
-=======
         </div>,
         document.body
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
       )}
 
       <Card>
@@ -789,10 +761,7 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
                       { icon: "🆔", label: "Request ID", value: String(r.sourceId).substring(0, 16) },
                       { icon: "📋", label: "Type", value: r.type || "Request" },
                       { icon: "📅", label: "Date", value: r.date },
-<<<<<<< HEAD
-=======
                       ...(r.category ? [{ icon: "🏷️", label: "Category", value: CATEGORY_OPTIONS.find((c) => c.value === r.category)?.label || r.category }] : []),
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
                       ...(r.salary ? [{ icon: "💰", label: "Salary", value: r.salary }] : []),
                       ...(r.experience ? [{ icon: "⏳", label: "Experience", value: `${r.experience} yrs` }] : []),
                       ...(r.vacancies ? [{ icon: "👥", label: "Vacancies", value: String(r.vacancies) }] : []),
@@ -939,11 +908,7 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
                   </div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{r.role}</div>
                   <div style={{ fontSize: 12, color: T.inkLight, marginTop: 3 }}>
-<<<<<<< HEAD
-                    {r.dept && r.dept !== "N/A" ? `${r.dept} · ` : ""}{r.requestedBy} · {r.date}
-=======
                     {r.dept && r.dept !== "N/A" ? `${r.dept} · ` : ""}{r.category ? `${CATEGORY_OPTIONS.find(c => c.value === r.category)?.label || r.category} · ` : ""}{r.requestedBy} · {r.date}
->>>>>>> 0e928b01990185edb7148468322d2160324cb7e4
                   </div>
                   {r.comment && (
                     <div style={{ marginTop: 6, fontSize: 12, color: T.amber, background: T.amberLight, padding: "3px 8px", borderRadius: 6, display: "inline-block", border: `1px solid #FDE68A` }}>
