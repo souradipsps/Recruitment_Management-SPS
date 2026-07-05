@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { T, font } from "../theme";
 import { STATUS_COLORS } from "../theme";
 import { useBreakpoint } from "../hooks";
@@ -32,6 +32,19 @@ export default function ExistingRoles({ roles, setRoles }) {
     .filter((r) => deptFilter === "All" || r.dept === deptFilter)
     .filter((r) => statusFilter === "All" || r.currentStatus === statusFilter)
     .filter((r) => r.role.toLowerCase().includes(search.toLowerCase()) || r.dept.toLowerCase().includes(search.toLowerCase()) || String(r.id).toLowerCase().includes(search.toLowerCase()));
+
+  const [currentPage, setCurrentPage] = useState(1);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [deptFilter, statusFilter, search]);
+
+  const ITEMS_PER_PAGE = 10;
+  const totalItems = filtered.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const activePage = Math.min(currentPage, Math.max(totalPages, 1));
+  const startIndex = (activePage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const displayFiltered = filtered.slice(startIndex, endIndex);
 
   const totalRoles = roles.length;
   const activeRoles = roles.filter((r) => r.currentStatus === "Active").length;
@@ -94,14 +107,21 @@ export default function ExistingRoles({ roles, setRoles }) {
               ))}
             </div>
           </div>
-          <span style={{ fontSize: 12, color: T.inkFaint, marginLeft: "auto" }}>{filtered.length} roles</span>
+          <span style={{ fontSize: 12, color: T.inkFaint, marginLeft: "auto", fontWeight: 600 }}>
+            Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, totalItems)} of {totalItems}
+          </span>
         </div>
 
         <RolesTable
           cols={["Role ID", "Department", "Role Name", "Category", "Experience", "Salary Range", "Type", "Status", "Action"]}
-          rows={filtered}
+          rows={displayFiltered}
           onStatusChange={handleStatusChange}
           onDelete={handleDeleteRole}
+          currentPage={activePage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={totalItems}
+          startIndex={startIndex}
         />
       </Card>
 
@@ -137,6 +157,11 @@ function RolesTable({
   rows,
   onStatusChange,
   onDelete,
+  currentPage,
+  totalPages,
+  onPageChange,
+  totalItems,
+  startIndex,
 }) {
   const [sel, setSel] = useState(null);
   const bp = useBreakpoint();
@@ -307,7 +332,7 @@ function RolesTable({
     return (
       <>
         <div style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, marginBottom: 8, textAlign: "center" }}>
-          {rows.length} role{rows.length !== 1 ? "s" : ""}
+          Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(startIndex + rows.length, totalItems)} of {totalItems} roles
         </div>
 
         <div
@@ -373,7 +398,7 @@ function RolesTable({
                     border: "1px solid rgba(255,255,255,0.2)",
                   }}
                 >
-                  {idx + 1} of {rows.length}
+                  {startIndex + idx + 1} of {totalItems}
                 </div>
 
                 <div>
@@ -486,7 +511,49 @@ function RolesTable({
           </div>
         )}
 
-        {renderRoleDetailsModal()}
+        {totalPages > 1 && (
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, marginTop: 10, marginBottom: 20 }}>
+            <button
+              onClick={() => onPageChange(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              style={{
+                background: T.white,
+                color: currentPage === 1 ? T.inkFaint : T.primary,
+                border: `1.5px solid ${currentPage === 1 ? T.border : T.primary}`,
+                borderRadius: 8,
+                padding: "6px 12px",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: currentPage === 1 ? "not-allowed" : "pointer",
+                opacity: currentPage === 1 ? 0.5 : 1,
+                transition: "all 0.15s",
+              }}
+            >
+              &larr; Prev 10
+            </button>
+            <span style={{ fontSize: 12, color: T.inkMid, fontWeight: 600 }}>
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => onPageChange(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              style={{
+                background: currentPage === totalPages ? T.white : T.primary,
+                color: currentPage === totalPages ? T.inkFaint : T.white,
+                border: `1.5px solid ${currentPage === totalPages ? T.border : T.primary}`,
+                borderRadius: 8,
+                padding: "6px 12px",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: currentPage === totalPages ? "not-allowed" : "pointer",
+                opacity: currentPage === totalPages ? 0.5 : 1,
+                transition: "all 0.15s",
+              }}
+            >
+              Next 10 &rarr;
+            </button>
+          </div>
+        )}
       </>
     );
   }
@@ -498,6 +565,56 @@ function RolesTable({
         rows={renderRows()}
         onRowClick={(i) => open(rows[i])}
       />
+      {totalPages > 1 && (
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 12,
+          padding: "16px 20px",
+          borderTop: `1px solid ${T.border}`,
+        }}>
+          <button
+            onClick={() => onPageChange(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            style={{
+              background: T.white,
+              color: currentPage === 1 ? T.inkFaint : T.primary,
+              border: `1.5px solid ${currentPage === 1 ? T.border : T.primary}`,
+              borderRadius: 8,
+              padding: "8px 16px",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: currentPage === 1 ? "not-allowed" : "pointer",
+              opacity: currentPage === 1 ? 0.5 : 1,
+              transition: "all 0.15s",
+            }}
+          >
+            &larr; Previous 10
+          </button>
+          <span style={{ fontSize: 13, color: T.inkMid, fontWeight: 600 }}>
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            onClick={() => onPageChange(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            style={{
+              background: currentPage === totalPages ? T.white : T.primary,
+              color: currentPage === totalPages ? T.inkFaint : T.white,
+              border: `1.5px solid ${currentPage === totalPages ? T.border : T.primary}`,
+              borderRadius: 8,
+              padding: "8px 16px",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: currentPage === totalPages ? "not-allowed" : "pointer",
+              opacity: currentPage === totalPages ? 0.5 : 1,
+              transition: "all 0.15s",
+            }}
+          >
+            Next 10 &rarr;
+          </button>
+        </div>
+      )}
       {renderRoleDetailsModal()}
     </>
   );

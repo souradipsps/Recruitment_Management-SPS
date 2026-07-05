@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { T, font } from "../theme";
 import { statusVariant } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
@@ -46,6 +46,11 @@ export default function InterviewPanel({
   const scrollRef = useRef(null);
   const [evalInterview, setEvalInterview] = useState(null);
   const [inlineEvalKey, setInlineEvalKey] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedPostingId, roundFilter]);
   const [scores, setScores] = useState({});
   const [recommendation, setRecommendation] = useState("");
   const [remarks, setRemarks] = useState("");
@@ -261,7 +266,15 @@ export default function InterviewPanel({
       return { ...c, displayRound: c.activeRound };
     });
 
-  const selectableCandidates = filteredCandidates.filter((c) => c.displayRound === c.activeRound);
+  const ITEMS_PER_PAGE = 10;
+  const totalItems = filteredCandidates.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const activePage = Math.min(currentPage, Math.max(totalPages, 1));
+  const startIndex = (activePage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const displayFilteredCandidates = filteredCandidates.slice(startIndex, endIndex);
+
+  const selectableCandidates = displayFilteredCandidates.filter((c) => c.displayRound === c.activeRound);
 
   const isAllSelected =
     selectableCandidates.length > 0 &&
@@ -1047,7 +1060,7 @@ export default function InterviewPanel({
             <>
               {/* Candidate count */}
               <div style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, marginBottom: 8, textAlign: "center" }}>
-                {filteredCandidates.length} shortlisted candidate{filteredCandidates.length !== 1 ? "s" : ""}
+                Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(startIndex + displayFilteredCandidates.length, totalItems)} of {totalItems} shortlisted candidate{totalItems !== 1 ? "s" : ""}
               </div>
 
               {/* Snap scroll container */}
@@ -1071,7 +1084,7 @@ export default function InterviewPanel({
                   margin: "0 -16px",
                 }}
               >
-                {filteredCandidates.map((c, idx) => {
+                {displayFilteredCandidates.map((c, idx) => {
                   const i = c.interview;
                   const rnd = c.displayRound;
                   const isScheduled = !!i.date;
@@ -1098,7 +1111,7 @@ export default function InterviewPanel({
                     >
                       {/* Pagination counter */}
                       <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", padding: "4px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.2)" }}>
-                        {idx + 1} of {filteredCandidates.length}
+                        {startIndex + idx + 1} of {totalItems}
                       </div>
 
                       <div>
@@ -1339,19 +1352,65 @@ export default function InterviewPanel({
               </div>
 
               {/* Dot indicators */}
-              <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 12, paddingBottom: 8 }}>
-                {filteredCandidates.map((_, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => scrollRef.current?.scrollTo({ left: (idx * scrollRef.current.clientWidth), behavior: "smooth" })}
+              {displayFilteredCandidates.length > 0 && (
+                <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 12, paddingBottom: 8 }}>
+                  {displayFilteredCandidates.map((_, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => scrollRef.current?.scrollTo({ left: (idx * scrollRef.current.clientWidth), behavior: "smooth" })}
+                      style={{
+                        width: 8, height: 8, borderRadius: "50%",
+                        background: currentCardIndex === idx ? T.primary : T.border,
+                        cursor: "pointer", transition: "all 0.3s",
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {totalPages > 1 && (
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, marginTop: 10, marginBottom: 20 }}>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={activePage === 1}
                     style={{
-                      width: 8, height: 8, borderRadius: "50%",
-                      background: currentCardIndex === idx ? T.primary : T.border,
-                      cursor: "pointer", transition: "all 0.3s",
+                      background: T.white,
+                      color: activePage === 1 ? T.inkFaint : T.primary,
+                      border: `1.5px solid ${activePage === 1 ? T.border : T.primary}`,
+                      borderRadius: 8,
+                      padding: "6px 12px",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: activePage === 1 ? "not-allowed" : "pointer",
+                      opacity: activePage === 1 ? 0.5 : 1,
+                      transition: "all 0.15s",
                     }}
-                  />
-                ))}
-              </div>
+                  >
+                    &larr; Prev 10
+                  </button>
+                  <span style={{ fontSize: 12, color: T.inkMid, fontWeight: 600 }}>
+                    {activePage} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={activePage === totalPages}
+                    style={{
+                      background: activePage === totalPages ? T.white : T.primary,
+                      color: activePage === totalPages ? T.inkFaint : T.white,
+                      border: `1.5px solid ${activePage === totalPages ? T.border : T.primary}`,
+                      borderRadius: 8,
+                      padding: "6px 12px",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: activePage === totalPages ? "not-allowed" : "pointer",
+                      opacity: activePage === totalPages ? 0.5 : 1,
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    Next 10 &rarr;
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -1410,7 +1469,7 @@ export default function InterviewPanel({
                 style={{ maxWidth: 360, flex: 1, minWidth: 0 }}
               />
               <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, whiteSpace: "nowrap" }}>
-                {filteredCandidates.length} of {candidatesWithInterviews.length} shortlisted
+                Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, totalItems)} of {totalItems} shortlisted
               </span>
             </div>
           </div>
@@ -1439,7 +1498,7 @@ export default function InterviewPanel({
                 </tr>
               </thead>
               <tbody>
-                {filteredCandidates.map((c) => {
+                {displayFilteredCandidates.map((c) => {
                   const i = c.interview;
                   const rnd = c.displayRound;
                   const isPreviousRound = c.displayRound < c.activeRound;
@@ -1880,7 +1939,7 @@ export default function InterviewPanel({
                   );
                 })}
 
-                {filteredCandidates.length === 0 && (
+                {totalItems === 0 && (
                   <tr>
                     <td colSpan={8} style={{ padding: "40px 24px", textAlign: "center", color: T.inkFaint, fontSize: 14 }}>
                       No candidates found matching the filters.
@@ -1890,6 +1949,56 @@ export default function InterviewPanel({
               </tbody>
             </table>
           </div>
+          {totalPages > 1 && (
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              padding: "16px 20px",
+              borderTop: `1px solid ${T.border}`,
+            }}>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={activePage === 1}
+                style={{
+                  background: T.white,
+                  color: activePage === 1 ? T.inkFaint : T.primary,
+                  border: `1.5px solid ${activePage === 1 ? T.border : T.primary}`,
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: activePage === 1 ? "not-allowed" : "pointer",
+                  opacity: activePage === 1 ? 0.5 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                &larr; Previous 10
+              </button>
+              <span style={{ fontSize: 13, color: T.inkMid, fontWeight: 600 }}>
+                Page {activePage} of {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={activePage === totalPages}
+                style={{
+                  background: activePage === totalPages ? T.white : T.primary,
+                  color: activePage === totalPages ? T.inkFaint : T.white,
+                  border: `1.5px solid ${activePage === totalPages ? T.border : T.primary}`,
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: activePage === totalPages ? "not-allowed" : "pointer",
+                  opacity: activePage === totalPages ? 0.5 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                Next 10 &rarr;
+              </button>
+            </div>
+          )}
         </Card>
       )}
 

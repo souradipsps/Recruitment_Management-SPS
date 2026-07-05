@@ -1,9 +1,8 @@
 // Job Requests API client.
-// Uses the access token from .env (no login flow yet).
+import { apiRequest } from "./apiClient";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const API_URL = `${API_BASE_URL}/job-requests/`;
-const ACCESS_TOKEN = import.meta.env.VITE_API_ACCESS_TOKEN;
 
 // Backend returns skills as a comma- or newline-separated string; the UI wants an array.
 const toSkillsArray = (val) => {
@@ -39,12 +38,7 @@ export const normalizeJobRequest = (r) => ({
 
 // GET /api/job-requests/ -> normalized array.
 export async function fetchJobRequests() {
-  const res = await fetch(API_URL, {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${ACCESS_TOKEN}`,
-    },
-  });
+  const res = await apiRequest(API_URL);
 
   if (!res.ok) {
     throw new Error(`Failed to load job requests (${res.status} ${res.statusText})`);
@@ -57,10 +51,6 @@ export async function fetchJobRequests() {
 
 // POST /api/job-requests/
 export async function createJobRequest(formData, submittedBy) {
-  if (!ACCESS_TOKEN) {
-    throw new Error("Missing VITE_API_ACCESS_TOKEN in .env");
-  }
-
   // Map frontend form data (using UI keys like qual, exp, etc.) to backend API payload keys
   const payload = {
     role: formData.role,
@@ -78,12 +68,8 @@ export async function createJobRequest(formData, submittedBy) {
     submitted_by: submittedBy,
   };
 
-  const res = await fetch(API_URL, {
+  const res = await apiRequest(API_URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${ACCESS_TOKEN}`,
-    },
     body: JSON.stringify(payload),
   });
 
@@ -95,3 +81,4 @@ export async function createJobRequest(formData, submittedBy) {
   const data = await res.json();
   return normalizeJobRequest(data);
 }
+

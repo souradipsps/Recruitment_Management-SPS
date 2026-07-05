@@ -1,16 +1,9 @@
 // Role Requests API client.
 // Mirrors the pattern used in jobRequestsApi.js.
-// Uses VITE_API_BASE_URL and VITE_API_ACCESS_TOKEN from .env
+import { apiRequest } from "./apiClient";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const API_URL = `${API_BASE_URL}/role-requests/`;
-const ACCESS_TOKEN = import.meta.env.VITE_API_ACCESS_TOKEN;
-
-// Helper to build Authorization header
-const authHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${ACCESS_TOKEN}`,
-});
 
 /**
  * Map one API record → the shape RoleRequests.jsx expects.
@@ -45,9 +38,7 @@ export const normalizeRoleRequest = (r) => ({
  * Returns a normalized array of all role requests.
  */
 export async function fetchRoleRequests() {
-  const res = await fetch(API_URL, {
-    headers: authHeaders(),
-  });
+  const res = await apiRequest(API_URL);
 
   if (!res.ok) {
     throw new Error(`Failed to load role requests (${res.status} ${res.statusText})`);
@@ -66,10 +57,6 @@ export async function fetchRoleRequests() {
  *   { dept, role, just, ... }
  */
 export async function createRoleRequest(formData, submittedBy) {
-  if (!ACCESS_TOKEN) {
-    throw new Error("Missing VITE_API_ACCESS_TOKEN in .env — please add your Bearer token.");
-  }
-
   // Map UI field names → backend field names
   const payload = {
     department: formData.dept,
@@ -78,9 +65,8 @@ export async function createRoleRequest(formData, submittedBy) {
     submitted_by: submittedBy,
   };
 
-  const res = await fetch(API_URL, {
+  const res = await apiRequest(API_URL, {
     method: "POST",
-    headers: authHeaders(),
     body: JSON.stringify(payload),
   });
 
@@ -92,3 +78,4 @@ export async function createRoleRequest(formData, submittedBy) {
   const data = await res.json();
   return normalizeRoleRequest(data);
 }
+

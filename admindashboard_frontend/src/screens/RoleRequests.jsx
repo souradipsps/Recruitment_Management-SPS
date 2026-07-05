@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { T } from "../theme";
 import { statusVariant } from "../theme";
 import { useBreakpoint } from "../hooks";
@@ -20,7 +20,6 @@ const emptyForm = () => ({
   id: Date.now() + Math.random(),
   dept: "",
   role: "",
-  category: "",
   minExperience: "",
   maxExperience: "",
   minSalary: "",
@@ -48,6 +47,11 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
   const [search, setSearch] = useState("");
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const scrollRef = useRef(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, search]);
 
   const statuses = ["All", "Pending", "Approved", "Rejected", "Cancelled", "Sent Back"];
 
@@ -61,6 +65,14 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
         (String(r.id) || "").toLowerCase().includes(query)
       );
     });
+
+  const ITEMS_PER_PAGE = 10;
+  const totalItems = filteredRequests.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const activePage = Math.min(currentPage, Math.max(totalPages, 1));
+  const startIndex = (activePage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const displayFiltered = filteredRequests.slice(startIndex, endIndex);
 
   const counts = statuses.reduce((acc, status) => {
     acc[status] = status === "All"
@@ -161,7 +173,6 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                 experience: updatedForms[0].experience,
                 salary: updatedForms[0].salaryRange ? `₹${updatedForms[0].salaryRange}` : "",
                 just: updatedForms[0].just,
-                category: updatedForms[0].category,
               }
             : apr
         )
@@ -212,7 +223,6 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
           history: r.history,
           sourceId: r.id,
           type: "Role Request",
-          category: r.category,
         })),
       ]);
 
@@ -262,7 +272,6 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
               salary: updated.salaryRange ? `₹${updated.salaryRange}` : "",
               just: updated.just,
               status: updated.status,
-              category: updated.category || "",
             }
           : apr
       )
@@ -447,155 +456,150 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
         </div>
       ))}
 
-      <Modal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); setRoleForms([emptyForm()]); }} maxWidth={620}>
-        <ModalHeader title={editingId ? "Edit Role Request" : "New Role Request"} onClose={() => { setShowForm(false); setEditingId(null); setRoleForms([emptyForm()]); }} />
-
-        <div style={{
-          background: "linear-gradient(135deg, #72102a 0%, #3a0010 100%)",
-          margin: isMobile ? "-16px -16px 20px -16px" : "-24px -24px 20px -24px",
-          padding: "20px 24px",
-          display: "flex",
-          alignItems: "center",
-          gap: 14,
-        }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 12,
-            background: "rgba(255,255,255,0.15)",
-            backdropFilter: "blur(8px)",
-            border: "1px solid rgba(255,255,255,0.2)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 22, flexShrink: 0,
-          }}>
-            📂
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>
-              {editingId ? "Modify Role Request Details" : "Raise New Headcount Request"}
-            </div>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", marginTop: 2 }}>
-              Provide job details and salary specifications to start the approval workflow.
-            </div>
-          </div>
-        </div>
-
-        <div style={{ maxHeight: "55vh", overflowY: "auto", paddingRight: 4, margin: "0 -4px" }}>
-          {roleForms.map((form, index) => (
-            <Card key={form.id} hover={false} style={{ padding: 18, marginBottom: 16, border: `1px solid ${T.border}`, background: T.canvas }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>
-                  {editingId ? "Role Details" : `Role Request #${index + 1}`}
-                </div>
-                {roleForms.length > 1 && (
-                  <button onClick={() => removeForm(index)} style={{ border: "none", background: "#FEE2E2", color: "#DC2626", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12 }}>
-                    Remove
-                  </button>
-                )}
+      {showForm && (
+        <div style={{ marginBottom: 20 }}>
+          <Card style={{ padding: 0, overflow: "hidden", borderTop: `3px solid ${T.primary}`, marginBottom: 16 }}>
+            <div style={{
+              background: "linear-gradient(135deg, #72102a 0%, #3a0010 100%)",
+              padding: "20px 24px",
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+            }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: 12,
+                background: "rgba(255,255,255,0.15)",
+                backdropFilter: "blur(8px)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 22, flexShrink: 0,
+              }}>
+                📂
               </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14, marginBottom: 14 }}>
-                <FormField label="Department" required>
-                  <Input placeholder="Enter department" value={form.dept} onChange={(e) => updateForm(index, "dept", e.target.value)} />
-                </FormField>
-                <FormField label="Role Name" required>
-                  <Input placeholder="Enter role" value={form.role} onChange={(e) => updateForm(index, "role", e.target.value)} />
-                </FormField>
-                <FormField label="Category" required>
-                  <Select
-                    value={form.category}
-                    onChange={(e) => updateForm(index, "category", e.target.value)}
-                    options={CATEGORY_OPTIONS}
-                    placeholder="Select Category"
-                  />
-                </FormField>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <FormField label="Min Experience (Yrs)" required>
-                    <Input
-                      placeholder="e.g. 2"
-                      value={form.minExperience}
-                      onChange={(e) => updateForm(index, "minExperience", e.target.value)}
-                      style={formErrors[index]?.minExperience ? { borderColor: T.red } : {}}
-                    />
-                    {formErrors[index]?.minExperience && (
-                      <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
-                        {formErrors[index].minExperience}
-                      </div>
-                    )}
-                  </FormField>
-                  <FormField label="Max Experience (Yrs)" required>
-                    <Input
-                      placeholder="e.g. 5"
-                      value={form.maxExperience}
-                      onChange={(e) => updateForm(index, "maxExperience", e.target.value)}
-                      style={formErrors[index]?.maxExperience ? { borderColor: T.red } : {}}
-                    />
-                    {formErrors[index]?.maxExperience && (
-                      <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
-                        {formErrors[index].maxExperience}
-                      </div>
-                    )}
-                  </FormField>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>
+                  {editingId ? "Edit Role Request" : "New Role Request"}
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <FormField label="Min Salary (₹)" required>
-                    <Input
-                      placeholder="e.g. 40,000"
-                      value={form.minSalary}
-                      onChange={(e) => updateForm(index, "minSalary", e.target.value)}
-                      style={formErrors[index]?.minSalary ? { borderColor: T.red } : {}}
-                    />
-                    {formErrors[index]?.minSalary && (
-                      <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
-                        {formErrors[index].minSalary}
-                      </div>
-                    )}
-                  </FormField>
-                  <FormField label="Max Salary (₹)" required>
-                    <Input
-                      placeholder="e.g. 60,000"
-                      value={form.maxSalary}
-                      onChange={(e) => updateForm(index, "maxSalary", e.target.value)}
-                      style={formErrors[index]?.maxSalary ? { borderColor: T.red } : {}}
-                    />
-                    {formErrors[index]?.maxSalary && (
-                      <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
-                        {formErrors[index].maxSalary}
-                      </div>
-                    )}
-                  </FormField>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", marginTop: 2 }}>
+                  Provide job details and salary specifications to start the approval workflow.
                 </div>
               </div>
-              <FormField label="Justification" required>
-                <Textarea
-                  value={form.just}
-                  onChange={(e) => updateForm(index, "just", e.target.value)}
-                  placeholder="Why is this role needed?"
-                  rows={3}
+            </div>
+
+            <div style={{ padding: 24 }}>
+              {roleForms.map((form, index) => (
+                <Card key={form.id} hover={false} style={{ padding: 18, marginBottom: 16, border: `1px solid ${T.border}`, background: T.canvas }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>
+                      {editingId ? "Role Details" : `Role Request #${index + 1}`}
+                    </div>
+                    {roleForms.length > 1 && (
+                      <button onClick={() => removeForm(index)} style={{ border: "none", background: "#FEE2E2", color: "#DC2626", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12 }}>
+                        Remove
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14, marginBottom: 14 }}>
+                    <FormField label="Department" required>
+                      <Input placeholder="Enter department" value={form.dept} onChange={(e) => updateForm(index, "dept", e.target.value)} />
+                    </FormField>
+                    <FormField label="Role Name" required>
+                      <Input placeholder="Enter role" value={form.role} onChange={(e) => updateForm(index, "role", e.target.value)} />
+                    </FormField>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                      <FormField label="Min Experience (Yrs)" required>
+                        <Input
+                          placeholder="e.g. 2"
+                          value={form.minExperience}
+                          onChange={(e) => updateForm(index, "minExperience", e.target.value)}
+                          style={formErrors[index]?.minExperience ? { borderColor: T.red } : {}}
+                        />
+                        {formErrors[index]?.minExperience && (
+                          <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+                            {formErrors[index].minExperience}
+                          </div>
+                        )}
+                      </FormField>
+                      <FormField label="Max Experience (Yrs)" required>
+                        <Input
+                          placeholder="e.g. 5"
+                          value={form.maxExperience}
+                          onChange={(e) => updateForm(index, "maxExperience", e.target.value)}
+                          style={formErrors[index]?.maxExperience ? { borderColor: T.red } : {}}
+                        />
+                        {formErrors[index]?.maxExperience && (
+                          <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+                            {formErrors[index].maxExperience}
+                          </div>
+                        )}
+                      </FormField>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                      <FormField label="Min Salary (₹)" required>
+                        <Input
+                          placeholder="e.g. 40,000"
+                          value={form.minSalary}
+                          onChange={(e) => updateForm(index, "minSalary", e.target.value)}
+                          style={formErrors[index]?.minSalary ? { borderColor: T.red } : {}}
+                        />
+                        {formErrors[index]?.minSalary && (
+                          <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+                            {formErrors[index].minSalary}
+                          </div>
+                        )}
+                      </FormField>
+                      <FormField label="Max Salary (₹)" required>
+                        <Input
+                          placeholder="e.g. 60,000"
+                          value={form.maxSalary}
+                          onChange={(e) => updateForm(index, "maxSalary", e.target.value)}
+                          style={formErrors[index]?.maxSalary ? { borderColor: T.red } : {}}
+                        />
+                        {formErrors[index]?.maxSalary && (
+                          <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+                            {formErrors[index].maxSalary}
+                          </div>
+                        )}
+                      </FormField>
+                    </div>
+                  </div>
+                  <FormField label="Justification" required>
+                    <Textarea
+                      value={form.just}
+                      onChange={(e) => updateForm(index, "just", e.target.value)}
+                      placeholder="Why is this role needed?"
+                      rows={3}
+                    />
+                  </FormField>
+                </Card>
+              ))}
+
+              {submitError && (
+                <div style={{ width: "100%", color: "#DC2626", fontSize: 12, fontWeight: 600, background: "#FEE2E2", border: "1px solid #FECACA", borderRadius: 8, padding: "8px 12px", marginBottom: 16 }}>
+                  ⚠ {submitError}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", marginTop: 20, paddingTop: 16, borderTop: `1px solid ${T.border}` }}>
+                {!editingId && <Btn label="+ Add More" variant="outline" onClick={() => setRoleForms((p) => [...p, emptyForm()])} style={{ marginRight: "auto" }} />}
+                <Btn label="Cancel" variant="ghost" onClick={() => { setShowForm(false); setEditingId(null); setRoleForms([emptyForm()]); }} />
+                <Btn
+                  label={submitting ? "Submitting…" : "Submit Request"}
+                  onClick={submitRequests}
+                  disabled={submitting}
                 />
-              </FormField>
-            </Card>
-          ))}
-        </div>
-
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", marginTop: 20, paddingTop: 16, borderTop: `1px solid ${T.border}` }}>
-          {!editingId && <Btn label="+ Add More" variant="outline" onClick={() => setRoleForms((p) => [...p, emptyForm()])} style={{ marginRight: "auto" }} />}
-          <Btn label="Cancel" variant="ghost" onClick={() => { setShowForm(false); setEditingId(null); setRoleForms([emptyForm()]); }} />
-          {submitError && (
-            <div style={{ width: "100%", color: "#DC2626", fontSize: 12, fontWeight: 600, background: "#FEE2E2", border: "1px solid #FECACA", borderRadius: 8, padding: "8px 12px" }}>
-              ⚠ {submitError}
+              </div>
             </div>
-          )}
-          <Btn
-            label={submitting ? "Submitting…" : "Submit Request"}
-            onClick={submitRequests}
-            disabled={submitting}
-          />
+          </Card>
         </div>
-      </Modal>
+      )}
 
       {isMobile ? (
         <div style={{ marginBottom: 4 }}>
           <div style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, marginBottom: 8, textAlign: "center" }}>
-            {filteredRequests.length} request{filteredRequests.length !== 1 ? "s" : ""}
+            Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(startIndex + displayFiltered.length, totalItems)} of {totalItems} request{totalItems !== 1 ? "s" : ""}
           </div>
 
           <div
@@ -603,8 +607,10 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
             onScroll={(e) => {
               const scrollLeft = e.currentTarget.scrollLeft;
               const cardWidth = e.currentTarget.clientWidth;
-              const newIndex = Math.round(scrollLeft / cardWidth);
-              setCurrentCardIndex(newIndex);
+              if (cardWidth > 0) {
+                const newIndex = Math.round(scrollLeft / cardWidth);
+                setCurrentCardIndex(newIndex);
+              }
             }}
             style={{
               display: "flex",
@@ -618,7 +624,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
               margin: "0 -16px",
             }}
           >
-            {filteredRequests.map((r, idx) => {
+            {displayFiltered.map((r, idx) => {
               const cardBackground = "linear-gradient(135deg, #72102a 0%, #3a0010 100%)";
               return (
                 <div
@@ -642,7 +648,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                   }}
                 >
                   <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", padding: "4px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.2)" }}>
-                    {idx + 1} of {filteredRequests.length}
+                    {startIndex + idx + 1} of {totalItems}
                   </div>
 
                   <div>
@@ -685,10 +691,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                         <div style={{ fontSize: 10, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>Request ID</div>
                         <div style={{ fontSize: 12, fontWeight: 600 }}>{typeof r.id === "string" ? r.id.substring(0, 18) : String(r.id)}</div>
                       </div>
-                      <div>
-                        <div style={{ fontSize: 10, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>Category</div>
-                        <div style={{ fontSize: 12, fontWeight: 600 }}>{CATEGORY_OPTIONS.find((c) => c.value === r.category)?.label || r.category || "—"}</div>
-                      </div>
+
                       <div>
                         <div style={{ fontSize: 10, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>Experience</div>
                         <div style={{ fontSize: 12, fontWeight: 600 }}>{r.experience ? `${r.experience} yrs` : "—"}</div>
@@ -729,9 +732,9 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
             })}
           </div>
 
-          {filteredRequests.length > 0 && (
+          {displayFiltered.length > 0 && (
             <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10, paddingBottom: 8 }}>
-              {filteredRequests.map((_, i) => (
+              {displayFiltered.map((_, i) => (
                 <div
                   key={i}
                   onClick={() => scrollRef.current?.scrollTo({ left: (i * scrollRef.current.clientWidth), behavior: "smooth" })}
@@ -747,23 +750,71 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
               ))}
             </div>
           )}
+
+          {totalPages > 1 && (
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, marginTop: 10, marginBottom: 20 }}>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={activePage === 1}
+                style={{
+                  background: T.white,
+                  color: activePage === 1 ? T.inkFaint : T.primary,
+                  border: `1.5px solid ${activePage === 1 ? T.border : T.primary}`,
+                  borderRadius: 8,
+                  padding: "6px 12px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: activePage === 1 ? "not-allowed" : "pointer",
+                  opacity: activePage === 1 ? 0.5 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                &larr; Prev 10
+              </button>
+              <span style={{ fontSize: 12, color: T.inkMid, fontWeight: 600 }}>
+                {activePage} / {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={activePage === totalPages}
+                style={{
+                  background: activePage === totalPages ? T.white : T.primary,
+                  color: activePage === totalPages ? T.inkFaint : T.white,
+                  border: `1.5px solid ${activePage === totalPages ? T.border : T.primary}`,
+                  borderRadius: 8,
+                  padding: "6px 12px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: activePage === totalPages ? "not-allowed" : "pointer",
+                  opacity: activePage === totalPages ? 0.5 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                Next 10 &rarr;
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <Card>
+          <div style={{ padding: "12px 14px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "flex-end" }}>
+            <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, whiteSpace: "nowrap" }}>
+              Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, totalItems)} of {totalItems}
+            </span>
+          </div>
           <Table
             onRowClick={(index) => {
-              setSelectedRequest(filteredRequests[index]);
-              setOriginalRequest(filteredRequests[index]);
+              setSelectedRequest(displayFiltered[index]);
+              setOriginalRequest(displayFiltered[index]);
               setShowViewModal(true);
             }}
-            cols={["Request ID", "Department", "Role", "Category", "Experience", "Salary Range", "Justification", "Date", "Status"]}
-            rows={filteredRequests.map((r) => {
+            cols={["Request ID", "Department", "Role", "Experience", "Salary Range", "Justification", "Date", "Status"]}
+            rows={displayFiltered.map((r) => {
               const ss = getStatusStyle(r.status);
               return [
                 <Mono v={typeof r.id === "string" ? r.id.substring(0, 18) : String(r.id)} />,
                 r.dept || "—",
                 <strong>{r.role || "—"}</strong>,
-                CATEGORY_OPTIONS.find((c) => c.value === r.category)?.label || r.category || "—",
                 r.experience ? `${r.experience} yrs` : "—",
                 r.salaryRange ? `₹${r.salaryRange}` : "—",
                 <span style={{ fontSize: 12, color: T.inkLight, maxWidth: 180, display: "inline-block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.just || "—"}</span>,
@@ -772,6 +823,56 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
               ];
             })}
           />
+          {totalPages > 1 && (
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              padding: "16px 20px",
+              borderTop: `1px solid ${T.border}`,
+            }}>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={activePage === 1}
+                style={{
+                  background: T.white,
+                  color: activePage === 1 ? T.inkFaint : T.primary,
+                  border: `1.5px solid ${activePage === 1 ? T.border : T.primary}`,
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: activePage === 1 ? "not-allowed" : "pointer",
+                  opacity: activePage === 1 ? 0.5 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                &larr; Previous 10
+              </button>
+              <span style={{ fontSize: 13, color: T.inkMid, fontWeight: 600 }}>
+                Page {activePage} of {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={activePage === totalPages}
+                style={{
+                  background: activePage === totalPages ? T.white : T.primary,
+                  color: activePage === totalPages ? T.inkFaint : T.white,
+                  border: `1.5px solid ${activePage === totalPages ? T.border : T.primary}`,
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: activePage === totalPages ? "not-allowed" : "pointer",
+                  opacity: activePage === totalPages ? 0.5 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                Next 10 &rarr;
+              </button>
+            </div>
+          )}
         </Card>
       )}
 
@@ -855,21 +956,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                   )}
                 </div>
 
-                <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Category</div>
-                  {selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back" ? (
-                    <Select
-                      value={selectedRequest.category || ""}
-                      onChange={(e) => setSelectedRequest({ ...selectedRequest, category: e.target.value })}
-                      options={CATEGORY_OPTIONS}
-                      placeholder="Select Category"
-                    />
-                  ) : (
-                    <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>
-                      {CATEGORY_OPTIONS.find((c) => c.value === selectedRequest.category)?.label || selectedRequest.category || "—"}
-                    </div>
-                  )}
-                </div>
+
 
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Salary Range</div>

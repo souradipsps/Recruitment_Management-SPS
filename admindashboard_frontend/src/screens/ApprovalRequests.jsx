@@ -22,6 +22,11 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
   const [statusFilter, setStatusFilter] = useState("Pending");
   const [search, setSearch] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, search]);
 
   useEffect(() => {
     if (sel) {
@@ -64,6 +69,14 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
       );
     });
 
+  const ITEMS_PER_PAGE = 10;
+  const totalItems = filtered.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const activePage = Math.min(currentPage, Math.max(totalPages, 1));
+  const startIndex = (activePage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const displayFiltered = filtered.slice(startIndex, endIndex);
+
   const pendingCount = requests.filter((r) => r.status === "Pending").length;
 
   const openModal = (r) => { setSel(r); setComment(""); setFieldErrors({}); };
@@ -89,7 +102,6 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
             history: updated.history,
             salaryRange: r.salary ? r.salary.replace(/^₹/, "") : item.salaryRange,
             experience: r.experience || item.experience,
-            category: r.category || item.category,
           };
           delete updated2.minSalary;
           delete updated2.maxSalary;
@@ -127,7 +139,7 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
           headcount: 1, filled: 0, currentFilled: 0, status: "Inactive", currentStatus: "Inactive",
           experience: r.experience || "—",
           salaryRange: cleanedSalary || "—",
-          category: r.category || "—",
+          category: "—",
         }];
       });
       if (onNavigateToExistingRoles) {
@@ -281,23 +293,7 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
                   </div>
                 )}
 
-                {sel.type === "Role Request" && (
-                  <div>
-                    <div style={labelCss}>Category</div>
-                    {sel.status === "Pending" ? (
-                      <Select
-                        value={sel.category || ""}
-                        onChange={(e) => setSel({ ...sel, category: e.target.value })}
-                        options={CATEGORY_OPTIONS}
-                        placeholder="Select Category"
-                      />
-                    ) : (
-                      <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>
-                        {CATEGORY_OPTIONS.find((c) => c.value === sel.category)?.label || sel.category || "—"}
-                      </div>
-                    )}
-                  </div>
-                )}
+
 
                 {(sel.salary || sel.type === "Role Request") && (
                   <div>
@@ -664,7 +660,7 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
         ) : isMobile ? (
           <div style={{ marginBottom: 4 }}>
             <div style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, marginBottom: 8, textAlign: "center" }}>
-              {filtered.length} request{filtered.length !== 1 ? "s" : ""}
+              Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(startIndex + displayFiltered.length, totalItems)} of {totalItems} request{totalItems !== 1 ? "s" : ""}
             </div>
 
             <div
@@ -692,7 +688,7 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
                 paddingRight: 12,
               }}
             >
-              {filtered.map((r, idx) => (
+              {displayFiltered.map((r, idx) => (
                 <div
                   key={r.id}
                   onClick={() => openModal(r)}
@@ -728,7 +724,7 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
                       border: "1px solid rgba(255,255,255,0.2)",
                     }}
                   >
-                    {idx + 1} of {filtered.length}
+                    {startIndex + idx + 1} of {totalItems}
                   </div>
 
                   <div>
@@ -862,9 +858,9 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
               ))}
             </div>
 
-            {filtered.length > 0 && (
+            {displayFiltered.length > 0 && (
               <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10, paddingBottom: 8 }}>
-                {filtered.map((_, i) => (
+                {displayFiltered.map((_, i) => (
                   <div
                     key={i}
                     onClick={() => {
@@ -884,10 +880,59 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
                 ))}
               </div>
             )}
+
+            {totalPages > 1 && (
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, marginTop: 10, marginBottom: 20 }}>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={activePage === 1}
+                  style={{
+                    background: T.white,
+                    color: activePage === 1 ? T.inkFaint : T.primary,
+                    border: `1.5px solid ${activePage === 1 ? T.border : T.primary}`,
+                    borderRadius: 8,
+                    padding: "6px 12px",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: activePage === 1 ? "not-allowed" : "pointer",
+                    opacity: activePage === 1 ? 0.5 : 1,
+                    transition: "all 0.15s",
+                  }}
+                >
+                  &larr; Prev 10
+                </button>
+                <span style={{ fontSize: 12, color: T.inkMid, fontWeight: 600 }}>
+                  {activePage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={activePage === totalPages}
+                  style={{
+                    background: activePage === totalPages ? T.white : T.primary,
+                    color: activePage === totalPages ? T.inkFaint : T.white,
+                    border: `1.5px solid ${activePage === totalPages ? T.border : T.primary}`,
+                    borderRadius: 8,
+                    padding: "6px 12px",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: activePage === totalPages ? "not-allowed" : "pointer",
+                    opacity: activePage === totalPages ? 0.5 : 1,
+                    transition: "all 0.15s",
+                  }}
+                >
+                  Next 10 &rarr;
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div>
-            {filtered.map((r) => (
+            <div style={{ padding: "12px 14px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "flex-end" }}>
+              <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, whiteSpace: "nowrap" }}>
+                Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, totalItems)} of {totalItems}
+              </span>
+            </div>
+            {displayFiltered.map((r) => (
               <div
                 key={r.id}
                 onClick={() => openModal(r)}
@@ -952,6 +997,56 @@ export default function ApprovalRequests({ requests, setRequests, setExistingRol
                 ) : null}
               </div>
             ))}
+            {totalPages > 1 && (
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 12,
+                padding: "16px 20px",
+                borderTop: `1px solid ${T.border}`,
+              }}>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={activePage === 1}
+                  style={{
+                    background: T.white,
+                    color: activePage === 1 ? T.inkFaint : T.primary,
+                    border: `1.5px solid ${activePage === 1 ? T.border : T.primary}`,
+                    borderRadius: 8,
+                    padding: "8px 16px",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: activePage === 1 ? "not-allowed" : "pointer",
+                    opacity: activePage === 1 ? 0.5 : 1,
+                    transition: "all 0.15s",
+                  }}
+                >
+                  &larr; Previous 10
+                </button>
+                <span style={{ fontSize: 13, color: T.inkMid, fontWeight: 600 }}>
+                  Page {activePage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={activePage === totalPages}
+                  style={{
+                    background: activePage === totalPages ? T.white : T.primary,
+                    color: activePage === totalPages ? T.inkFaint : T.white,
+                    border: `1.5px solid ${activePage === totalPages ? T.border : T.primary}`,
+                    borderRadius: 8,
+                    padding: "8px 16px",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: activePage === totalPages ? "not-allowed" : "pointer",
+                    opacity: activePage === totalPages ? 0.5 : 1,
+                    transition: "all 0.15s",
+                  }}
+                >
+                  Next 10 &rarr;
+                </button>
+              </div>
+            )}
           </div>
         )}
       </Card>
