@@ -82,3 +82,19 @@ export async function createJobRequest(formData, submittedBy) {
   return normalizeJobRequest(data);
 }
 
+// PATCH /api/job-requests/{backendId}/
+export async function updateJobRequestStatus(backendId, status) {
+  const res = await apiRequest(`${API_URL}${backendId}/`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`API Error: ${res.status} - ${errText}`);
+  }
+
+  const data = await res.json();
+  return normalizeJobRequest(data);
+}
+

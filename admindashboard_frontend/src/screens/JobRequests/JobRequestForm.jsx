@@ -1,6 +1,6 @@
 import { T } from "../../theme";
 import { Card, Btn, Input, Select, FormField } from "../../components/ui";
-import { VACANCY_OPTIONS, QUAL_OPTIONS, TYPE_OPTIONS, DEPT_OPTIONS, CATEGORY_OPTIONS, ALL_SKILLS } from "../../data";
+import { VACANCY_OPTIONS, QUAL_OPTIONS, TYPE_OPTIONS, CATEGORY_OPTIONS, ALL_SKILLS } from "../../data";
 import SkillsMultiSelect from "../../components/SkillsMultiSelect";
 import { emptyForm } from "./jobRequestUtils";
 
@@ -9,7 +9,9 @@ export default function JobRequestForm({
   setJobForms,
   editingId,
   isMobile,
-  roleOptions,
+  deptOptions,
+  getRoleOptionsForDept,
+  handleDepartmentChange,
   handleRoleChange,
   updateForm,
   submitRequests,
@@ -35,10 +37,16 @@ export default function JobRequestForm({
 
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 14, marginBottom: 14 }}>
             <FormField label="Department" required>
-              <Select value={form.department} onChange={(e) => updateForm(index, "department", e.target.value)} options={DEPT_OPTIONS} placeholder="Select department…" />
+              <Select value={form.department} onChange={(e) => handleDepartmentChange(index, e.target.value)} options={deptOptions} placeholder="Select department…" />
             </FormField>
             <FormField label="Role" required>
-              <Select value={form.role} onChange={(e) => handleRoleChange(index, e.target.value)} options={roleOptions} placeholder="Select role…" />
+              <Select
+                value={form.role}
+                onChange={(e) => handleRoleChange(index, e.target.value)}
+                options={getRoleOptionsForDept(form.department)}
+                placeholder={form.department ? "Select role…" : "Select department first"}
+                disabled={!form.department}
+              />
             </FormField>
             <FormField label="Experience" required>
               <Input placeholder="Enter experience" value={form.exp} onChange={(e) => updateForm(index, "exp", e.target.value)} />

@@ -1,12 +1,12 @@
 # -----------------------
-# Environment / secrets
+# Node.js / Frontend
 # -----------------------
-# Local environment variables (keep secrets out of git)
-.env
-.env.local
-.env.*.local
-*.env
-!.env.example
+node_modules/
+dist/
+build/
+.cache/
+*.tsbuildinfo
+package-lock.json
 
 # -----------------------
 # Python
@@ -21,55 +21,65 @@ __pycache__/
 venv/
 .venv/
 env/
-ENV/
 
-# Python cache / tooling
+# Python cache
 .pytest_cache/
 .mypy_cache/
-.ruff_cache/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
 
 # -----------------------
 # Django
 # -----------------------
 *.sqlite3
+db.sqlite3
 media/
 staticfiles/
+*.log
 
 # -----------------------
-# Celery
+# Environment Variables & Secrets
 # -----------------------
-celerybeat-schedule
-celerybeat-schedule-*
-celerybeat.pid
+.env
+.env.*
+.env.local
+.env.development
+.env.production
 
 # -----------------------
-# Node / frontend
+# IDE / Editor
 # -----------------------
-node_modules/
-dist/
-dist-ssr/
-*.local
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
 
 # -----------------------
-# Logs
+# OS Files
 # -----------------------
-logs/
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# -----------------------
+# Logs & Debug
+# -----------------------
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
+debug.log
 
 # -----------------------
-# Editor / OS
+# Misc
 # -----------------------
-.vscode/*
-!.vscode/extensions.json
-.idea/
-.DS_Store
-Thumbs.db
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+*.bak
+*.tmp
+*.temp
+.eslintcache

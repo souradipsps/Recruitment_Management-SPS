@@ -62,7 +62,9 @@ export default function JobRequests(props) {
           setJobForms={s.setJobForms}
           editingId={s.editingId}
           isMobile={isMobile}
-          roleOptions={s.roleOptions}
+          deptOptions={s.deptOptions}
+          getRoleOptionsForDept={s.getRoleOptionsForDept}
+          handleDepartmentChange={s.handleDepartmentChange}
           handleRoleChange={s.handleRoleChange}
           updateForm={s.updateForm}
           submitRequests={s.submitRequests}
@@ -200,7 +202,9 @@ export default function JobRequests(props) {
           selectedRequest={s.selectedRequest}
           setSelectedRequest={s.setSelectedRequest}
           isMobile={isMobile}
-          roleOptions={s.roleOptions}
+          deptOptions={s.deptOptions}
+          getRoleOptionsForDept={s.getRoleOptionsForDept}
+          handleDepartmentChangeInModal={s.handleDepartmentChangeInModal}
           handleRoleChangeInModal={s.handleRoleChangeInModal}
           hasChanges={s.hasChanges}
           handleAccept={s.handleAccept}
