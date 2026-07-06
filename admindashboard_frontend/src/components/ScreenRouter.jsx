@@ -27,6 +27,7 @@ export default function ScreenRouter({ active, s, navigate, onGiveOffer }) {
           existingRoles={s.existingRoles}
           setExistingRoles={s.setExistingRoles}
           onNavigateToExistingRoles={() => navigate("existing-roles")}
+          currentUser={s.currentUser}
         />
       );
     case "job-requests":

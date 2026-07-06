@@ -6,6 +6,7 @@ import { fetchJobRequests } from "./api/jobRequestsApi";
 import { fetchApprovals } from "./api/approvalsApi";
 import { fetchRoles } from "./api/rolesApi";
 import { fetchJobPostings } from "./api/jobPostingsApi";
+import { fetchRoleRequests } from "./api/roleRequestsApi";
 
 import Auth from "./screens/Auth";
 import ModuleSelector from "./screens/ModuleSelector";
@@ -80,6 +81,14 @@ export default function App() {
       .catch((err) => console.error("Failed to load job postings:", err));
     return () => { active = false; };
   }, [setJobPostings]);
+  // Load role requests from the API on mount.
+  useEffect(() => {
+    let active = true;
+    fetchRoleRequests()
+      .then((data) => { if (active) setRoleRequests(data); })
+      .catch((err) => console.error("Failed to load role requests:", err));
+    return () => { active = false; };
+  }, [setRoleRequests]);
 
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";

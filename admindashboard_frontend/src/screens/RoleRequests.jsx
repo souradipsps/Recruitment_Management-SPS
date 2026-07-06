@@ -3,7 +3,7 @@ import { T } from "../theme";
 import { statusVariant } from "../theme";
 import { useBreakpoint } from "../hooks";
 import { Card, SectionTitle, Table, Mono, Btn, Input, Badge, FormField, Modal, ModalHeader, Textarea, Select } from "../components/ui";
-import { CATEGORY_OPTIONS } from "../data";
+import { createRoleRequest } from "../api/roleRequestsApi";
 
 const getStatusStyle = (status) => {
   switch (status) {
@@ -30,12 +30,15 @@ const emptyForm = () => ({
   comment: "",
 });
 
-export default function RoleRequests({ roleRequests, setRoleRequests, setApprovalRequests, setExistingRoles, onNavigateToExistingRoles }) {
+export default function RoleRequests({ roleRequests, setRoleRequests, setApprovalRequests, setExistingRoles, onNavigateToExistingRoles, currentUser }) {
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
 
   const [showForm, setShowForm] = useState(false);
   const [roleForms, setRoleForms] = useState([emptyForm()]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState("");
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [originalRequest, setOriginalRequest] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -131,13 +134,16 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
   const openNew = () => {
     setEditingId(null);
     setRoleForms([emptyForm()]);
+    setSubmitError("");
     setShowForm(true);
   };
 
-  const submitRequests = () => {
+  const submitRequests = async () => {
     if (!validateForms()) return;
     const updatedForms = roleForms.map((f) => {
-      const combinedSalary = f.minSalary && f.maxSalary ? `${f.minSalary}-${f.maxSalary}` : (f.minSalary || f.maxSalary || "");
+      const cleanMinSalary = (f.minSalary || "").replace(/,/g, "");
+      const cleanMaxSalary = (f.maxSalary || "").replace(/,/g, "");
+      const combinedSalary = cleanMinSalary && cleanMaxSalary ? `${cleanMinSalary}-${cleanMaxSalary}` : (cleanMinSalary || cleanMaxSalary || "");
       const combinedExperience = f.minExperience && f.maxExperience ? `${f.minExperience}-${f.maxExperience}` : (f.minExperience || f.maxExperience || "");
       return {
         ...f,
@@ -163,12 +169,26 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
             : apr
         )
       );
-    } else {
+      setRoleForms([emptyForm()]);
+      setShowForm(false);
+      setEditingId(null);
+      return;
+    }
+
+    const submittedBy = currentUser?.name || currentUser?.email || "HR Admin";
+    setSubmitError("");
+    setSubmitting(true);
+    try {
+      const created = await Promise.all(updatedForms.map((f) => createRoleRequest(f, submittedBy)));
+      const now = new Date().toLocaleDateString();
       const newRequests = updatedForms.map((f, i) => ({
         ...f,
-        id: `RR-${Date.now()}-${i}`,
+        id: created[i].id,
+        status: created[i].status || "Pending",
+        submittedBy: created[i].submittedBy || submittedBy,
+        date: now,
         requestType: "Role",
-        history: [{ act: "Submitted", by: "Current User", date: f.date || new Date().toLocaleDateString(), note: "" }],
+        history: [{ act: "Submitted", by: submittedBy, date: now, note: "" }],
       }));
       setRoleRequests((prev) => [...prev, ...newRequests]);
       setApprovalRequests((prev) => [
@@ -178,22 +198,29 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
           dept: r.dept,
           role: r.role,
           experience: r.experience,
-          requestedBy: "Current User",
+          requestedBy: submittedBy,
           date: r.date,
           salary: r.salaryRange ? `₹${r.salaryRange}` : "",
           just: r.just,
-          status: "Pending",
+          status: r.status,
           comment: "",
-          history: [{ act: "Submitted", by: "Current User", date: r.date, note: "" }],
+          history: r.history,
           sourceId: r.id,
           type: "Role Request",
           category: r.category,
         })),
       ]);
+      setRoleForms([emptyForm()]);
+      setShowForm(false);
+      setEditingId(null);
+      setSubmitSuccess("Role request submitted successfully.");
+      setTimeout(() => setSubmitSuccess(""), 4000);
+    } catch (err) {
+      console.error("Submit error:", err);
+      setSubmitError(err.message || "Failed to submit role request. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
-    setRoleForms([emptyForm()]);
-    setShowForm(false);
-    setEditingId(null);
   };
 
   const saveRoleRequestEdits = (submitAsPending) => {
@@ -340,6 +367,12 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
         action={<Btn label="+ New Role Request" onClick={openNew} />}
       />
 
+      {submitSuccess && (
+        <div style={{ background: T.greenLight, border: `1px solid ${T.green}33`, color: T.green, padding: "10px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
+          ✓ {submitSuccess}
+        </div>
+      )}
+
       <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
         <Input
           placeholder="Search requests by role, department, or ID..."
@@ -416,46 +449,16 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
         </div>
       ))}
 
-      <Modal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); setRoleForms([emptyForm()]); }} maxWidth={620}>
-        <ModalHeader title={editingId ? "Edit Role Request" : "New Role Request"} onClose={() => { setShowForm(false); setEditingId(null); setRoleForms([emptyForm()]); }} />
-
-        <div style={{
-          background: "linear-gradient(135deg, #72102a 0%, #3a0010 100%)",
-          margin: isMobile ? "-16px -16px 20px -16px" : "-24px -24px 20px -24px",
-          padding: "20px 24px",
-          display: "flex",
-          alignItems: "center",
-          gap: 14,
-        }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 12,
-            background: "rgba(255,255,255,0.15)",
-            backdropFilter: "blur(8px)",
-            border: "1px solid rgba(255,255,255,0.2)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 22, flexShrink: 0,
-          }}>
-            📂
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>
-              {editingId ? "Modify Role Request Details" : "Raise New Headcount Request"}
-            </div>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", marginTop: 2 }}>
-              Provide job details and salary specifications to start the approval workflow.
-            </div>
-          </div>
-        </div>
-
-        <div style={{ maxHeight: "55vh", overflowY: "auto", paddingRight: 4, margin: "0 -4px" }}>
+      {showForm && (
+        <div style={{ marginBottom: 20 }}>
           {roleForms.map((form, index) => (
-            <Card key={form.id} hover={false} style={{ padding: 18, marginBottom: 16, border: `1px solid ${T.border}`, background: T.canvas }}>
+            <Card key={form.id} hover={false} style={{ padding: 20, marginBottom: 16, borderTop: `3px solid ${T.blue}` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>
-                  {editingId ? "Role Details" : `Role Request #${index + 1}`}
+                <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>
+                  {editingId ? "Edit Role Request" : `Role Request #${index + 1}`}
                 </div>
                 {roleForms.length > 1 && (
-                  <button onClick={() => removeForm(index)} style={{ border: "none", background: "#FEE2E2", color: "#DC2626", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12 }}>
+                  <button onClick={() => removeForm(index)} style={{ border: "none", background: "#FEE2E2", color: "#DC2626", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontWeight: 700 }}>
                     Remove
                   </button>
                 )}
@@ -467,14 +470,6 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                 </FormField>
                 <FormField label="Role Name" required>
                   <Input placeholder="Enter role" value={form.role} onChange={(e) => updateForm(index, "role", e.target.value)} />
-                </FormField>
-                <FormField label="Category" required>
-                  <Select
-                    value={form.category}
-                    onChange={(e) => updateForm(index, "category", e.target.value)}
-                    options={CATEGORY_OPTIONS}
-                    placeholder="Select Category"
-                  />
                 </FormField>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <FormField label="Min Experience (Yrs)" required>
@@ -533,24 +528,26 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                   </FormField>
                 </div>
               </div>
-              <FormField label="Justification" required>
-                <Textarea
-                  value={form.just}
-                  onChange={(e) => updateForm(index, "just", e.target.value)}
-                  placeholder="Why is this role needed?"
-                  rows={3}
-                />
-              </FormField>
+              <div style={{ marginTop: 14 }}>
+                <FormField label="Justification" required>
+                  <textarea
+                    value={form.just}
+                    onChange={(e) => updateForm(index, "just", e.target.value)}
+                    placeholder="Why is this role needed?"
+                    style={{ width: "100%", minHeight: 100, border: `1.5px solid ${T.border}`, borderRadius: 8, padding: 12, resize: "vertical", outline: "none", fontSize: 13, boxSizing: "border-box" }}
+                  />
+                </FormField>
+              </div>
             </Card>
           ))}
-        </div>
 
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", marginTop: 20, paddingTop: 16, borderTop: `1px solid ${T.border}` }}>
-          {!editingId && <Btn label="+ Add More" variant="outline" onClick={() => setRoleForms((p) => [...p, emptyForm()])} style={{ marginRight: "auto" }} />}
-          <Btn label="Cancel" variant="ghost" onClick={() => { setShowForm(false); setEditingId(null); setRoleForms([emptyForm()]); }} />
-          <Btn label="Submit Request" onClick={submitRequests} />
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
+            <Btn label="Submit Request" onClick={submitRequests} />
+            {!editingId && <Btn label="+ Add More" variant="outline" onClick={() => setRoleForms((p) => [...p, emptyForm()])} />}
+            <Btn label="Cancel" variant="ghost" onClick={() => { setShowForm(false); setEditingId(null); setRoleForms([emptyForm()]); }} />
+          </div>
         </div>
-      </Modal>
+      )}
 
       {isMobile ? (
         <div style={{ marginBottom: 4 }}>
@@ -646,10 +643,6 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                         <div style={{ fontSize: 12, fontWeight: 600 }}>{typeof r.id === "string" ? r.id.substring(0, 18) : String(r.id)}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: 10, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>Category</div>
-                        <div style={{ fontSize: 12, fontWeight: 600 }}>{CATEGORY_OPTIONS.find((c) => c.value === r.category)?.label || r.category || "—"}</div>
-                      </div>
-                      <div>
                         <div style={{ fontSize: 10, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>Experience</div>
                         <div style={{ fontSize: 12, fontWeight: 600 }}>{r.experience ? `${r.experience} yrs` : "—"}</div>
                       </div>
@@ -716,18 +709,16 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
               setOriginalRequest(filteredRequests[index]);
               setShowViewModal(true);
             }}
-            cols={["Request ID", "Department", "Role", "Category", "Experience", "Salary Range", "Justification", "Date", "Status"]}
+            cols={["Request ID", "Department", "Role", "Experience", "Salary Range", "Justification", "Status"]}
             rows={filteredRequests.map((r) => {
               const ss = getStatusStyle(r.status);
               return [
                 <Mono v={typeof r.id === "string" ? r.id.substring(0, 18) : String(r.id)} />,
                 r.dept || "—",
                 <strong>{r.role || "—"}</strong>,
-                CATEGORY_OPTIONS.find((c) => c.value === r.category)?.label || r.category || "—",
                 r.experience ? `${r.experience} yrs` : "—",
                 r.salaryRange ? `₹${r.salaryRange}` : "—",
                 <span style={{ fontSize: 12, color: T.inkLight, maxWidth: 180, display: "inline-block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.just || "—"}</span>,
-                r.date || "—",
                 <span style={{ ...ss, borderRadius: 99, padding: "3px 10px", fontSize: 11, fontWeight: 700, display: "inline-block" }}>{r.status}</span>,
               ];
             })}
@@ -815,21 +806,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                   )}
                 </div>
 
-                <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Category</div>
-                  {selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back" ? (
-                    <Select
-                      value={selectedRequest.category || ""}
-                      onChange={(e) => setSelectedRequest({ ...selectedRequest, category: e.target.value })}
-                      options={CATEGORY_OPTIONS}
-                      placeholder="Select Category"
-                    />
-                  ) : (
-                    <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>
-                      {CATEGORY_OPTIONS.find((c) => c.value === selectedRequest.category)?.label || selectedRequest.category || "—"}
-                    </div>
-                  )}
-                </div>
+
 
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Salary Range</div>
