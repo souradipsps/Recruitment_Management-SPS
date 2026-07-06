@@ -1,4 +1,5 @@
 import { takeApprovalAction } from "../../api/approvalsApi";
+import { updateJobRequestFields } from "../../api/jobRequestsApi";
 
 const parseSal = (v) => parseFloat((v || "").replace(/,/g, "")) || 0;
 
@@ -22,6 +23,32 @@ export function useApprovalActions({
 }) {
   // Persist action to backend (if backendId present) and sync all local state.
   const performAction = async (r, action, customComment) => {
+    // takeApprovalAction only sends the action verb + note — any field edits
+    // made in this modal (department, role, salary, etc.) must be saved to the
+    // underlying Job Request separately, or they'd silently vanish.
+    if (r.type === "Job Request" && r.sourceDbId != null) {
+      try {
+        await updateJobRequestFields(r.sourceDbId, {
+          role: r.role,
+          department: r.dept,
+          location: r.location,
+          category: r.category,
+          salary: r.salary,
+          vacancies: r.vacancies,
+          exp: r.experience,
+          qual: r.qual,
+          type: r.empType,
+          description: r.description,
+          justification: r.just,
+          skills: r.skills,
+        });
+      } catch (err) {
+        console.error("Failed to save job request edits:", err);
+        alert(`Could not save changes: ${err.message}`);
+        return false;
+      }
+    }
+
     if (r.backendId != null) {
       try {
         await takeApprovalAction(r.backendId, action, customComment || "");
@@ -71,10 +98,18 @@ export function useApprovalActions({
             status: action,
             comment: customComment || "",
             history: updated.history,
+            department: r.dept !== undefined ? r.dept : item.department,
+            role: r.role !== undefined ? r.role : item.role,
+            location: r.location !== undefined ? r.location : item.location,
+            category: r.category !== undefined ? r.category : item.category,
+            salary: r.salary !== undefined ? r.salary : item.salary,
             vacancies: r.vacancies !== undefined ? r.vacancies : item.vacancies,
+            exp: r.experience !== undefined ? r.experience : item.exp,
             qual: r.qual !== undefined ? r.qual : item.qual,
             type: r.empType !== undefined ? r.empType : item.type,
+            justification: r.just !== undefined ? r.just : item.justification,
             description: r.description !== undefined ? r.description : item.description,
+            skills: r.skills !== undefined ? r.skills : item.skills,
           };
         }),
       );
@@ -106,7 +141,7 @@ export function useApprovalActions({
           location: r.location || "",
           salary: r.salary || "",
           vacancies: r.vacancies || "",
-          exp: r.exp || "",
+          exp: r.experience || "",
           qual: r.qual || "",
           type: r.empType || "",
           description: r.description || "",

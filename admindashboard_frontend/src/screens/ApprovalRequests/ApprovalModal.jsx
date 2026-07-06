@@ -35,7 +35,7 @@ export default function ApprovalModal({ sel, setSel, closeModal, isPending, comm
   };
 
   const handleDepartmentChange = (department) => {
-    setSel({ ...sel, dept: department, role: "", exp: "", salary: "", empType: "" });
+    setSel({ ...sel, dept: department, role: "", experience: "", salary: "", empType: "" });
   };
 
   const handleRoleChange = (role) => {
@@ -43,7 +43,7 @@ export default function ApprovalModal({ sel, setSel, closeModal, isPending, comm
     setSel({
       ...sel,
       role,
-      exp: matchingRole ? (matchingRole.experience || "") : sel.exp,
+      experience: matchingRole ? (matchingRole.experience || "") : sel.experience,
       salary: matchingRole ? (matchingRole.salaryRange || "") : sel.salary,
       empType: matchingRole ? (matchingRole.type || "") : sel.empType,
     });
@@ -277,10 +277,10 @@ export default function ApprovalModal({ sel, setSel, closeModal, isPending, comm
                 <div>
                   <div style={labelCss}>Experience</div>
                   {isPending ? (
-                    <input value={sel.exp || ""} onChange={(e) => setSel({ ...sel, exp: e.target.value })} placeholder="Enter experience"
+                    <input value={sel.experience || ""} onChange={(e) => setSel({ ...sel, experience: e.target.value })} placeholder="Enter experience"
                       style={{ width: "100%", padding: 9, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }} />
                   ) : (
-                    <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{sel.exp || "—"}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{sel.experience || "—"}</div>
                   )}
                 </div>
                 <div>
