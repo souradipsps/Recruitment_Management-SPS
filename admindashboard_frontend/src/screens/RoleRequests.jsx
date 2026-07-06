@@ -450,52 +450,22 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
         </div>
       ))}
 
-      <Modal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); setRoleForms([emptyForm()]); setSubmitError(""); }} maxWidth={620}>
-        <ModalHeader title={editingId ? "Edit Role Request" : "New Role Request"} onClose={() => { setShowForm(false); setEditingId(null); setRoleForms([emptyForm()]); setSubmitError(""); }} />
-
-        <div style={{
-          background: "linear-gradient(135deg, #72102a 0%, #3a0010 100%)",
-          margin: isMobile ? "-16px -16px 20px -16px" : "-24px -24px 20px -24px",
-          padding: "20px 24px",
-          display: "flex",
-          alignItems: "center",
-          gap: 14,
-        }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 12,
-            background: "rgba(255,255,255,0.15)",
-            backdropFilter: "blur(8px)",
-            border: "1px solid rgba(255,255,255,0.2)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 22, flexShrink: 0,
-          }}>
-            📂
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>
-              {editingId ? "Modify Role Request Details" : "Raise New Headcount Request"}
-            </div>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", marginTop: 2 }}>
-              Provide job details and salary specifications to start the approval workflow.
-            </div>
-          </div>
-        </div>
-
-        <div style={{ maxHeight: "55vh", overflowY: "auto", paddingRight: 4, margin: "0 -4px" }}>
+      {showForm && (
+        <div style={{ marginBottom: 20 }}>
           {roleForms.map((form, index) => (
-            <Card key={form.id} hover={false} style={{ padding: 18, marginBottom: 16, border: `1px solid ${T.border}`, background: T.canvas }}>
+            <Card key={form.id} hover={false} style={{ padding: 20, marginBottom: 16, borderTop: `3px solid ${T.blue}` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>
-                  {editingId ? "Role Details" : `Role Request #${index + 1}`}
+                <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>
+                  {editingId ? "Edit Role Request" : `Role Request #${index + 1}`}
                 </div>
                 {roleForms.length > 1 && (
-                  <button onClick={() => removeForm(index)} style={{ border: "none", background: "#FEE2E2", color: "#DC2626", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12 }}>
+                  <button onClick={() => removeForm(index)} style={{ border: "none", background: "#FEE2E2", color: "#DC2626", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontWeight: 700 }}>
                     Remove
                   </button>
                 )}
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14, marginBottom: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 14, marginBottom: 14 }}>
                 <FormField label="Department" required>
                   <Input placeholder="Enter department" value={form.dept} onChange={(e) => updateForm(index, "dept", e.target.value)} />
                 </FormField>
@@ -567,34 +537,26 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                   </FormField>
                 </div>
               </div>
-              <FormField label="Justification" required>
-                <Textarea
-                  value={form.just}
-                  onChange={(e) => updateForm(index, "just", e.target.value)}
-                  placeholder="Why is this role needed?"
-                  rows={3}
-                />
-              </FormField>
+              <div style={{ marginTop: 14 }}>
+                <FormField label="Justification" required>
+                  <textarea
+                    value={form.just}
+                    onChange={(e) => updateForm(index, "just", e.target.value)}
+                    placeholder="Why is this role needed?"
+                    style={{ width: "100%", minHeight: 100, border: `1.5px solid ${T.border}`, borderRadius: 8, padding: 12, resize: "vertical", outline: "none", fontSize: 13, boxSizing: "border-box" }}
+                  />
+                </FormField>
+              </div>
             </Card>
           ))}
-        </div>
 
-        {submitError && (
-          <div style={{ marginTop: 16, padding: "12px 16px", borderRadius: 8, background: "#FEE2E2", color: "#DC2626", fontSize: 13, fontWeight: 600, border: "1px solid #FCA5A5" }}>
-            {submitError}
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
+            <Btn label="Submit Request" onClick={submitRequests} />
+            {!editingId && <Btn label="+ Add More" variant="outline" onClick={() => setRoleForms((p) => [...p, emptyForm()])} />}
+            <Btn label="Cancel" variant="ghost" onClick={() => { setShowForm(false); setEditingId(null); setRoleForms([emptyForm()]); }} />
           </div>
-        )}
-
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", marginTop: 20, paddingTop: 16, borderTop: `1px solid ${T.border}` }}>
-          {!editingId && <Btn label="+ Add More" variant="outline" onClick={() => setRoleForms((p) => [...p, emptyForm()])} style={{ marginRight: "auto" }} disabled={submitting} />}
-          <Btn label="Cancel" variant="ghost" onClick={() => { setShowForm(false); setEditingId(null); setRoleForms([emptyForm()]); setSubmitError(""); }} disabled={submitting} />
-          <Btn
-            label={submitting ? "Submitting…" : "Submit Request"}
-            onClick={submitRequests}
-            style={submitting ? { opacity: 0.6, pointerEvents: "none" } : {}}
-          />
         </div>
-      </Modal>
+      )}
 
       {isMobile ? (
         <div style={{ marginBottom: 4 }}>
