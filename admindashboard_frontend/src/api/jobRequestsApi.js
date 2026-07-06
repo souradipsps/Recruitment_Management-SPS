@@ -95,3 +95,28 @@ export async function createJobRequest(formData, submittedBy) {
   const data = await res.json();
   return normalizeJobRequest(data);
 }
+
+// PATCH /api/job-requests/{backendId}/
+export async function updateJobRequestStatus(backendId, status) {
+  if (!ACCESS_TOKEN) {
+    throw new Error("Missing VITE_API_ACCESS_TOKEN in .env");
+  }
+
+  const res = await fetch(`${API_URL}${backendId}/`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${ACCESS_TOKEN}`,
+    },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`API Error: ${res.status} - ${errText}`);
+  }
+
+  const data = await res.json();
+  return normalizeJobRequest(data);
+}
+

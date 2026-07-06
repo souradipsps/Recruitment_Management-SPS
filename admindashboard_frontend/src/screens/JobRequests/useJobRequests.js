@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { emptyForm } from "./jobRequestUtils";
-import { createJobRequest } from "../../api/jobRequestsApi";
+import { createJobRequest, updateJobRequestStatus } from "../../api/jobRequestsApi";
 
 const STATUSES = ["All", "Pending", "Approved", "Rejected", "Cancelled", "Sent Back"];
 
@@ -181,7 +181,18 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     }
   };
 
-  const cancelJobRequest = (reqId) => {
+  const cancelJobRequest = async (reqId) => {
+    const target = jobRequests.find((r) => r.id === reqId);
+    if (target && target.backendId != null) {
+      try {
+        await updateJobRequestStatus(target.backendId, "Cancelled");
+      } catch (err) {
+        console.error("Failed to cancel job request on backend:", err);
+        alert(`Could not cancel request: ${err.message}`);
+        return;
+      }
+    }
+
     setJobRequests((prev) =>
       prev.map((r) => (r.id === reqId ? { ...r, status: "Cancelled" } : r))
     );
