@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { emptyForm } from "./jobRequestUtils";
 import { createJobRequest, updateJobRequestStatus } from "../../api/jobRequestsApi";
+import { fetchApprovals } from "../../api/approvalsApi";
 
 const STATUSES = ["All", "Pending", "Approved", "Rejected", "Cancelled", "Sent Back"];
 
@@ -304,31 +305,25 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
       }));
 
       setJobRequests((prev) => [...prev, ...newRequests]);
-      setApprovalRequests((prev) => [
-        ...prev,
-        ...newRequests.map((r) => ({
-          id: `APR-${Date.now()}-${Math.random()}`,
-          dept: r.department || "N/A",
-          role: r.role,
-          category: r.category || "N/A",
-          requestedBy: r.submittedBy || submittedBy,
-          date: now,
-          location: r.location,
-          salary: r.salary,
-          vacancies: r.vacancies,
-          exp: r.exp,
-          qual: r.qual,
-          empType: r.type,
-          just: r.justification,
-          description: r.description,
-          skills: r.skills,
-          status: r.status || "Pending",
-          comment: "",
-          history: r.history || [{ act: "Submitted", by: submittedBy, date: now, note: "" }],
-          sourceId: r.id,
-          type: "Job Request",
-        })),
-      ]);
+
+      // The backend auto-creates the corresponding Approval record(s) for each
+      // Job Request. Re-fetch the real list instead of fabricating local
+      // stand-ins here — a fabricated entry has no backendId, so approving/
+      // rejecting it silently no-ops against the API while a duplicate,
+      // backend-sourced entry (with a real backendId) does update the database.
+      // Role Request approvals aren't backend-synced yet, so only the
+      // "Job Request" entries are replaced; anything else is left untouched.
+      try {
+        const freshApprovals = await fetchApprovals();
+        const freshJobRequestApprovals = freshApprovals.filter((a) => a.type === "Job Request");
+        setApprovalRequests((prev) => [
+          ...prev.filter((a) => a.type !== "Job Request"),
+          ...freshJobRequestApprovals,
+        ]);
+      } catch (err) {
+        console.error("Failed to refresh approvals after submitting job request:", err);
+      }
+
       setJobForms([emptyForm()]);
       setShowForm(false);
       setEditingId(null);
