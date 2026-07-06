@@ -2,16 +2,52 @@ import { createPortal } from "react-dom";
 import { T } from "../../theme";
 import { statusVariant } from "../../theme";
 import { Badge, Btn, Select } from "../../components/ui";
-import { QUAL_OPTIONS, TYPE_OPTIONS, VACANCY_OPTIONS, DEPT_OPTIONS, CATEGORY_OPTIONS, ALL_SKILLS } from "../../data";
+import { QUAL_OPTIONS, TYPE_OPTIONS, VACANCY_OPTIONS, CATEGORY_OPTIONS, ALL_SKILLS } from "../../data";
 import SkillsMultiSelect from "../../components/SkillsMultiSelect";
 import { labelCss } from "./constants";
+
+// Only Active roles (Existing Roles screen) are eligible to be requested against.
+const isActiveRole = (r) => (r.currentStatus || r.status) === "Active";
 
 /**
  * Full-screen portal modal showing request details, editable fields for
  * Pending requests, activity history, comment textarea, and action buttons.
  */
-export default function ApprovalModal({ sel, setSel, closeModal, isPending, comment, setComment, fieldErrors, setFieldErrors, takeAction, isMobile }) {
+export default function ApprovalModal({ sel, setSel, closeModal, isPending, comment, setComment, fieldErrors, setFieldErrors, takeAction, isMobile, existingRoles }) {
   if (!sel) return null;
+
+  // Department list sourced from existing (sanctioned) roles that have at least one Active role.
+  const deptOptions = [...new Set((existingRoles || []).filter(isActiveRole).map((r) => r.dept).filter(Boolean))]
+    .map((d) => ({ value: d, label: d }));
+
+  // Active roles for a given department (or all active roles when no department is selected yet).
+  const getRoleOptionsForDept = (department) => {
+    const seen = new Set();
+    const opts = [];
+    for (const r of existingRoles || []) {
+      if (!r.role || seen.has(r.role)) continue;
+      if (!isActiveRole(r)) continue;
+      if (department && r.dept !== department) continue;
+      seen.add(r.role);
+      opts.push({ value: r.role, label: r.role });
+    }
+    return opts;
+  };
+
+  const handleDepartmentChange = (department) => {
+    setSel({ ...sel, dept: department, role: "", experience: "", salary: "", empType: "" });
+  };
+
+  const handleRoleChange = (role) => {
+    const matchingRole = (existingRoles || []).find((r) => r.role === role && (!sel.dept || r.dept === sel.dept));
+    setSel({
+      ...sel,
+      role,
+      experience: matchingRole ? (matchingRole.experience || "") : sel.experience,
+      salary: matchingRole ? (matchingRole.salaryRange || "") : sel.salary,
+      empType: matchingRole ? (matchingRole.type || "") : sel.empType,
+    });
+  };
 
   return createPortal(
     <div
@@ -180,13 +216,29 @@ export default function ApprovalModal({ sel, setSel, closeModal, isPending, comm
                 <div>
                   <div style={labelCss}>Department</div>
                   {isPending ? (
-                    <select value={sel.dept || ""} onChange={(e) => setSel({ ...sel, dept: e.target.value })}
+                    <select value={sel.dept || ""} onChange={(e) => handleDepartmentChange(e.target.value)}
                       style={{ width: "100%", padding: "8px 10px", border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", background: T.surface, color: T.ink }}>
                       <option value="">Select department…</option>
-                      {DEPT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      {deptOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
                   ) : (
                     <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{sel.dept && sel.dept !== "N/A" ? sel.dept : "—"}</div>
+                  )}
+                </div>
+                <div>
+                  <div style={labelCss}>Role</div>
+                  {isPending ? (
+                    <select
+                      value={sel.role || ""}
+                      onChange={(e) => handleRoleChange(e.target.value)}
+                      disabled={!sel.dept}
+                      style={{ width: "100%", padding: "8px 10px", border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", background: sel.dept ? T.surface : T.canvas, color: T.ink, cursor: sel.dept ? "pointer" : "not-allowed" }}
+                    >
+                      <option value="">{sel.dept ? "Select role…" : "Select department first"}</option>
+                      {getRoleOptionsForDept(sel.dept).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  ) : (
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{sel.role || "—"}</div>
                   )}
                 </div>
                 <div>
@@ -225,10 +277,10 @@ export default function ApprovalModal({ sel, setSel, closeModal, isPending, comm
                 <div>
                   <div style={labelCss}>Experience</div>
                   {isPending ? (
-                    <input value={sel.exp || ""} onChange={(e) => setSel({ ...sel, exp: e.target.value })} placeholder="Enter experience"
+                    <input value={sel.experience || ""} onChange={(e) => setSel({ ...sel, experience: e.target.value })} placeholder="Enter experience"
                       style={{ width: "100%", padding: 9, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }} />
                   ) : (
-                    <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{sel.exp || "—"}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{sel.experience || "—"}</div>
                   )}
                 </div>
                 <div>

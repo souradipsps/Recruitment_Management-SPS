@@ -55,28 +55,29 @@ export async function fetchJobRequests() {
   return list.map(normalizeJobRequest);
 }
 
+// Map frontend form data (using UI keys like qual, exp, etc.) to backend API payload keys.
+const buildJobRequestPayload = (formData) => ({
+  role: formData.role,
+  vacancies: parseInt(formData.vacancies) || 1,
+  experience: formData.exp,
+  salary_range: formData.salary,
+  type: formData.type,
+  educational_qualifications: formData.qual, // Backend field name
+  department: formData.department,
+  category: formData.category ? (formData.category.endsWith("Positions") ? formData.category : `${formData.category} Positions`) : "",
+  location: formData.location,
+  description: formData.description,
+  justification: formData.justification,
+  skills_required: (formData.skills || []).join(", "), // Backend expects comma-separated string
+});
+
 // POST /api/job-requests/
 export async function createJobRequest(formData, submittedBy) {
   if (!ACCESS_TOKEN) {
     throw new Error("Missing VITE_API_ACCESS_TOKEN in .env");
   }
 
-  // Map frontend form data (using UI keys like qual, exp, etc.) to backend API payload keys
-  const payload = {
-    role: formData.role,
-    vacancies: parseInt(formData.vacancies) || 1,
-    experience: formData.exp,
-    salary_range: formData.salary,
-    type: formData.type,
-    educational_qualifications: formData.qual, // Backend field name
-    department: formData.department,
-    category: formData.category ? (formData.category.endsWith("Positions") ? formData.category : `${formData.category} Positions`) : "",
-    location: formData.location,
-    description: formData.description,
-    justification: formData.justification,
-    skills_required: (formData.skills || []).join(", "), // Backend expects comma-separated string
-    submitted_by: submittedBy,
-  };
+  const payload = { ...buildJobRequestPayload(formData), submitted_by: submittedBy };
 
   const res = await fetch(API_URL, {
     method: "POST",
@@ -109,6 +110,32 @@ export async function updateJobRequestStatus(backendId, status) {
       Authorization: `Bearer ${ACCESS_TOKEN}`,
     },
     body: JSON.stringify({ status }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`API Error: ${res.status} - ${errText}`);
+  }
+
+  const data = await res.json();
+  return normalizeJobRequest(data);
+}
+
+// PATCH /api/job-requests/{backendId}/ — persists edited fields (department, role,
+// salary, etc). `takeApprovalAction` only sends the action verb + note, so field
+// edits made in the Approval Requests modal must be saved here separately.
+export async function updateJobRequestFields(backendId, formData) {
+  if (!ACCESS_TOKEN) {
+    throw new Error("Missing VITE_API_ACCESS_TOKEN in .env");
+  }
+
+  const res = await fetch(`${API_URL}${backendId}/`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${ACCESS_TOKEN}`,
+    },
+    body: JSON.stringify(buildJobRequestPayload(formData)),
   });
 
   if (!res.ok) {

@@ -33,6 +33,7 @@ export const normalizeApproval = (r) => ({
   id: r.request_id || String(r.id), // key used across local state (matches sourceId of role/job requests)
   backendId: r.id,                  // numeric pk, used for the action endpoint
   sourceId: r.source_request_id || r.request_id || String(r.id),
+  sourceDbId: r.source_db_id ?? r.job_request ?? r.role_request ?? null, // numeric pk of the underlying Job/Role Request row
   type: r.type || "",
   role: r.title || "",
   dept: r.department || "",

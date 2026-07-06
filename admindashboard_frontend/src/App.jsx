@@ -5,6 +5,7 @@ import { NAV, EXISTING_ROLES, POSTINGS, JOB_APPLICATIONS, GENERAL_APPLICATIONS, 
 import { fetchJobRequests } from "./api/jobRequestsApi";
 import { fetchApprovals } from "./api/approvalsApi";
 import { fetchRoles } from "./api/rolesApi";
+import { fetchJobPostings } from "./api/jobPostingsApi";
 import { fetchRoleRequests } from "./api/roleRequestsApi";
 
 import Auth from "./screens/Auth";
@@ -72,6 +73,14 @@ export default function App() {
     return () => { active = false; };
   }, [setExistingRoles]);
 
+  // Load job postings from the API on mount.
+  useEffect(() => {
+    let active = true;
+    fetchJobPostings()
+      .then((data) => { if (active) setJobPostings(data); })
+      .catch((err) => console.error("Failed to load job postings:", err));
+    return () => { active = false; };
+  }, [setJobPostings]);
   // Load role requests from the API on mount.
   useEffect(() => {
     let active = true;

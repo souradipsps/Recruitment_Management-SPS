@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { T, font } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
 import { Card, SectionTitle, Table, Mono, Badge, Input, Modal, ModalHeader, Btn } from "../components/ui";
+import { publishJobPosting, unpublishJobPosting } from "../api/jobPostingsApi";
 
 export default function JobPostings({ postings, setPostings, jobRequests, existingRoles }) {
   const bp = useBreakpoint();
@@ -11,6 +12,8 @@ export default function JobPostings({ postings, setPostings, jobRequests, existi
   const [selectedJobForModal, setSelectedJobForModal] = useState(null);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [filterActiveIndex, setFilterActiveIndex] = useState(0);
+  const [statusUpdatingId, setStatusUpdatingId] = useState(null);
+  const [statusError, setStatusError] = useState("");
   const scrollRef = useRef(null);
   const hScroll = useHorizontalScroll();
 
@@ -53,9 +56,30 @@ export default function JobPostings({ postings, setPostings, jobRequests, existi
     alert(`Job link copied!\n\n${link}`);
   };
 
-  const toggleStatus = (id, currentStatus) => {
+  const toggleStatus = async (id, currentStatus) => {
+    const target = postings.find((p) => p.id === id);
     const newStatus = currentStatus === "Published" ? "Unpublished" : "Published";
-    setPostings((prev) => prev.map((item) => item.id === id ? { ...item, status: newStatus } : item));
+    setStatusError("");
+
+    if (target && target.backendId != null) {
+      setStatusUpdatingId(id);
+      try {
+        const updated = currentStatus === "Published"
+          ? await unpublishJobPosting(target.backendId)
+          : await publishJobPosting(target.backendId);
+        setPostings((prev) => prev.map((item) => (item.id === id ? { ...item, ...updated } : item)));
+        setSelectedJobForModal((prev) => (prev && prev.id === id ? { ...prev, ...updated } : prev));
+      } catch (err) {
+        console.error("Failed to update job posting status:", err);
+        setStatusError(err.message || "Failed to update status. Please try again.");
+      } finally {
+        setStatusUpdatingId(null);
+      }
+      return;
+    }
+
+    setPostings((prev) => prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item)));
+    setSelectedJobForModal((prev) => (prev && prev.id === id ? { ...prev, status: newStatus } : prev));
   };
 
   const stats = [
@@ -67,6 +91,12 @@ export default function JobPostings({ postings, setPostings, jobRequests, existi
   return (
     <div>
       <SectionTitle title="Job Postings" sub="Manage and publish approved jobs to your career portal" />
+
+      {statusError && (
+        <div style={{ marginBottom: 16, padding: "12px 16px", borderRadius: 8, background: "#FEE2E2", color: "#DC2626", fontSize: 13, fontWeight: 600, border: "1px solid #FCA5A5" }}>
+          {statusError}
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr 1fr" : "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
         {stats.map((s, idx) => (
@@ -433,14 +463,18 @@ export default function JobPostings({ postings, setPostings, jobRequests, existi
                     )}
                     <button
                       onClick={() => toggleStatus(p.id, p.status)}
+                      disabled={statusUpdatingId === p.id}
                       style={{
                         background: p.status === "Published" ? "rgba(239, 68, 68, 0.2)" : "rgba(16, 185, 129, 0.2)",
                         color: p.status === "Published" ? "#FCA5A5" : "#34D399",
                         border: `1px solid ${p.status === "Published" ? "rgba(239, 68, 68, 0.3)" : "rgba(16, 185, 129, 0.3)"}`,
-                        borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontWeight: 700, fontSize: 12,
+                        borderRadius: 8, padding: "8px 14px",
+                        cursor: statusUpdatingId === p.id ? "not-allowed" : "pointer",
+                        opacity: statusUpdatingId === p.id ? 0.6 : 1,
+                        fontWeight: 700, fontSize: 12,
                       }}
                     >
-                      {p.status === "Published" ? "Unpublish" : "Publish"}
+                      {statusUpdatingId === p.id ? "Updating…" : (p.status === "Published" ? "Unpublish" : "Publish")}
                     </button>
                   </div>
                 </div>
@@ -510,14 +544,18 @@ export default function JobPostings({ postings, setPostings, jobRequests, existi
                 )}
                 <button
                   onClick={() => toggleStatus(p.id, p.status)}
+                  disabled={statusUpdatingId === p.id}
                   style={{
                     border: "none",
                     background: p.status === "Published" ? "#FEE2E2" : T.greenLight,
                     color: p.status === "Published" ? "#DC2626" : T.green,
-                    borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontWeight: 700, fontSize: 12,
+                    borderRadius: 8, padding: "6px 12px",
+                    cursor: statusUpdatingId === p.id ? "not-allowed" : "pointer",
+                    opacity: statusUpdatingId === p.id ? 0.6 : 1,
+                    fontWeight: 700, fontSize: 12,
                   }}
                 >
-                  {p.status === "Published" ? "Unpublish" : "Publish"}
+                  {statusUpdatingId === p.id ? "Updating…" : (p.status === "Published" ? "Unpublish" : "Publish")}
                 </button>
               </div>,
             ])}
@@ -611,19 +649,23 @@ export default function JobPostings({ postings, setPostings, jobRequests, existi
               </div>
             )}
 
+            {statusError && (
+              <div style={{ marginBottom: 14, padding: "10px 14px", borderRadius: 8, background: "#FEE2E2", color: "#DC2626", fontSize: 13, fontWeight: 600, border: "1px solid #FCA5A5" }}>
+                {statusError}
+              </div>
+            )}
+
             <div style={{ marginTop: 20, display: "flex", gap: 10, justifyContent: "flex-end", borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
               {selectedJobForModal.status === "Published" && (
                 <Btn label="Share" variant="outline" onClick={(e) => { e.stopPropagation(); shareJob(selectedJobForModal); }} />
               )}
               <Btn
-                label={selectedJobForModal.status === "Published" ? "Unpublish" : "Publish"}
+                label={statusUpdatingId === selectedJobForModal.id ? "Updating…" : (selectedJobForModal.status === "Published" ? "Unpublish" : "Publish")}
                 variant={selectedJobForModal.status === "Published" ? "danger" : "success"}
+                disabled={statusUpdatingId === selectedJobForModal.id}
                 onClick={(e) => {
                   e.stopPropagation();
                   toggleStatus(selectedJobForModal.id, selectedJobForModal.status);
-                  setSelectedJobForModal((prev) =>
-                    prev ? { ...prev, status: prev.status === "Published" ? "Unpublished" : "Published" } : null
-                  );
                 }}
               />
             </div>
