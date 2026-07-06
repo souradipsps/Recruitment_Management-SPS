@@ -582,14 +582,14 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", marginTop: 20, paddingTop: 16, borderTop: `1px solid ${T.border}` }}>
-                {!editingId && <Btn label="+ Add More" variant="outline" onClick={() => setRoleForms((p) => [...p, emptyForm()])} style={{ marginRight: "auto" }} />}
-                <Btn label="Cancel" variant="ghost" onClick={() => { setShowForm(false); setEditingId(null); setRoleForms([emptyForm()]); }} />
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-start", marginTop: 20, paddingTop: 16, borderTop: `1px solid ${T.border}` }}>
                 <Btn
                   label={submitting ? "Submitting…" : "Submit Request"}
                   onClick={submitRequests}
                   disabled={submitting}
                 />
+                {!editingId && <Btn label="+ Add More" variant="outline" onClick={() => setRoleForms((p) => [...p, emptyForm()])} />}
+                <Btn label="Cancel" variant="ghost" onClick={() => { setShowForm(false); setEditingId(null); setRoleForms([emptyForm()]); }} />
               </div>
             </div>
           </Card>
