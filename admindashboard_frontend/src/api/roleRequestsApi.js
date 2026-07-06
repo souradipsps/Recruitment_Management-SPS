@@ -25,11 +25,10 @@ export const normalizeRoleRequest = (r) => ({
   status: r.status || "Pending",
   date: r.date || new Date().toLocaleDateString(),
   submittedBy: r.created_by_name || r.submitted_by || "",
-  // Fields that exist on the backend model but are optional in the UI
-  experience: "",
-  salaryRange: "",
-  category: "",
-  history: [],
+  experience: r.experience || "",
+  salaryRange: r.salary_range || "",
+  category: r.category || "",
+  history: Array.isArray(r.history) ? r.history : [],
   requestType: "Role",
 });
 
@@ -62,6 +61,8 @@ export async function createRoleRequest(formData, submittedBy) {
     department: formData.dept,
     role: formData.role,
     justification: formData.just,
+    experience: formData.experience,
+    salary_range: formData.salaryRange,
     submitted_by: submittedBy,
   };
 
