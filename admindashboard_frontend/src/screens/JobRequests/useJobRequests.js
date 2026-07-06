@@ -112,37 +112,53 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     });
   };
 
-  const saveJobRequestEdits = (submitAsPending) => {
+  // Resubmits an edited Sent-Back request as a brand-new Job Request. The old
+  // request/approval already went through a one-way "Sent Back" transition on
+  // the backend (there's no "reopen" endpoint), so flipping its local status
+  // back to "Pending" without telling the server just desyncs local state from
+  // the database — any later Approve/Reject then 400s with "already been
+  // processed". Instead, POST a genuinely new Job Request (same as a fresh
+  // submission); the backend auto-creates its own new Approval. The old
+  // Sent-Back entry is left untouched as historical record.
+  const saveJobRequestEdits = async () => {
     if (!selectedRequest) return;
-    const updated = {
+    const submittedBy = currentUser?.name || currentUser?.email || "Admin";
+
+    let created;
+    try {
+      created = await createJobRequest(selectedRequest, submittedBy);
+    } catch (err) {
+      console.error("Failed to resubmit job request:", err);
+      alert(`Could not resubmit request: ${err.message}`);
+      return;
+    }
+
+    const now = new Date().toLocaleDateString();
+    const newRequest = {
       ...selectedRequest,
-      status: submitAsPending ? "Pending" : selectedRequest.status,
+      id: created.id,
+      backendId: created.backendId,
+      status: created.status || "Pending",
+      submittedBy,
+      comment: "",
+      date: now,
+      history: [{ act: "Submitted", by: submittedBy, date: now, note: "Resubmitted after being sent back." }],
     };
 
-    setJobRequests((prev) => prev.map((r) => r.id === selectedRequest.id ? updated : r));
+    setJobRequests((prev) => [...prev, newRequest]);
 
-    setApprovalRequests((prev) =>
-      prev.map((apr) =>
-        String(apr.sourceId) === String(selectedRequest.id)
-          ? {
-              ...apr,
-              department: updated.department,
-              role: updated.role,
-              location: updated.location,
-              category: updated.category,
-              salary: updated.salary,
-              vacancies: updated.vacancies,
-              exp: updated.exp,
-              qual: updated.qual,
-              empType: updated.type,
-              just: updated.justification,
-              description: updated.description,
-              skills: updated.skills,
-              status: updated.status,
-            }
-          : apr
-      )
-    );
+    // Re-fetch real approvals instead of fabricating a local stand-in (same
+    // reasoning as submitRequests: a fabricated entry has no backendId).
+    try {
+      const freshApprovals = await fetchApprovals();
+      const freshJobRequestApprovals = freshApprovals.filter((a) => a.type === "Job Request");
+      setApprovalRequests((prev) => [
+        ...prev.filter((a) => a.type !== "Job Request"),
+        ...freshJobRequestApprovals,
+      ]);
+    } catch (err) {
+      console.error("Failed to refresh approvals after resubmitting job request:", err);
+    }
 
     closeModal();
   };
@@ -213,7 +229,7 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
 
   const handleAccept = () => {
     if (hasChanges()) {
-      saveJobRequestEdits(true);
+      saveJobRequestEdits();
     } else {
       approveDirectly();
     }
