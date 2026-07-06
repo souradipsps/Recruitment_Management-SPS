@@ -16,6 +16,7 @@ import ApprovalListMobile from "./ApprovalListMobile";
 export default function ApprovalRequests({
   requests,
   setRequests,
+  existingRoles,
   setExistingRoles,
   setJobPostings,
   setRoleRequests,
@@ -80,6 +81,7 @@ export default function ApprovalRequests({
         setFieldErrors={setFieldErrors}
         takeAction={takeAction}
         isMobile={isMobile}
+        existingRoles={existingRoles}
       />
 
       <Card>
