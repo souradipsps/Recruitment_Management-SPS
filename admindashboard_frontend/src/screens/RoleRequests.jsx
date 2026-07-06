@@ -709,7 +709,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
               setOriginalRequest(filteredRequests[index]);
               setShowViewModal(true);
             }}
-            cols={["Request ID", "Department", "Role", "Experience", "Salary Range", "Justification", "Date", "Status"]}
+            cols={["Request ID", "Department", "Role", "Experience", "Salary Range", "Justification", "Status"]}
             rows={filteredRequests.map((r) => {
               const ss = getStatusStyle(r.status);
               return [
@@ -719,7 +719,6 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                 r.experience ? `${r.experience} yrs` : "—",
                 r.salaryRange ? `₹${r.salaryRange}` : "—",
                 <span style={{ fontSize: 12, color: T.inkLight, maxWidth: 180, display: "inline-block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.just || "—"}</span>,
-                r.date || "—",
                 <span style={{ ...ss, borderRadius: 99, padding: "3px 10px", fontSize: 11, fontWeight: 700, display: "inline-block" }}>{r.status}</span>,
               ];
             })}
