@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { emptyForm } from "./jobRequestUtils";
-import { createJobRequest, updateJobRequestStatus } from "../../api/jobRequestsApi";
+import { createJobRequest, updateJobRequestStatus, updateJobRequestFields } from "../../api/jobRequestsApi";
 import { fetchApprovals } from "../../api/approvalsApi";
 
 const STATUSES = ["All", "Pending", "Approved", "Rejected", "Cancelled", "Sent Back"];
@@ -112,40 +112,39 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     });
   };
 
-  // Resubmits an edited Sent-Back request as a brand-new Job Request. The old
-  // request/approval already went through a one-way "Sent Back" transition on
-  // the backend (there's no "reopen" endpoint), so flipping its local status
-  // back to "Pending" without telling the server just desyncs local state from
-  // the database — any later Approve/Reject then 400s with "already been
-  // processed". Instead, POST a genuinely new Job Request (same as a fresh
-  // submission); the backend auto-creates its own new Approval. The old
-  // Sent-Back entry is left untouched as historical record.
+  // Updates the existing Sent-Back request in place (same id/backendId) with
+  // the edited fields and resubmits it as Pending, instead of creating a
+  // separate new request. Note: the request's linked Approval record was
+  // already processed by the backend and there's no documented "reopen"
+  // endpoint for it — re-fetching approvals below reflects whatever the
+  // backend actually reports for that Approval after this update.
   const saveJobRequestEdits = async () => {
     if (!selectedRequest) return;
-    const submittedBy = currentUser?.name || currentUser?.email || "Admin";
 
-    let created;
+    if (selectedRequest.backendId == null) {
+      alert("This request has no backend record yet — reload the page and try again.");
+      return;
+    }
+
     try {
-      created = await createJobRequest(selectedRequest, submittedBy);
+      await updateJobRequestFields(selectedRequest.backendId, selectedRequest);
+      await updateJobRequestStatus(selectedRequest.backendId, "Pending");
     } catch (err) {
-      console.error("Failed to resubmit job request:", err);
-      alert(`Could not resubmit request: ${err.message}`);
+      console.error("Failed to update job request:", err);
+      alert(`Could not update request: ${err.message}`);
       return;
     }
 
     const now = new Date().toLocaleDateString();
-    const newRequest = {
+    const submittedBy = currentUser?.name || currentUser?.email || "Admin";
+    const entry = { act: "Resubmitted", by: submittedBy, date: now, note: "" };
+    const updated = {
       ...selectedRequest,
-      id: created.id,
-      backendId: created.backendId,
-      status: created.status || "Pending",
-      submittedBy,
-      comment: "",
-      date: now,
-      history: [{ act: "Submitted", by: submittedBy, date: now, note: "Resubmitted after being sent back." }],
+      status: "Pending",
+      history: [...(selectedRequest.history || []), entry],
     };
 
-    setJobRequests((prev) => [...prev, newRequest]);
+    setJobRequests((prev) => prev.map((r) => (r.id === selectedRequest.id ? updated : r)));
 
     // Re-fetch real approvals instead of fabricating a local stand-in (same
     // reasoning as submitRequests: a fabricated entry has no backendId).
@@ -157,7 +156,7 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
         ...freshJobRequestApprovals,
       ]);
     } catch (err) {
-      console.error("Failed to refresh approvals after resubmitting job request:", err);
+      console.error("Failed to refresh approvals after updating job request:", err);
     }
 
     closeModal();
@@ -312,6 +311,7 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
       const newRequests = jobForms.map((f, i) => ({
         ...f,
         id: created[i].id || `JR-${Date.now()}-${i}`,
+        backendId: created[i].backendId,
         requestId: created[i].request_id,
         status: created[i].status || "Pending",
         submittedBy: created[i].submittedBy || submittedBy,
