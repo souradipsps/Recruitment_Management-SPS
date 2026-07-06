@@ -4,6 +4,7 @@ import { statusVariant } from "../theme";
 import { useBreakpoint } from "../hooks";
 import { Card, SectionTitle, Table, Mono, Btn, Input, Badge, FormField, Modal, ModalHeader, Textarea, Select } from "../components/ui";
 import { CATEGORY_OPTIONS } from "../data";
+import { createRoleRequest } from "../api/roleRequestsApi";
 
 const getStatusStyle = (status) => {
   switch (status) {
@@ -30,12 +31,15 @@ const emptyForm = () => ({
   comment: "",
 });
 
-export default function RoleRequests({ roleRequests, setRoleRequests, setApprovalRequests, setExistingRoles, onNavigateToExistingRoles }) {
+export default function RoleRequests({ roleRequests, setRoleRequests, setApprovalRequests, setExistingRoles, onNavigateToExistingRoles, currentUser }) {
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
 
   const [showForm, setShowForm] = useState(false);
   const [roleForms, setRoleForms] = useState([emptyForm()]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState("");
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [originalRequest, setOriginalRequest] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -131,13 +135,16 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
   const openNew = () => {
     setEditingId(null);
     setRoleForms([emptyForm()]);
+    setSubmitError("");
     setShowForm(true);
   };
 
-  const submitRequests = () => {
+  const submitRequests = async () => {
     if (!validateForms()) return;
     const updatedForms = roleForms.map((f) => {
-      const combinedSalary = f.minSalary && f.maxSalary ? `${f.minSalary}-${f.maxSalary}` : (f.minSalary || f.maxSalary || "");
+      const cleanMinSalary = (f.minSalary || "").replace(/,/g, "");
+      const cleanMaxSalary = (f.maxSalary || "").replace(/,/g, "");
+      const combinedSalary = cleanMinSalary && cleanMaxSalary ? `${cleanMinSalary}-${cleanMaxSalary}` : (cleanMinSalary || cleanMaxSalary || "");
       const combinedExperience = f.minExperience && f.maxExperience ? `${f.minExperience}-${f.maxExperience}` : (f.minExperience || f.maxExperience || "");
       return {
         ...f,
@@ -163,12 +170,26 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
             : apr
         )
       );
-    } else {
+      setRoleForms([emptyForm()]);
+      setShowForm(false);
+      setEditingId(null);
+      return;
+    }
+
+    const submittedBy = currentUser?.name || currentUser?.email || "HR Admin";
+    setSubmitError("");
+    setSubmitting(true);
+    try {
+      const created = await Promise.all(updatedForms.map((f) => createRoleRequest(f, submittedBy)));
+      const now = new Date().toLocaleDateString();
       const newRequests = updatedForms.map((f, i) => ({
         ...f,
-        id: `RR-${Date.now()}-${i}`,
+        id: created[i].id,
+        status: created[i].status || "Pending",
+        submittedBy: created[i].submittedBy || submittedBy,
+        date: now,
         requestType: "Role",
-        history: [{ act: "Submitted", by: "Current User", date: f.date || new Date().toLocaleDateString(), note: "" }],
+        history: [{ act: "Submitted", by: submittedBy, date: now, note: "" }],
       }));
       setRoleRequests((prev) => [...prev, ...newRequests]);
       setApprovalRequests((prev) => [
@@ -178,22 +199,29 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
           dept: r.dept,
           role: r.role,
           experience: r.experience,
-          requestedBy: "Current User",
+          requestedBy: submittedBy,
           date: r.date,
           salary: r.salaryRange ? `₹${r.salaryRange}` : "",
           just: r.just,
-          status: "Pending",
+          status: r.status,
           comment: "",
-          history: [{ act: "Submitted", by: "Current User", date: r.date, note: "" }],
+          history: r.history,
           sourceId: r.id,
           type: "Role Request",
           category: r.category,
         })),
       ]);
+      setRoleForms([emptyForm()]);
+      setShowForm(false);
+      setEditingId(null);
+      setSubmitSuccess("Role request submitted successfully.");
+      setTimeout(() => setSubmitSuccess(""), 4000);
+    } catch (err) {
+      console.error("Submit error:", err);
+      setSubmitError(err.message || "Failed to submit role request. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
-    setRoleForms([emptyForm()]);
-    setShowForm(false);
-    setEditingId(null);
   };
 
   const saveRoleRequestEdits = (submitAsPending) => {
@@ -339,6 +367,12 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
         sub="Raise role requests before creating job requests"
         action={<Btn label="+ New Role Request" onClick={openNew} />}
       />
+
+      {submitSuccess && (
+        <div style={{ background: T.greenLight, border: `1px solid ${T.green}33`, color: T.green, padding: "10px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
+          ✓ {submitSuccess}
+        </div>
+      )}
 
       <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
         <Input
