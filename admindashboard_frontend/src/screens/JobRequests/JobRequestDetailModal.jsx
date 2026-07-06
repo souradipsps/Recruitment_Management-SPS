@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { T } from "../../theme";
 import { statusVariant } from "../../theme";
 import { Btn, Input, Select, Badge } from "../../components/ui";
-import { VACANCY_OPTIONS, QUAL_OPTIONS, TYPE_OPTIONS, DEPT_OPTIONS, CATEGORY_OPTIONS, ALL_SKILLS } from "../../data";
+import { VACANCY_OPTIONS, QUAL_OPTIONS, TYPE_OPTIONS, CATEGORY_OPTIONS, ALL_SKILLS } from "../../data";
 import SkillsMultiSelect from "../../components/SkillsMultiSelect";
 import JobRequestActivityTimeline from "./JobRequestActivityTimeline";
 
@@ -14,7 +14,7 @@ const textareaStyle = { width: "100%", minHeight: 80, padding: 10, border: `1px 
 
 // weight = font-weight used when the value is shown read-only
 const FIELDS = [
-  { key: "department", label: "Department", type: "select", options: DEPT_OPTIONS, placeholder: "Select department…", weight: 600 },
+  { key: "department", label: "Department", type: "select", placeholder: "Select department…", weight: 600 },
   { key: "role", label: "Role", type: "select", placeholder: "Select role…", weight: 700 },
   { key: "vacancies", label: "Vacancies", type: "select", options: VACANCY_OPTIONS, placeholder: "Select count…", weight: 400 },
   { key: "exp", label: "Experience", type: "input", placeholder: "Enter experience", weight: 600 },
@@ -34,7 +34,9 @@ export default function JobRequestDetailModal({
   selectedRequest,
   setSelectedRequest,
   isMobile,
-  roleOptions,
+  deptOptions,
+  getRoleOptionsForDept,
+  handleDepartmentChangeInModal,
   handleRoleChangeInModal,
   hasChanges,
   handleAccept,
@@ -109,15 +111,31 @@ export default function JobRequestDetailModal({
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
               {FIELDS.map((f) => {
                 const value = selectedRequest[f.key] || "";
-                const onChange = f.key === "role"
+                const onChange = f.key === "department"
+                  ? (e) => handleDepartmentChangeInModal(e.target.value)
+                  : f.key === "role"
                   ? (e) => handleRoleChangeInModal(e.target.value)
                   : (e) => patch(f.key, e.target.value);
+                const options = f.key === "department"
+                  ? deptOptions
+                  : f.key === "role"
+                  ? getRoleOptionsForDept(selectedRequest.department)
+                  : f.options;
+                const placeholder = f.key === "role" && !selectedRequest.department
+                  ? "Select department first"
+                  : f.placeholder;
                 return (
                   <div key={f.key} style={{ gridColumn: f.span2 && !isMobile ? "span 2" : "auto" }}>
                     <Label>{f.label}</Label>
                     {isEditable ? (
                       f.type === "select" ? (
-                        <Select value={value} onChange={onChange} options={f.key === "role" ? roleOptions : f.options} placeholder={f.placeholder} />
+                        <Select
+                          value={value}
+                          onChange={onChange}
+                          options={options}
+                          placeholder={placeholder}
+                          disabled={f.key === "role" && !selectedRequest.department}
+                        />
                       ) : (
                         <Input value={value} onChange={onChange} placeholder={f.placeholder} />
                       )

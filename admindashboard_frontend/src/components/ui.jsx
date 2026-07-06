@@ -71,6 +71,7 @@ export const Btn = ({
   variant = "primary",
   small = false,
   onClick,
+  disabled = false,
   style = {},
   className = "",
 }) => {
@@ -89,6 +90,7 @@ export const Btn = ({
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       className={`btn-hover ${className}`}
       style={{
         background: v.bg,
@@ -99,12 +101,13 @@ export const Btn = ({
         fontSize: small ? font.sm + 1 : font.base,
         fontWeight: font.bold,
         fontFamily: font.body,
-        cursor: "pointer",
+        cursor: disabled ? "not-allowed" : "pointer",
         whiteSpace: "nowrap",
         lineHeight: 1.4,
         transition: transition.fast,
         minWidth: 0,
         letterSpacing: "0.01em",
+        opacity: disabled ? 0.6 : 1,
         ...style,
       }}
     >
@@ -149,11 +152,13 @@ export const Select = ({
   onChange,
   options,
   placeholder,
+  disabled = false,
   style = {},
 }) => (
   <select
     value={value}
     onChange={onChange}
+    disabled={disabled}
     className="select-focus"
     style={{
       border: `1.5px solid ${T.border}`,
@@ -162,11 +167,11 @@ export const Select = ({
       fontSize: font.base,
       fontFamily: font.body,
       color: value ? T.ink : T.inkFaint,
-      background: "#fff",
+      background: disabled ? T.canvas : "#fff",
       outline: "none",
       width: "100%",
       boxSizing: "border-box",
-      cursor: "pointer",
+      cursor: disabled ? "not-allowed" : "pointer",
       appearance: "none",
       backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B6B6B' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
       backgroundRepeat: "no-repeat",
