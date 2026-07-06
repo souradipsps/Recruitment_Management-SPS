@@ -39,3 +39,16 @@ export async function fetchRoles() {
   const list = Array.isArray(data) ? data : data.results || []; // handle DRF pagination
   return list.map(normalizeRole);
 }
+
+// DELETE /api/roles/{backendId}/
+export async function deleteRole(backendId) {
+  const res = await fetch(`${API_URL}${backendId}/`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Failed to delete role (${res.status}): ${errText}`);
+  }
+}

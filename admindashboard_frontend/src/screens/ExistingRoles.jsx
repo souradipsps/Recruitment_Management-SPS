@@ -3,6 +3,7 @@ import { T, font } from "../theme";
 import { STATUS_COLORS } from "../theme";
 import { useBreakpoint } from "../hooks";
 import { Card, SectionTitle, Table, Badge, Mono, Input, Modal, ModalHeader, Select, Btn } from "../components/ui";
+import { deleteRole } from "../api/rolesApi";
 
 export default function ExistingRoles({ roles, setRoles }) {
   const bp = useBreakpoint();
@@ -12,6 +13,8 @@ export default function ExistingRoles({ roles, setRoles }) {
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const depts = ["All", ...new Set(roles.map((r) => r.dept))];
   const statuses = ["All", "Active", "Inactive"];
@@ -25,7 +28,30 @@ export default function ExistingRoles({ roles, setRoles }) {
   };
 
   const handleDeleteRole = (roleId) => {
+    setDeleteError("");
     setDeleteConfirmId(roleId);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmId) return;
+    const target = roles.find((r) => r.id === deleteConfirmId);
+
+    if (target && target.backendId != null) {
+      setDeleting(true);
+      setDeleteError("");
+      try {
+        await deleteRole(target.backendId);
+      } catch (err) {
+        console.error("Failed to delete role:", err);
+        setDeleteError(err.message || "Failed to delete role. Please try again.");
+        setDeleting(false);
+        return;
+      }
+      setDeleting(false);
+    }
+
+    setRoles((prev) => prev.filter((r) => r.id !== deleteConfirmId));
+    setDeleteConfirmId(null);
   };
 
   const filtered = roles
@@ -98,7 +124,7 @@ export default function ExistingRoles({ roles, setRoles }) {
         </div>
 
         <RolesTable
-          cols={["Role ID", "Department", "Role Name", "Category", "Experience", "Salary Range", "Type", "Status", "Action"]}
+          cols={["Role ID", "Department", "Role Name", "Experience", "Salary Range", "Type", "Status", "Action"]}
           rows={filtered}
           onStatusChange={handleStatusChange}
           onDelete={handleDeleteRole}
@@ -107,23 +133,24 @@ export default function ExistingRoles({ roles, setRoles }) {
 
       <RoleDetailsModal />
 
-      <Modal open={!!deleteConfirmId} onClose={() => setDeleteConfirmId(null)} maxWidth={400}>
-        <ModalHeader title="Confirm Deletion" onClose={() => setDeleteConfirmId(null)} />
+      <Modal open={!!deleteConfirmId} onClose={() => { setDeleteConfirmId(null); setDeleteError(""); }} maxWidth={400}>
+        <ModalHeader title="Confirm Deletion" onClose={() => { setDeleteConfirmId(null); setDeleteError(""); }} />
         <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "10px 0" }}>
           <div style={{ fontSize: 14, color: T.ink, lineHeight: 1.5 }}>
             Are you sure you want to delete this existing role? This action cannot be undone.
           </div>
+          {deleteError && (
+            <div style={{ padding: "10px 14px", borderRadius: 8, background: "#FEE2E2", color: "#DC2626", fontSize: 13, fontWeight: 600, border: "1px solid #FCA5A5" }}>
+              {deleteError}
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
-            <Btn label="Cancel" onClick={() => setDeleteConfirmId(null)} />
+            <Btn label="Cancel" onClick={() => { setDeleteConfirmId(null); setDeleteError(""); }} disabled={deleting} />
             <Btn
-              label="Delete"
+              label={deleting ? "Deleting…" : "Delete"}
               variant="danger"
-              onClick={() => {
-                if (deleteConfirmId) {
-                  setRoles((prev) => prev.filter((r) => r.id !== deleteConfirmId));
-                  setDeleteConfirmId(null);
-                }
-              }}
+              onClick={confirmDelete}
+              disabled={deleting}
             />
           </div>
         </div>
@@ -209,7 +236,6 @@ function RolesTable({
           {[
             { label: "Role ID", value: <span style={{ fontFamily: font.mono, fontWeight: 700 }}>{sel.id}</span> },
             { label: "Department", value: sel.dept },
-            { label: "Category", value: sel.category || "—" },
             { label: "Employment Type", value: sel.type },
             { label: "Work Experience Required", value: sel.experience ? `${sel.experience} years` : "No experience required" },
             { label: "Salary Budget (Annual)", value: <strong style={{ color: T.tealDark }}>{sel.salaryRange || "—"}</strong> },
@@ -272,7 +298,6 @@ function RolesTable({
       <Mono v={r.id} />,
       <span style={{ fontSize: 12, color: T.inkMid }}>{r.dept}</span>,
       <strong style={{ color: T.ink }}>{r.role}</strong>,
-      <span style={{ fontSize: 12, color: T.inkMid }}>{r.category || "—"}</span>,
       <span style={{ fontSize: 13, color: T.ink }}>{r.experience ? `${r.experience} yrs` : "—"}</span>,
       <span style={{ fontSize: 13, color: T.ink, fontWeight: 600 }}>{r.salaryRange ? `₹${r.salaryRange}` : "—"}</span>,
       <Badge label={r.type} variant={r.type === "Full-time" ? "blue" : "teal"} />,
@@ -404,7 +429,6 @@ function RolesTable({
                 >
                   {[
                     { icon: "🆔", label: "Role ID", value: r.id },
-                    { icon: "🏷️", label: "Category", value: r.category || "—" },
                     { icon: "⏳", label: "Experience", value: r.experience ? `${r.experience} yrs` : "—" },
                     { icon: "💰", label: "Salary Range", value: r.salaryRange ? `₹${r.salaryRange}` : "—" },
                     { icon: "💼", label: "Type", value: r.type },

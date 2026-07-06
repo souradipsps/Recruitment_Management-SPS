@@ -36,7 +36,26 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     return acc;
   }, {});
 
-  const roleOptions = (existingRoles || []).map((r) => ({ value: r.role, label: r.role }));
+  // Only Active roles are eligible to be requested against.
+  const isActiveRole = (r) => (r.currentStatus || r.status) === "Active";
+
+  // Department list sourced from existing (sanctioned) roles that have at least one Active role.
+  const deptOptions = [...new Set((existingRoles || []).filter(isActiveRole).map((r) => r.dept).filter(Boolean))]
+    .map((d) => ({ value: d, label: d }));
+
+  // Active roles for a given department (or all active roles when no department is selected yet).
+  const getRoleOptionsForDept = (department) => {
+    const seen = new Set();
+    const opts = [];
+    for (const r of existingRoles || []) {
+      if (!r.role || seen.has(r.role)) continue;
+      if (!isActiveRole(r)) continue;
+      if (department && r.dept !== department) continue;
+      seen.add(r.role);
+      opts.push({ value: r.role, label: r.role });
+    }
+    return opts;
+  };
 
   const openView = (r) => {
     setSelectedRequest(r);
@@ -54,23 +73,41 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     setJobForms((prev) => prev.map((f, i) => i === index ? { ...f, [key]: value } : f));
   };
 
+  const handleDepartmentChange = (index, department) => {
+    setJobForms((prev) =>
+      prev.map((f, i) => (i === index ? { ...f, department, role: "", exp: "", salary: "", type: "" } : f)),
+    );
+  };
+
   const handleRoleChange = (index, selectedRole) => {
     updateForm(index, "role", selectedRole);
-    const matchingRole = (existingRoles || []).find((r) => r.role === selectedRole);
+    const department = jobForms[index]?.department;
+    const matchingRole = (existingRoles || []).find(
+      (r) => r.role === selectedRole && (!department || r.dept === department),
+    );
     if (matchingRole) {
       updateForm(index, "exp", matchingRole.experience || "");
       updateForm(index, "salary", matchingRole.salaryRange || "");
+      updateForm(index, "type", matchingRole.type || "");
     }
+  };
+
+  const handleDepartmentChangeInModal = (department) => {
+    if (!selectedRequest) return;
+    setSelectedRequest({ ...selectedRequest, department, role: "", exp: "", salary: "", type: "" });
   };
 
   const handleRoleChangeInModal = (selectedRole) => {
     if (!selectedRequest) return;
-    const matchingRole = (existingRoles || []).find((r) => r.role === selectedRole);
+    const matchingRole = (existingRoles || []).find(
+      (r) => r.role === selectedRole && (!selectedRequest.department || r.dept === selectedRequest.department),
+    );
     setSelectedRequest({
       ...selectedRequest,
       role: selectedRole,
       exp: matchingRole ? (matchingRole.experience || "") : selectedRequest.exp,
       salary: matchingRole ? (matchingRole.salaryRange || "") : selectedRequest.salary,
+      type: matchingRole ? (matchingRole.type || "") : selectedRequest.type,
     });
   };
 
@@ -323,14 +360,17 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     submitting,
     submitError,
     updateForm,
+    handleDepartmentChange,
     handleRoleChange,
-    roleOptions,
+    deptOptions,
+    getRoleOptionsForDept,
     // modal state
     showViewModal,
     selectedRequest,
     setSelectedRequest,
     openView,
     closeModal,
+    handleDepartmentChangeInModal,
     handleRoleChangeInModal,
     hasChanges,
     handleAccept,
