@@ -4,6 +4,7 @@ import { useBreakpoint, usePersistentState, useSessionState } from "./hooks";
 import { NAV, EXISTING_ROLES, POSTINGS, JOB_APPLICATIONS, GENERAL_APPLICATIONS, INTERVIEWS, OFFERS } from "./data";
 import { fetchJobRequests } from "./api/jobRequestsApi";
 import { fetchApprovals } from "./api/approvalsApi";
+import { fetchRoles } from "./api/rolesApi";
 
 import Auth from "./screens/Auth";
 import ModuleSelector from "./screens/ModuleSelector";
@@ -60,6 +61,15 @@ export default function App() {
       .catch((err) => console.error("Failed to load approvals:", err));
     return () => { active = false; };
   }, [setApprovalRequests]);
+
+  // Load existing roles from the API on mount.
+  useEffect(() => {
+    let active = true;
+    fetchRoles()
+      .then((data) => { if (active) setExistingRoles(data); })
+      .catch((err) => console.error("Failed to load roles:", err));
+    return () => { active = false; };
+  }, [setExistingRoles]);
 
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
