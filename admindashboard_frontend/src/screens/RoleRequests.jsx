@@ -5,6 +5,7 @@ import { useBreakpoint } from "../hooks";
 import { Card, SectionTitle, Table, Mono, Btn, Input, Badge, FormField, Modal, ModalHeader, Textarea, Select } from "../components/ui";
 import { CATEGORY_OPTIONS } from "../data";
 import { createRoleRequest } from "../api/roleRequestsApi";
+import "./RoleRequests.css";
 
 const getStatusStyle = (status) => {
   switch (status) {
@@ -380,16 +381,18 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
         action={<Btn label="+ New Role Request" onClick={openNew} />}
       />
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
+      {/* Search Bar */}
+      <div className="rr-search-bar">
         <Input
           placeholder="Search requests by role, department, or ID..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ maxWidth: 360, flex: 1 }}
+          className="rr-search-input"
         />
       </div>
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+      {/* Status Filter Tabs */}
+      <div className="rr-filter-tabs">
         {statuses.map((status) => {
           const count = counts[status];
           const isActive = statusFilter === status;
@@ -397,30 +400,19 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
+              className="rr-filter-btn"
               style={{
                 background: isActive ? T.primary : T.white,
                 color: isActive ? "#fff" : T.ink,
                 border: `1.5px solid ${isActive ? T.primary : T.border}`,
-                borderRadius: 999,
-                padding: "6px 14px",
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: "pointer",
-                transition: "all 0.15s",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
               }}
             >
               {status}
               <span
+                className="rr-filter-btn__count"
                 style={{
                   background: isActive ? "rgba(255,255,255,0.25)" : T.border,
                   color: isActive ? "#fff" : T.inkMid,
-                  borderRadius: 99,
-                  padding: "1px 6px",
-                  fontSize: 10,
-                  fontWeight: 800,
                 }}
               >
                 {count}
@@ -430,25 +422,16 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
         })}
       </div>
 
+      {/* Sent-Back Banners */}
       {roleRequests.filter((r) => r.status === "Sent Back").map((r) => (
         <div
           key={r.id}
-          style={{
-            background: T.amberLight,
-            border: `1px solid #FDE68A`,
-            borderRadius: 10,
-            padding: "12px 16px",
-            marginBottom: 16,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap",
-          }}
+          className="rr-sentback-banner"
+          style={{ background: T.amberLight, border: `1px solid #FDE68A` }}
         >
-          <div style={{ flex: 1 }}>
-            <strong style={{ color: T.amber, fontSize: 13 }}>Action Required (Sent Back): </strong>
-            <span style={{ fontSize: 13, color: T.ink }}>
+          <div className="rr-sentback-banner__body">
+            <strong className="rr-sentback-banner__label" style={{ color: T.amber }}>Action Required (Sent Back): </strong>
+            <span className="rr-sentback-banner__text" style={{ color: T.ink }}>
               Request for <strong>{r.role}</strong> was returned with comment: <em>...</em>
             </span>
           </div>
@@ -456,51 +439,37 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
         </div>
       ))}
 
+      {/* New / Edit Form */}
       {showForm && (
-        <div style={{ marginBottom: 20 }}>
+        <div className="rr-form-wrapper">
           <Card style={{ padding: 0, overflow: "hidden", borderTop: `3px solid ${T.primary}`, marginBottom: 16 }}>
-            <div style={{
-              background: "linear-gradient(135deg, #72102a 0%, #3a0010 100%)",
-              padding: "20px 24px",
-              display: "flex",
-              alignItems: "center",
-              gap: 14,
-            }}>
-              <div style={{
-                width: 44, height: 44, borderRadius: 12,
-                background: "rgba(255,255,255,0.15)",
-                backdropFilter: "blur(8px)",
-                border: "1px solid rgba(255,255,255,0.2)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 22, flexShrink: 0,
-              }}>
-                📂
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>
+            <div className="rr-form-header">
+              <div className="rr-form-header__icon">📂</div>
+              <div className="rr-form-header__text">
+                <div className="rr-form-header__title">
                   {editingId ? "Edit Role Request" : "New Role Request"}
                 </div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", marginTop: 2 }}>
+                <div className="rr-form-header__subtitle">
                   Provide job details and salary specifications to start the approval workflow.
                 </div>
               </div>
             </div>
 
-            <div style={{ padding: 24 }}>
+            <div className="rr-form-body">
               {roleForms.map((form, index) => (
                 <Card key={form.id} hover={false} style={{ padding: 18, marginBottom: 16, border: `1px solid ${T.border}`, background: T.canvas }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>
+                  <div className="rr-form-card-header">
+                    <div className="rr-form-card-title" style={{ color: T.ink }}>
                       {editingId ? "Role Details" : `Role Request #${index + 1}`}
                     </div>
                     {roleForms.length > 1 && (
-                      <button onClick={() => removeForm(index)} style={{ border: "none", background: "#FEE2E2", color: "#DC2626", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12 }}>
+                      <button onClick={() => removeForm(index)} className="rr-form-remove-btn">
                         Remove
                       </button>
                     )}
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14, marginBottom: 14 }}>
+                  <div className={`rr-form-grid-2col${isMobile ? " rr-form-grid-2col--mobile" : ""}`}>
                     <FormField label="Department" required>
                       <Input placeholder="Enter department" value={form.dept} onChange={(e) => updateForm(index, "dept", e.target.value)} />
                     </FormField>
@@ -508,7 +477,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                       <Input placeholder="Enter role" value={form.role} onChange={(e) => updateForm(index, "role", e.target.value)} />
                     </FormField>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <div className="rr-form-grid-half">
                       <FormField label="Min Experience (Yrs)" required>
                         <Input
                           placeholder="e.g. 2"
@@ -517,7 +486,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                           style={formErrors[index]?.minExperience ? { borderColor: T.red } : {}}
                         />
                         {formErrors[index]?.minExperience && (
-                          <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+                          <div className="rr-form-error-text" style={{ color: T.red }}>
                             {formErrors[index].minExperience}
                           </div>
                         )}
@@ -530,13 +499,13 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                           style={formErrors[index]?.maxExperience ? { borderColor: T.red } : {}}
                         />
                         {formErrors[index]?.maxExperience && (
-                          <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+                          <div className="rr-form-error-text" style={{ color: T.red }}>
                             {formErrors[index].maxExperience}
                           </div>
                         )}
                       </FormField>
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <div className="rr-form-grid-half">
                       <FormField label="Min Salary (₹)" required>
                         <Input
                           placeholder="e.g. 40,000"
@@ -545,7 +514,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                           style={formErrors[index]?.minSalary ? { borderColor: T.red } : {}}
                         />
                         {formErrors[index]?.minSalary && (
-                          <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+                          <div className="rr-form-error-text" style={{ color: T.red }}>
                             {formErrors[index].minSalary}
                           </div>
                         )}
@@ -558,7 +527,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                           style={formErrors[index]?.maxSalary ? { borderColor: T.red } : {}}
                         />
                         {formErrors[index]?.maxSalary && (
-                          <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+                          <div className="rr-form-error-text" style={{ color: T.red }}>
                             {formErrors[index].maxSalary}
                           </div>
                         )}
@@ -577,12 +546,10 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
               ))}
 
               {submitError && (
-                <div style={{ width: "100%", color: "#DC2626", fontSize: 12, fontWeight: 600, background: "#FEE2E2", border: "1px solid #FECACA", borderRadius: 8, padding: "8px 12px", marginBottom: 16 }}>
-                  ⚠ {submitError}
-                </div>
+                <div className="rr-submit-error">⚠ {submitError}</div>
               )}
 
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-start", marginTop: 20, paddingTop: 16, borderTop: `1px solid ${T.border}` }}>
+              <div className="rr-form-actions" style={{ borderTop: `1px solid ${T.border}` }}>
                 <Btn
                   label={submitting ? "Submitting…" : "Submit Request"}
                   onClick={submitRequests}
@@ -597,13 +564,14 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
       )}
 
       {isMobile ? (
-        <div style={{ marginBottom: 4 }}>
-          <div style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, marginBottom: 8, textAlign: "center" }}>
+        <div className="rr-mobile-wrapper">
+          <div className="rr-mobile-count" style={{ color: T.inkFaint }}>
             Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(startIndex + displayFiltered.length, totalItems)} of {totalItems} request{totalItems !== 1 ? "s" : ""}
           </div>
 
           <div
             ref={scrollRef}
+            className="rr-mobile-scroll"
             onScroll={(e) => {
               const scrollLeft = e.currentTarget.scrollLeft;
               const cardWidth = e.currentTarget.clientWidth;
@@ -612,182 +580,112 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                 setCurrentCardIndex(newIndex);
               }
             }}
-            style={{
-              display: "flex",
-              overflowX: "auto",
-              scrollSnapType: "x mandatory",
-              WebkitOverflowScrolling: "touch",
-              scrollbarWidth: "none",
-              msOverflowStyle: "none",
-              gap: 16,
-              padding: "0 16px 20px",
-              margin: "0 -16px",
-            }}
           >
-            {displayFiltered.map((r, idx) => {
-              const cardBackground = "linear-gradient(135deg, #72102a 0%, #3a0010 100%)";
-              return (
-                <div
-                  key={r.id}
-                  onClick={() => { setSelectedRequest(r); setOriginalRequest(r); setShowViewModal(true); }}
-                  style={{
-                    flexShrink: 0,
-                    minWidth: "calc(100% - 32px)",
-                    scrollSnapAlign: "center",
-                    borderRadius: 20,
-                    background: cardBackground,
-                    color: "#fff",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    padding: 24,
-                    position: "relative",
-                    boxShadow: "0 14px 40px rgba(0,0,0,0.25)",
-                    cursor: "pointer",
-                    minHeight: 380,
-                  }}
-                >
-                  <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", padding: "4px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.2)" }}>
-                    {startIndex + idx + 1} of {totalItems}
-                  </div>
+            {displayFiltered.map((r, idx) => (
+              <div
+                key={r.id}
+                className="rr-mobile-card"
+                onClick={() => { setSelectedRequest(r); setOriginalRequest(r); setShowViewModal(true); }}
+              >
+                <div className="rr-mobile-card__counter">
+                  {startIndex + idx + 1} of {totalItems}
+                </div>
 
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                      <div
-                        style={{
-                          width: 48, height: 48, borderRadius: "50%",
-                          background: "rgba(255,255,255,0.15)",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 16, fontWeight: 800, color: "#fff", flexShrink: 0,
-                        }}
-                      >
-                        📂
-                      </div>
-                      <div style={{ paddingRight: 64 }}>
-                        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#fff" }}>{r.role || "—"}</h3>
-                        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.8)", marginTop: 2 }}>
-                          {r.dept || "—"}
-                        </div>
-                      </div>
+                <div>
+                  <div className="rr-mobile-card__top">
+                    <div className="rr-mobile-card__icon">📂</div>
+                    <div className="rr-mobile-card__info">
+                      <h3 className="rr-mobile-card__role">{r.role || "—"}</h3>
+                      <div className="rr-mobile-card__dept">{r.dept || "—"}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rr-mobile-card__details">
+                  <div className="rr-mobile-card__grid">
+                    <div>
+                      <div className="rr-card-field__label">Request ID</div>
+                      <div className="rr-card-field__value">{typeof r.id === "string" ? r.id.substring(0, 18) : String(r.id)}</div>
+                    </div>
+                    <div>
+                      <div className="rr-card-field__label">Experience</div>
+                      <div className="rr-card-field__value">{r.experience ? `${r.experience} yrs` : "—"}</div>
+                    </div>
+                    <div>
+                      <div className="rr-card-field__label">Salary Range</div>
+                      <div className="rr-card-field__value">{r.salaryRange ? `₹${r.salaryRange}` : "—"}</div>
+                    </div>
+                    <div>
+                      <div className="rr-card-field__label">Date</div>
+                      <div className="rr-card-field__value">{r.date || "—"}</div>
                     </div>
                   </div>
 
-                  <div
-                    style={{
-                      background: "rgba(255,255,255,0.1)",
-                      backdropFilter: "blur(8px)",
-                      borderRadius: 12,
-                      padding: 18,
-                      border: "1px solid rgba(255,255,255,0.15)",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 12,
-                      marginTop: 16,
-                      flex: 1,
-                    }}
-                  >
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                      <div>
-                        <div style={{ fontSize: 10, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>Request ID</div>
-                        <div style={{ fontSize: 12, fontWeight: 600 }}>{typeof r.id === "string" ? r.id.substring(0, 18) : String(r.id)}</div>
-                      </div>
-
-                      <div>
-                        <div style={{ fontSize: 10, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>Experience</div>
-                        <div style={{ fontSize: 12, fontWeight: 600 }}>{r.experience ? `${r.experience} yrs` : "—"}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 10, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>Salary Range</div>
-                        <div style={{ fontSize: 12, fontWeight: 600 }}>{r.salaryRange ? `₹${r.salaryRange}` : "—"}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 10, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>Date</div>
-                        <div style={{ fontSize: 12, fontWeight: 600 }}>{r.date || "—"}</div>
-                      </div>
+                  {r.just && (
+                    <div className="rr-card-divider">
+                      <div className="rr-card-field__label">Justification</div>
+                      <div className="rr-card-just__text">{r.just}</div>
                     </div>
+                  )}
 
-                    {r.just && (
-                      <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 8, marginTop: 4 }}>
-                        <div style={{ fontSize: 10, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>Justification</div>
-                        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.9)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {r.just}
-                        </div>
-                      </div>
-                    )}
-
-                    <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 8, marginTop: 4 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div />
-                        <div>
-                          <div style={{ fontSize: 10, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontWeight: 700, textAlign: "right" }}>Status</div>
-                          <div style={{ marginTop: 2, textAlign: "right" }}>
-                            <Badge label={r.status} variant={statusVariant(r.status)} />
-                          </div>
+                  <div className="rr-card-divider">
+                    <div className="rr-card-status-row">
+                      <div />
+                      <div>
+                        <div className="rr-card-status__label">Status</div>
+                        <div className="rr-card-status__badge">
+                          <Badge label={r.status} variant={statusVariant(r.status)} />
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
 
           {displayFiltered.length > 0 && (
-            <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10, paddingBottom: 8 }}>
+            <div className="rr-dots">
               {displayFiltered.map((_, i) => (
                 <div
                   key={i}
+                  className="rr-dot"
                   onClick={() => scrollRef.current?.scrollTo({ left: (i * scrollRef.current.clientWidth), behavior: "smooth" })}
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: currentCardIndex === i ? T.primary : T.border,
-                    cursor: "pointer",
-                    transition: "all 0.3s",
-                  }}
+                  style={{ background: currentCardIndex === i ? T.primary : T.border }}
                 />
               ))}
             </div>
           )}
 
           {totalPages > 1 && (
-            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, marginTop: 10, marginBottom: 20 }}>
+            <div className="rr-pagination">
               <button
+                className="rr-pagination__btn"
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={activePage === 1}
                 style={{
                   background: T.white,
                   color: activePage === 1 ? T.inkFaint : T.primary,
                   border: `1.5px solid ${activePage === 1 ? T.border : T.primary}`,
-                  borderRadius: 8,
                   padding: "6px 12px",
                   fontSize: 12,
-                  fontWeight: 700,
-                  cursor: activePage === 1 ? "not-allowed" : "pointer",
-                  opacity: activePage === 1 ? 0.5 : 1,
-                  transition: "all 0.15s",
                 }}
               >
                 &larr; Prev 10
               </button>
-              <span style={{ fontSize: 12, color: T.inkMid, fontWeight: 600 }}>
+              <span className="rr-pagination__page-label" style={{ fontSize: 12, color: T.inkMid }}>
                 {activePage} / {totalPages}
               </span>
               <button
+                className="rr-pagination__btn"
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={activePage === totalPages}
                 style={{
                   background: activePage === totalPages ? T.white : T.primary,
                   color: activePage === totalPages ? T.inkFaint : T.white,
                   border: `1.5px solid ${activePage === totalPages ? T.border : T.primary}`,
-                  borderRadius: 8,
                   padding: "6px 12px",
                   fontSize: 12,
-                  fontWeight: 700,
-                  cursor: activePage === totalPages ? "not-allowed" : "pointer",
-                  opacity: activePage === totalPages ? 0.5 : 1,
-                  transition: "all 0.15s",
                 }}
               >
                 Next 10 &rarr;
@@ -797,8 +695,8 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
         </div>
       ) : (
         <Card>
-          <div style={{ padding: "12px 14px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "flex-end" }}>
-            <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, whiteSpace: "nowrap" }}>
+          <div className="rr-table-pager-row" style={{ borderBottom: `1px solid ${T.border}` }}>
+            <span className="rr-table-pager-label" style={{ color: T.inkFaint }}>
               Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, totalItems)} of {totalItems}
             </span>
           </div>
@@ -817,56 +715,41 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                 <strong>{r.role || "—"}</strong>,
                 r.experience ? `${r.experience} yrs` : "—",
                 r.salaryRange ? `₹${r.salaryRange}` : "—",
-                <span style={{ fontSize: 12, color: T.inkLight, maxWidth: 180, display: "inline-block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.just || "—"}</span>,
+                <span className="rr-just-cell" style={{ color: T.inkLight }}>{r.just || "—"}</span>,
                 r.date || "—",
-                <span style={{ ...ss, borderRadius: 99, padding: "3px 10px", fontSize: 11, fontWeight: 700, display: "inline-block" }}>{r.status}</span>,
+                <span className="rr-status-badge" style={{ ...ss }}>{r.status}</span>,
               ];
             })}
           />
           {totalPages > 1 && (
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 12,
-              padding: "16px 20px",
-              borderTop: `1px solid ${T.border}`,
-            }}>
+            <div className="rr-pagination rr-pagination--desktop" style={{ borderTop: `1px solid ${T.border}` }}>
               <button
+                className="rr-pagination__btn"
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={activePage === 1}
                 style={{
                   background: T.white,
                   color: activePage === 1 ? T.inkFaint : T.primary,
                   border: `1.5px solid ${activePage === 1 ? T.border : T.primary}`,
-                  borderRadius: 8,
                   padding: "8px 16px",
                   fontSize: 13,
-                  fontWeight: 700,
-                  cursor: activePage === 1 ? "not-allowed" : "pointer",
-                  opacity: activePage === 1 ? 0.5 : 1,
-                  transition: "all 0.15s",
                 }}
               >
                 &larr; Previous 10
               </button>
-              <span style={{ fontSize: 13, color: T.inkMid, fontWeight: 600 }}>
+              <span className="rr-pagination__page-label" style={{ fontSize: 13, color: T.inkMid }}>
                 Page {activePage} of {totalPages}
               </span>
               <button
+                className="rr-pagination__btn"
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={activePage === totalPages}
                 style={{
                   background: activePage === totalPages ? T.white : T.primary,
                   color: activePage === totalPages ? T.inkFaint : T.white,
                   border: `1.5px solid ${activePage === totalPages ? T.border : T.primary}`,
-                  borderRadius: 8,
                   padding: "8px 16px",
                   fontSize: 13,
-                  fontWeight: 700,
-                  cursor: activePage === totalPages ? "not-allowed" : "pointer",
-                  opacity: activePage === totalPages ? 0.5 : 1,
-                  transition: "all 0.15s",
                 }}
               >
                 Next 10 &rarr;
@@ -876,177 +759,180 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
         </Card>
       )}
 
+      {/* Detail View Modal */}
       {showViewModal && selectedRequest && (
         <div
+          className="rr-modal-overlay"
           onClick={() => { setShowViewModal(false); setSelectedRequest(null); setOriginalRequest(null); }}
-          style={{
-            position: "fixed", inset: 0, zIndex: 200,
-            background: "rgba(15,23,42,0.45)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            padding: 16,
-            backdropFilter: "blur(2px)",
-          }}
         >
           <div
+            className="rr-modal-panel"
             onClick={(e) => e.stopPropagation()}
-            style={{
-              background: T.surface, borderRadius: 16, width: "100%", maxWidth: 540,
-              maxHeight: "90vh", overflowY: "auto",
-              boxShadow: "0 24px 64px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.10)",
-              display: "flex", flexDirection: "column",
-            }}
+            style={{ background: T.surface }}
           >
-            <div style={{
-              padding: "20px 24px 16px",
-              borderBottom: `1px solid ${T.border}`,
-              display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-              position: "sticky", top: 0, background: T.surface, zIndex: 1,
-              borderRadius: "16px 16px 0 0",
-            }}>
+            {/* Modal Header */}
+            <div
+              className="rr-modal-header"
+              style={{ borderBottom: `1px solid ${T.border}`, background: T.surface }}
+            >
               <div>
-                <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
+                <div className="rr-modal-header__badges">
                   <Badge label="Role Request" variant="blue" />
                   <Badge label={selectedRequest.status} variant={statusVariant(selectedRequest.status)} />
                 </div>
-                <div style={{ fontSize: 17, fontWeight: 800, color: T.ink }}>
+                <div className="rr-modal-header__title" style={{ color: T.ink }}>
                   {selectedRequest.role || "Role Request Details"}
                 </div>
-                <div style={{ fontSize: 12, color: T.inkLight, marginTop: 3 }}>
+                <div className="rr-modal-header__sub" style={{ color: T.inkLight }}>
                   {selectedRequest.dept && selectedRequest.dept !== "N/A" ? `${selectedRequest.dept} · ` : ""}{selectedRequest.date}
                 </div>
               </div>
               <button
+                className="rr-modal-close-btn"
                 onClick={() => { setShowViewModal(false); setSelectedRequest(null); setOriginalRequest(null); }}
-                style={{
-                  background: T.canvas, border: `1px solid ${T.border}`, borderRadius: 8,
-                  width: 32, height: 32, fontSize: 18, color: T.inkMid, cursor: "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  flexShrink: 0, lineHeight: 1,
-                }}
+                style={{ background: T.canvas, border: `1px solid ${T.border}`, color: T.inkMid }}
               >×</button>
             </div>
 
-            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ background: T.canvas, borderRadius: 10, padding: 16, border: `1px solid ${T.border}`, display: "flex", flexDirection: "column", gap: 12 }}>
+            {/* Modal Body */}
+            <div className="rr-modal-body">
+              <div
+                className="rr-modal-section"
+                style={{ background: T.canvas, border: `1px solid ${T.border}` }}
+              >
+                {/* Department */}
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Department</div>
+                  <div className="rr-field-label" style={{ color: T.inkFaint }}>Department</div>
                   {selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back" ? (
                     <input
+                      className="rr-field-input"
                       value={selectedRequest.dept || ""}
                       onChange={(e) => setSelectedRequest({ ...selectedRequest, dept: e.target.value })}
                       placeholder="Department"
-                      style={{ width: "100%", padding: 9, border: `1.5px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }}
+                      style={{ border: `1.5px solid ${T.border}`, background: T.surface, color: T.ink }}
                     />
                   ) : (
-                    <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{selectedRequest.dept || "—"}</div>
+                    <div className="rr-field-value" style={{ color: T.ink }}>{selectedRequest.dept || "—"}</div>
                   )}
                 </div>
 
+                {/* Role Name */}
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Role Name</div>
+                  <div className="rr-field-label" style={{ color: T.inkFaint }}>Role Name</div>
                   {selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back" ? (
                     <input
+                      className="rr-field-input"
                       value={selectedRequest.role || ""}
                       onChange={(e) => setSelectedRequest({ ...selectedRequest, role: e.target.value })}
                       placeholder="Role Name"
-                      style={{ width: "100%", padding: 9, border: `1.5px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }}
+                      style={{ border: `1.5px solid ${T.border}`, background: T.surface, color: T.ink }}
                     />
                   ) : (
-                    <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{selectedRequest.role || "—"}</div>
+                    <div className="rr-field-value" style={{ fontWeight: 700, color: T.ink }}>{selectedRequest.role || "—"}</div>
                   )}
                 </div>
 
-
-
+                {/* Salary Range */}
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Salary Range</div>
+                  <div className="rr-field-label" style={{ color: T.inkFaint }}>Salary Range</div>
                   {selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back" ? (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div className="rr-range-grid">
                       <div>
-                        <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 3 }}>Min (₹)</div>
+                        <div className="rr-range-label" style={{ color: T.inkFaint }}>Min (₹)</div>
                         <input
+                          className="rr-field-input"
                           value={selectedRequest.minSalary ?? selectedRequest.salaryRange?.split("-")[0] ?? ""}
                           onChange={(e) => setSelectedRequest({ ...selectedRequest, minSalary: e.target.value })}
                           placeholder="e.g. 40,000"
-                          style={{ width: "100%", padding: 9, border: `1.5px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }}
+                          style={{ border: `1.5px solid ${T.border}`, background: T.surface, color: T.ink }}
                         />
                       </div>
                       <div>
-                        <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 3 }}>Max (₹)</div>
+                        <div className="rr-range-label" style={{ color: T.inkFaint }}>Max (₹)</div>
                         <input
+                          className="rr-field-input"
                           value={selectedRequest.maxSalary ?? selectedRequest.salaryRange?.split("-")[1] ?? ""}
                           onChange={(e) => setSelectedRequest({ ...selectedRequest, maxSalary: e.target.value })}
                           placeholder="e.g. 60,000"
-                          style={{ width: "100%", padding: 9, border: `1.5px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }}
+                          style={{ border: `1.5px solid ${T.border}`, background: T.surface, color: T.ink }}
                         />
                       </div>
                     </div>
                   ) : (
-                    <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>₹{selectedRequest.salaryRange || "—"}</div>
+                    <div className="rr-field-value" style={{ color: T.ink }}>₹{selectedRequest.salaryRange || "—"}</div>
                   )}
                 </div>
 
+                {/* Experience */}
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Experience</div>
+                  <div className="rr-field-label" style={{ color: T.inkFaint }}>Experience</div>
                   {selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back" ? (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div className="rr-range-grid">
                       <div>
-                        <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 3 }}>Min (yrs)</div>
+                        <div className="rr-range-label" style={{ color: T.inkFaint }}>Min (yrs)</div>
                         <input
+                          className="rr-field-input"
                           value={selectedRequest.minExperience ?? selectedRequest.experience?.split("-")[0] ?? ""}
                           onChange={(e) => setSelectedRequest({ ...selectedRequest, minExperience: e.target.value })}
                           placeholder="e.g. 2"
-                          style={{ width: "100%", padding: 9, border: `1.5px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }}
+                          style={{ border: `1.5px solid ${T.border}`, background: T.surface, color: T.ink }}
                         />
                       </div>
                       <div>
-                        <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 3 }}>Max (yrs)</div>
+                        <div className="rr-range-label" style={{ color: T.inkFaint }}>Max (yrs)</div>
                         <input
+                          className="rr-field-input"
                           value={selectedRequest.maxExperience ?? selectedRequest.experience?.split("-")[1] ?? ""}
                           onChange={(e) => setSelectedRequest({ ...selectedRequest, maxExperience: e.target.value })}
                           placeholder="e.g. 5"
-                          style={{ width: "100%", padding: 9, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }}
+                          style={{ border: `1px solid ${T.border}`, background: T.surface, color: T.ink }}
                         />
                       </div>
                     </div>
                   ) : (
-                    <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{selectedRequest.experience ? `${selectedRequest.experience} yrs` : "—"}</div>
+                    <div className="rr-field-value" style={{ color: T.ink }}>{selectedRequest.experience ? `${selectedRequest.experience} yrs` : "—"}</div>
                   )}
                 </div>
 
+                {/* Justification */}
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Justification</div>
+                  <div className="rr-field-label" style={{ color: T.inkFaint }}>Justification</div>
                   {selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back" ? (
                     <textarea
+                      className="rr-field-textarea"
                       value={selectedRequest.just || ""}
                       onChange={(e) => setSelectedRequest({ ...selectedRequest, just: e.target.value })}
                       placeholder="Why is this role needed?"
-                      style={{ width: "100%", minHeight: 80, padding: 10, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", resize: "vertical", boxSizing: "border-box", background: T.surface, color: T.ink }}
+                      style={{ border: `1px solid ${T.border}`, background: T.surface, color: T.ink }}
                     />
                   ) : (
-                    <div style={{ fontSize: 13, color: T.ink, lineHeight: 1.6 }}>{selectedRequest.just}</div>
+                    <div className="rr-field-value--just" style={{ color: T.ink }}>{selectedRequest.just}</div>
                   )}
                 </div>
               </div>
 
+              {/* History Timeline */}
               {selectedRequest.history?.length > 0 && (
-                <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>Activity History</div>
+                <div className="rr-history-section">
+                  <div className="rr-history-label" style={{ color: T.inkFaint }}>Activity History</div>
                   {selectedRequest.history.map((h, i) => (
-                    <div key={i} style={{ display: "flex", gap: 12, marginBottom: 10 }}>
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: i === selectedRequest.history.length - 1 ? T.blue : T.border, marginTop: 3, flexShrink: 0 }} />
-                        {i < selectedRequest.history.length - 1 && <div style={{ width: 2, flex: 1, background: T.border, margin: "3px 0" }} />}
+                    <div key={i} className="rr-history-item">
+                      <div className="rr-history-timeline">
+                        <div
+                          className="rr-history-dot"
+                          style={{ background: i === selectedRequest.history.length - 1 ? T.blue : T.border }}
+                        />
+                        {i < selectedRequest.history.length - 1 && (
+                          <div className="rr-history-line" style={{ background: T.border }} />
+                        )}
                       </div>
                       <div style={{ paddingBottom: i < selectedRequest.history.length - 1 ? 4 : 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: T.ink }}>
-                          {h.act} <span style={{ fontWeight: 400, color: T.inkLight }}>by {h.by}</span>
+                        <div className="rr-history-content__act" style={{ color: T.ink }}>
+                          {h.act} <span className="rr-history-content__by" style={{ color: T.inkLight }}>by {h.by}</span>
                         </div>
-                        <div style={{ fontSize: 11, color: T.inkFaint }}>{h.date}</div>
+                        <div className="rr-history-content__date" style={{ color: T.inkFaint }}>{h.date}</div>
                         {h.note && (
-                          <div style={{ marginTop: 4, fontSize: 12, color: T.amber, background: T.amberLight, padding: "6px 10px", borderRadius: 7, border: `1px solid #FDE68A` }}>
-                            {h.note}
-                          </div>
+                          <div className="rr-history-note">{h.note}</div>
                         )}
                       </div>
                     </div>
@@ -1055,20 +941,17 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
               )}
             </div>
 
+            {/* Modal Footer */}
             {(selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back") && (
-              <div style={{
-                padding: "16px 24px",
-                borderTop: `1px solid ${T.border}`,
-                display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap",
-                background: T.canvas, borderRadius: "0 0 16px 16px",
-              }}>
+              <div
+                className="rr-modal-footer"
+                style={{ borderTop: `1px solid ${T.border}`, background: T.canvas }}
+              >
                 <Btn
                   label="Cancel Request"
                   variant="danger"
                   small
-                  onClick={() => {
-                    cancelRoleRequest(selectedRequest.id);
-                  }}
+                  onClick={() => { cancelRoleRequest(selectedRequest.id); }}
                 />
                 <Btn
                   label={hasChanges() ? "Resubmit as New Request" : "Accept"}

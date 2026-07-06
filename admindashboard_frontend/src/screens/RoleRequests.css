@@ -1,0 +1,670 @@
+/* ============================================================
+   RoleRequests.css
+   Styles extracted from RoleRequests.jsx
+   Note: Dynamic values that depend on JS state/theme tokens
+   are kept as inline styles in the JSX.
+   ============================================================ */
+
+/* ── Page Layout ────────────────────────────────────────────── */
+.rr-search-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.rr-search-input {
+  max-width: 360px;
+  flex: 1;
+}
+
+/* ── Status Filter Tabs ─────────────────────────────────────── */
+.rr-filter-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.rr-filter-btn {
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  /* background, color, border set dynamically in JSX */
+}
+
+.rr-filter-btn__count {
+  border-radius: 99px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 800;
+  /* background, color set dynamically in JSX */
+}
+
+/* ── Sent-Back Banner ───────────────────────────────────────── */
+.rr-sentback-banner {
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  /* background, border set from theme in JSX */
+}
+
+.rr-sentback-banner__body {
+  flex: 1;
+}
+
+.rr-sentback-banner__label {
+  font-size: 13px;
+  /* color set from T.amber in JSX */
+}
+
+.rr-sentback-banner__text {
+  font-size: 13px;
+  /* color set from T.ink in JSX */
+}
+
+/* ── New/Edit Role Request Form ─────────────────────────────── */
+.rr-form-wrapper {
+  margin-bottom: 20px;
+}
+
+.rr-form-header {
+  background: linear-gradient(135deg, #72102a 0%, #3a0010 100%);
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.rr-form-header__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.rr-form-header__text {
+  flex: 1;
+}
+
+.rr-form-header__title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.rr-form-header__subtitle {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 2px;
+}
+
+.rr-form-body {
+  padding: 24px;
+}
+
+.rr-form-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.rr-form-card-title {
+  font-size: 14px;
+  font-weight: 800;
+  /* color: T.ink set in JSX */
+}
+
+.rr-form-remove-btn {
+  border: none;
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.rr-form-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.rr-form-grid-half {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.rr-form-error-text {
+  font-size: 11px;
+  margin-top: 4px;
+  font-weight: 600;
+  /* color: T.red set in JSX */
+}
+
+.rr-submit-error {
+  width: 100%;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+}
+
+.rr-form-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-top: 20px;
+  padding-top: 16px;
+  /* border-top set from T.border in JSX */
+}
+
+/* ── Mobile Card Slider ─────────────────────────────────────── */
+.rr-mobile-wrapper {
+  margin-bottom: 4px;
+}
+
+.rr-mobile-count {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  text-align: center;
+  /* color: T.inkFaint set in JSX */
+}
+
+.rr-mobile-scroll {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  gap: 16px;
+  padding: 0 16px 20px;
+  margin: 0 -16px;
+}
+
+.rr-mobile-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.rr-mobile-card {
+  flex-shrink: 0;
+  min-width: calc(100% - 32px);
+  scroll-snap-align: center;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #72102a 0%, #3a0010 100%);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px;
+  position: relative;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  min-height: 380px;
+}
+
+.rr-mobile-card__counter {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.rr-mobile-card__top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.rr-mobile-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.rr-mobile-card__info {
+  padding-right: 64px;
+}
+
+.rr-mobile-card__role {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.rr-mobile-card__dept {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 2px;
+}
+
+.rr-mobile-card__details {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+  flex: 1;
+}
+
+.rr-mobile-card__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.rr-card-field__label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 700;
+}
+
+.rr-card-field__value {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.rr-card-divider {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.rr-card-just__text {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rr-card-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rr-card-status__label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 700;
+  text-align: right;
+}
+
+.rr-card-status__badge {
+  margin-top: 2px;
+  text-align: right;
+}
+
+/* ── Dot Indicator ──────────────────────────────────────────── */
+.rr-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-bottom: 8px;
+}
+
+.rr-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s;
+  /* background set dynamically in JSX */
+}
+
+/* ── Pagination (Mobile & Desktop) ──────────────────────────── */
+.rr-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+  margin-bottom: 20px;
+}
+
+.rr-pagination--desktop {
+  gap: 12px;
+  padding: 16px 20px;
+  /* border-top set from T.border in JSX */
+}
+
+.rr-pagination__btn {
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  /* background, color, border, font-size, padding set dynamically */
+}
+
+.rr-pagination__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.rr-pagination__page-label {
+  font-weight: 600;
+  /* font-size, color set dynamically */
+}
+
+/* ── Desktop Table Pager Row ────────────────────────────────── */
+.rr-table-pager-row {
+  padding: 12px 14px;
+  display: flex;
+  justify-content: flex-end;
+  /* border-bottom set from T.border in JSX */
+}
+
+.rr-table-pager-label {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  /* color: T.inkFaint set in JSX */
+}
+
+/* ── Table Status Badge ─────────────────────────────────────── */
+.rr-status-badge {
+  border-radius: 99px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-block;
+  /* border, background, color set from getStatusStyle() in JSX */
+}
+
+/* ── Table Justification Cell ───────────────────────────────── */
+.rr-just-cell {
+  font-size: 12px;
+  max-width: 180px;
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* color: T.inkLight set in JSX */
+}
+
+/* ── Detail Modal Overlay ───────────────────────────────────── */
+.rr-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  backdrop-filter: blur(2px);
+}
+
+.rr-modal-panel {
+  border-radius: 16px;
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18), 0 4px 16px rgba(0, 0, 0, 0.10);
+  display: flex;
+  flex-direction: column;
+  /* background: T.surface set in JSX */
+}
+
+.rr-modal-header {
+  padding: 20px 24px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border-radius: 16px 16px 0 0;
+  /* border-bottom, background set from theme in JSX */
+}
+
+.rr-modal-header__badges {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.rr-modal-header__title {
+  font-size: 17px;
+  font-weight: 800;
+  /* color: T.ink set in JSX */
+}
+
+.rr-modal-header__sub {
+  font-size: 12px;
+  margin-top: 3px;
+  /* color: T.inkLight set in JSX */
+}
+
+.rr-modal-close-btn {
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+  /* background, border, color set from theme in JSX */
+}
+
+.rr-modal-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rr-modal-section {
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* background, border set from T.canvas/T.border in JSX */
+}
+
+.rr-field-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+  /* color: T.inkFaint set in JSX */
+}
+
+.rr-field-value {
+  font-size: 13px;
+  font-weight: 600;
+  /* color: T.ink set in JSX */
+}
+
+.rr-field-value--just {
+  font-size: 13px;
+  line-height: 1.6;
+  /* color: T.ink set in JSX */
+}
+
+.rr-field-input {
+  width: 100%;
+  padding: 9px;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+  /* border, background, color set from theme in JSX */
+}
+
+.rr-field-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  resize: vertical;
+  box-sizing: border-box;
+  /* border, background, color set from theme in JSX */
+}
+
+.rr-range-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.rr-range-label {
+  font-size: 10px;
+  margin-bottom: 3px;
+  /* color: T.inkFaint set in JSX */
+}
+
+/* ── History Timeline ───────────────────────────────────────── */
+.rr-history-section {
+  /* margin, padding handled by parent gap */
+}
+
+.rr-history-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 12px;
+  /* color: T.inkFaint set in JSX */
+}
+
+.rr-history-item {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.rr-history-timeline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.rr-history-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 3px;
+  flex-shrink: 0;
+  /* background set dynamically (blue for last, border for rest) */
+}
+
+.rr-history-line {
+  width: 2px;
+  flex: 1;
+  margin: 3px 0;
+  /* background: T.border set in JSX */
+}
+
+.rr-history-content__act {
+  font-size: 12px;
+  font-weight: 700;
+  /* color: T.ink set in JSX */
+}
+
+.rr-history-content__by {
+  font-weight: 400;
+  /* color: T.inkLight set in JSX */
+}
+
+.rr-history-content__date {
+  font-size: 11px;
+  /* color: T.inkFaint set in JSX */
+}
+
+.rr-history-note {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #b45309;
+  background: #fff7ed;
+  padding: 6px 10px;
+  border-radius: 7px;
+  border: 1px solid #fde68a;
+}
+
+/* ── Modal Footer Actions ───────────────────────────────────── */
+.rr-modal-footer {
+  padding: 16px 24px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  border-radius: 0 0 16px 16px;
+  /* border-top, background set from theme in JSX */
+}
+
+/* ── Responsive overrides ───────────────────────────────────── */
+.rr-form-grid-2col--mobile {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 640px) {
+  .rr-form-grid-2col {
+    grid-template-columns: 1fr;
+  }
+}
