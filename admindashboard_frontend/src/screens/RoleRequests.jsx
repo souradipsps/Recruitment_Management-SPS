@@ -3,7 +3,7 @@ import { T } from "../theme";
 import { statusVariant } from "../theme";
 import { useBreakpoint } from "../hooks";
 import { Card, SectionTitle, Table, Mono, Btn, Input, Badge, FormField, Modal, ModalHeader, Textarea, Select } from "../components/ui";
-import { createRoleRequest } from "../api/roleRequestsApi";
+import { createRoleRequest, updateRoleRequest } from "../api/roleRequestsApi";
 
 const getStatusStyle = (status) => {
   switch (status) {
@@ -46,6 +46,8 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
   const [formErrors, setFormErrors] = useState({});
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
+  const [modalSaving, setModalSaving] = useState(false);
+  const [modalError, setModalError] = useState("");
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const scrollRef = useRef(null);
 
@@ -89,38 +91,73 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
     let valid = true;
     roleForms.forEach((f, i) => {
       const errs = {};
+      
+      if (!f.dept || !f.dept.trim()) {
+        errs.dept = "Department is required";
+        valid = false;
+      }
+      if (!f.role || !f.role.trim()) {
+        errs.role = "Role name is required";
+        valid = false;
+      }
+
       const minExp = parseFloat(f.minExperience);
       const maxExp = parseFloat(f.maxExperience);
 
-      if (f.minExperience && isNaN(minExp)) {
+      if (!f.minExperience || !f.minExperience.trim()) {
+        errs.minExperience = "Min experience is required";
+        valid = false;
+      } else if (isNaN(minExp)) {
         errs.minExperience = "Must be a number";
         valid = false;
       }
-      if (f.maxExperience && isNaN(maxExp)) {
+      
+      if (!f.maxExperience || !f.maxExperience.trim()) {
+        errs.maxExperience = "Max experience is required";
+        valid = false;
+      } else if (isNaN(maxExp)) {
         errs.maxExperience = "Must be a number";
         valid = false;
       }
+      
       if (f.minExperience && f.maxExperience && !isNaN(minExp) && !isNaN(maxExp) && minExp >= maxExp) {
         errs.minExperience = "Min experience must be less than max experience";
         valid = false;
       }
 
-      const parsedMinSal = parseFloat(f.minSalary.replace(/,/g, ""));
-      const parsedMaxSal = parseFloat(f.maxSalary.replace(/,/g, ""));
-      if (f.minSalary && isNaN(parsedMinSal)) {
+      const cleanMinSalary = (f.minSalary || "").replace(/,/g, "");
+      const cleanMaxSalary = (f.maxSalary || "").replace(/,/g, "");
+      const parsedMinSal = parseFloat(cleanMinSalary);
+      const parsedMaxSal = parseFloat(cleanMaxSalary);
+
+      if (!f.minSalary || !f.minSalary.trim()) {
+        errs.minSalary = "Min salary is required";
+        valid = false;
+      } else if (isNaN(parsedMinSal)) {
         errs.minSalary = "Must be a number";
         valid = false;
       }
-      if (f.maxSalary && isNaN(parsedMaxSal)) {
+      
+      if (!f.maxSalary || !f.maxSalary.trim()) {
+        errs.maxSalary = "Max salary is required";
+        valid = false;
+      } else if (isNaN(parsedMaxSal)) {
         errs.maxSalary = "Must be a number";
         valid = false;
       }
+      
       const minSal = parseSalary(f.minSalary);
       const maxSal = parseSalary(f.maxSalary);
       if (f.minSalary && f.maxSalary && minSal > 0 && maxSal > 0 && minSal >= maxSal) {
         errs.minSalary = "Min salary must be less than max salary";
         valid = false;
       }
+
+      if (!f.just || !f.just.trim()) {
+        errs.just = "Justification is required";
+        valid = false;
+      }
+
       if (Object.keys(errs).length > 0) errors[i] = errs;
     });
     setFormErrors(errors);
@@ -223,8 +260,12 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
     }
   };
 
-  const saveRoleRequestEdits = (submitAsPending) => {
+  const saveRoleRequestEdits = async (submitAsPending) => {
     if (!selectedRequest) return;
+    if (!selectedRequest.backendId) {
+      setModalError("This request has no backend record and cannot be saved.");
+      return;
+    }
     const minS = selectedRequest.minSalary ?? selectedRequest.salaryRange?.split("-")[0]?.trim() ?? "";
     const maxS = selectedRequest.maxSalary ?? selectedRequest.salaryRange?.split("-")[1]?.trim() ?? "";
     const minE = selectedRequest.minExperience ?? selectedRequest.experience?.split("-")[0]?.trim() ?? "";
@@ -233,40 +274,47 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
     const combinedSalary = minS && maxS ? `${minS}-${maxS}` : (minS || maxS || "");
     const combinedExperience = minE && maxE ? `${minE}-${maxE}` : (minE || maxE || "");
 
-    const updated = {
-      ...selectedRequest,
-      salaryRange: combinedSalary,
+    const payload = {
+      department: selectedRequest.dept,
+      role: selectedRequest.role,
+      justification: selectedRequest.just,
+      salary_range: combinedSalary,
       experience: combinedExperience,
       status: submitAsPending ? "Pending" : selectedRequest.status,
     };
 
-    delete updated.minSalary;
-    delete updated.maxSalary;
-    delete updated.minExperience;
-    delete updated.maxExperience;
+    setModalError("");
+    setModalSaving(true);
+    try {
+      const updated = await updateRoleRequest(selectedRequest.backendId, payload);
 
-    setRoleRequests((prev) => prev.map((r) => r.id === selectedRequest.id ? updated : r));
+      setRoleRequests((prev) => prev.map((r) => r.id === selectedRequest.id ? updated : r));
 
-    setApprovalRequests((prev) =>
-      prev.map((apr) =>
-        String(apr.sourceId) === String(selectedRequest.id)
-          ? {
-              ...apr,
-              dept: updated.dept,
-              role: updated.role,
-              experience: updated.experience,
-              salary: updated.salaryRange ? `₹${updated.salaryRange}` : "",
-              just: updated.just,
-              status: updated.status,
-              category: updated.category || "",
-            }
-          : apr
-      )
-    );
+      setApprovalRequests((prev) =>
+        prev.map((apr) =>
+          String(apr.sourceId) === String(selectedRequest.id)
+            ? {
+                ...apr,
+                dept: updated.dept,
+                role: updated.role,
+                experience: updated.experience,
+                salary: updated.salaryRange ? `₹${updated.salaryRange}` : "",
+                just: updated.just,
+                status: updated.status,
+              }
+            : apr
+        )
+      );
 
-    setShowViewModal(false);
-    setSelectedRequest(null);
-    setOriginalRequest(null);
+      setShowViewModal(false);
+      setSelectedRequest(null);
+      setOriginalRequest(null);
+    } catch (err) {
+      console.error("Failed to save role request edits:", err);
+      setModalError(err.message || "Failed to save changes. Please try again.");
+    } finally {
+      setModalSaving(false);
+    }
   };
 
   const hasChanges = () => {
@@ -290,51 +338,55 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
     );
   };
 
-  const approveDirectly = () => {
+  const approveDirectly = async () => {
     if (!selectedRequest) return;
-    const now = new Date().toLocaleDateString();
-    const entry = { act: "Approved", by: "HR Admin", date: now, note: "" };
-    const updated = {
-      ...selectedRequest,
-      status: "Approved",
-      history: [...(selectedRequest.history || []), entry],
-    };
-    delete updated.minSalary;
-    delete updated.maxSalary;
-    delete updated.minExperience;
-    delete updated.maxExperience;
-
-    setRoleRequests((prev) => prev.map((r) => r.id === selectedRequest.id ? updated : r));
-    setApprovalRequests((prev) =>
-      prev.map((apr) =>
-        String(apr.sourceId) === String(selectedRequest.id)
-          ? { ...apr, status: "Approved", history: updated.history }
-          : apr
-      )
-    );
-
-    if (setExistingRoles) {
-      setExistingRoles((prev) => {
-        const exists = prev.some((x) => x.role === selectedRequest.role && x.dept === selectedRequest.dept);
-        if (exists) return prev;
-        const cleanedSalary = selectedRequest.salaryRange ? selectedRequest.salaryRange.replace(/^₹/, "") : "";
-        return [...prev, {
-          id: `ROL-${Date.now()}`, dept: selectedRequest.dept, role: selectedRequest.role, type: "Full-time",
-          headcount: 1, filled: 0, currentFilled: 0, status: "Inactive", currentStatus: "Inactive",
-          experience: selectedRequest.experience || "—",
-          salaryRange: cleanedSalary || "—",
-          category: selectedRequest.category || "—",
-        }];
-      });
+    if (!selectedRequest.backendId) {
+      setModalError("This request has no backend record and cannot be approved.");
+      return;
     }
 
-    if (onNavigateToExistingRoles) {
-      setTimeout(() => { onNavigateToExistingRoles(); }, 300);
-    }
+    setModalError("");
+    setModalSaving(true);
+    try {
+      const updated = await updateRoleRequest(selectedRequest.backendId, { status: "Approved" });
 
-    setShowViewModal(false);
-    setSelectedRequest(null);
-    setOriginalRequest(null);
+      setRoleRequests((prev) => prev.map((r) => r.id === selectedRequest.id ? updated : r));
+      setApprovalRequests((prev) =>
+        prev.map((apr) =>
+          String(apr.sourceId) === String(selectedRequest.id)
+            ? { ...apr, status: "Approved" }
+            : apr
+        )
+      );
+
+      if (setExistingRoles) {
+        setExistingRoles((prev) => {
+          const exists = prev.some((x) => x.role === updated.role && x.dept === updated.dept);
+          if (exists) return prev;
+          const cleanedSalary = updated.salaryRange ? updated.salaryRange.replace(/^₹/, "") : "";
+          return [...prev, {
+            id: `ROL-${Date.now()}`, dept: updated.dept, role: updated.role, type: "Full-time",
+            headcount: 1, filled: 0, currentFilled: 0, status: "Inactive", currentStatus: "Inactive",
+            experience: updated.experience || "—",
+            salaryRange: cleanedSalary || "—",
+            category: updated.category || "—",
+          }];
+        });
+      }
+
+      if (onNavigateToExistingRoles) {
+        setTimeout(() => { onNavigateToExistingRoles(); }, 300);
+      }
+
+      setShowViewModal(false);
+      setSelectedRequest(null);
+      setOriginalRequest(null);
+    } catch (err) {
+      console.error("Failed to approve role request:", err);
+      setModalError(err.message || "Failed to approve. Please try again.");
+    } finally {
+      setModalSaving(false);
+    }
   };
 
   const handleAccept = () => {
@@ -345,18 +397,32 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
     }
   };
 
-  const cancelRoleRequest = (reqId) => {
-    setRoleRequests((prev) =>
-      prev.map((r) => (r.id === reqId ? { ...r, status: "Cancelled" } : r))
-    );
-    setApprovalRequests((prev) =>
-      prev.map((apr) =>
-        String(apr.sourceId) === String(reqId) ? { ...apr, status: "Cancelled" } : apr
-      )
-    );
-    setShowViewModal(false);
-    setSelectedRequest(null);
-    setOriginalRequest(null);
+  const cancelRoleRequest = async (reqId) => {
+    const target = roleRequests.find((r) => r.id === reqId);
+    if (!target?.backendId) {
+      setModalError("This request has no backend record and cannot be cancelled.");
+      return;
+    }
+
+    setModalError("");
+    setModalSaving(true);
+    try {
+      const updated = await updateRoleRequest(target.backendId, { status: "Cancelled" });
+      setRoleRequests((prev) => prev.map((r) => (r.id === reqId ? updated : r)));
+      setApprovalRequests((prev) =>
+        prev.map((apr) =>
+          String(apr.sourceId) === String(reqId) ? { ...apr, status: "Cancelled" } : apr
+        )
+      );
+      setShowViewModal(false);
+      setSelectedRequest(null);
+      setOriginalRequest(null);
+    } catch (err) {
+      console.error("Failed to cancel role request:", err);
+      setModalError(err.message || "Failed to cancel. Please try again.");
+    } finally {
+      setModalSaving(false);
+    }
   };
 
   return (
@@ -445,7 +511,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
               Request for <strong>{r.role}</strong> was returned with comment: <em>...</em>
             </span>
           </div>
-          <Btn label="View Request" small variant="amber" onClick={() => { setSelectedRequest(r); setShowViewModal(true); }} />
+          <Btn label="View Request" small variant="amber" onClick={() => { setSelectedRequest(r); setOriginalRequest(r); setModalError(""); setShowViewModal(true); }} />
         </div>
       ))}
 
@@ -466,10 +532,30 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
 
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14, marginBottom: 14 }}>
                 <FormField label="Department" required>
-                  <Input placeholder="Enter department" value={form.dept} onChange={(e) => updateForm(index, "dept", e.target.value)} />
+                  <Input
+                    placeholder="Enter department"
+                    value={form.dept}
+                    onChange={(e) => updateForm(index, "dept", e.target.value)}
+                    style={formErrors[index]?.dept ? { borderColor: T.red } : {}}
+                  />
+                  {formErrors[index]?.dept && (
+                    <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+                      {formErrors[index].dept}
+                    </div>
+                  )}
                 </FormField>
                 <FormField label="Role Name" required>
-                  <Input placeholder="Enter role" value={form.role} onChange={(e) => updateForm(index, "role", e.target.value)} />
+                  <Input
+                    placeholder="Enter role"
+                    value={form.role}
+                    onChange={(e) => updateForm(index, "role", e.target.value)}
+                    style={formErrors[index]?.role ? { borderColor: T.red } : {}}
+                  />
+                  {formErrors[index]?.role && (
+                    <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+                      {formErrors[index].role}
+                    </div>
+                  )}
                 </FormField>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <FormField label="Min Experience (Yrs)" required>
@@ -534,17 +620,28 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                     value={form.just}
                     onChange={(e) => updateForm(index, "just", e.target.value)}
                     placeholder="Why is this role needed?"
-                    style={{ width: "100%", minHeight: 100, border: `1.5px solid ${T.border}`, borderRadius: 8, padding: 12, resize: "vertical", outline: "none", fontSize: 13, boxSizing: "border-box" }}
+                    style={{ width: "100%", minHeight: 100, border: `1.5px solid ${formErrors[index]?.just ? T.red : T.border}`, borderRadius: 8, padding: 12, resize: "vertical", outline: "none", fontSize: 13, boxSizing: "border-box" }}
                   />
+                  {formErrors[index]?.just && (
+                    <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+                      {formErrors[index].just}
+                    </div>
+                  )}
                 </FormField>
               </div>
             </Card>
           ))}
 
+          {submitError && (
+            <div style={{ marginBottom: 16, padding: "12px 16px", borderRadius: 8, background: "#FEE2E2", color: "#DC2626", fontSize: 13, fontWeight: 600, border: "1px solid #FCA5A5" }}>
+              {submitError}
+            </div>
+          )}
+
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
-            <Btn label="Submit Request" onClick={submitRequests} />
-            {!editingId && <Btn label="+ Add More" variant="outline" onClick={() => setRoleForms((p) => [...p, emptyForm()])} />}
-            <Btn label="Cancel" variant="ghost" onClick={() => { setShowForm(false); setEditingId(null); setRoleForms([emptyForm()]); }} />
+            <Btn label={submitting ? "Submitting..." : "Submit Request"} onClick={submitRequests} disabled={submitting} />
+            {!editingId && <Btn label="+ Add More" variant="outline" onClick={() => setRoleForms((p) => [...p, emptyForm()])} disabled={submitting} />}
+            <Btn label="Cancel" variant="ghost" onClick={() => { setShowForm(false); setEditingId(null); setRoleForms([emptyForm()]); }} disabled={submitting} />
           </div>
         </div>
       )}
@@ -580,7 +677,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
               return (
                 <div
                   key={r.id}
-                  onClick={() => { setSelectedRequest(r); setOriginalRequest(r); setShowViewModal(true); }}
+                  onClick={() => { setSelectedRequest(r); setOriginalRequest(r); setModalError(""); setShowViewModal(true); }}
                   style={{
                     flexShrink: 0,
                     minWidth: "calc(100% - 32px)",
@@ -707,6 +804,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
             onRowClick={(index) => {
               setSelectedRequest(filteredRequests[index]);
               setOriginalRequest(filteredRequests[index]);
+              setModalError("");
               setShowViewModal(true);
             }}
             cols={["Request ID", "Department", "Role", "Experience", "Salary Range", "Justification", "Status"]}
@@ -728,7 +826,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
 
       {showViewModal && selectedRequest && (
         <div
-          onClick={() => { setShowViewModal(false); setSelectedRequest(null); setOriginalRequest(null); }}
+          onClick={() => { setShowViewModal(false); setSelectedRequest(null); setOriginalRequest(null); setModalError(""); }}
           style={{
             position: "fixed", inset: 0, zIndex: 200,
             background: "rgba(15,23,42,0.45)",
@@ -766,7 +864,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                 </div>
               </div>
               <button
-                onClick={() => { setShowViewModal(false); setSelectedRequest(null); setOriginalRequest(null); }}
+                onClick={() => { setShowViewModal(false); setSelectedRequest(null); setOriginalRequest(null); setModalError(""); }}
                 style={{
                   background: T.canvas, border: `1px solid ${T.border}`, borderRadius: 8,
                   width: 32, height: 32, fontSize: 18, color: T.inkMid, cursor: "pointer",
@@ -909,23 +1007,32 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
               <div style={{
                 padding: "16px 24px",
                 borderTop: `1px solid ${T.border}`,
-                display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap",
+                display: "flex", flexDirection: "column", gap: 10,
                 background: T.canvas, borderRadius: "0 0 16px 16px",
               }}>
-                <Btn
-                  label="Cancel Request"
-                  variant="danger"
-                  small
-                  onClick={() => {
-                    cancelRoleRequest(selectedRequest.id);
-                  }}
-                />
-                <Btn
-                  label={hasChanges() ? "Resubmit as New Request" : "Accept"}
-                  variant="success"
-                  small
-                  onClick={handleAccept}
-                />
+                {modalError && (
+                  <div style={{ background: "#FEE2E2", border: "1px solid #FECACA", color: "#DC2626", padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600 }}>
+                    {modalError}
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                  <Btn
+                    label="Cancel Request"
+                    variant="danger"
+                    small
+                    disabled={modalSaving}
+                    onClick={() => {
+                      cancelRoleRequest(selectedRequest.id);
+                    }}
+                  />
+                  <Btn
+                    label={modalSaving ? "Saving..." : hasChanges() ? "Resubmit as New Request" : "Accept"}
+                    variant="success"
+                    small
+                    disabled={modalSaving}
+                    onClick={handleAccept}
+                  />
+                </div>
               </div>
             )}
           </div>

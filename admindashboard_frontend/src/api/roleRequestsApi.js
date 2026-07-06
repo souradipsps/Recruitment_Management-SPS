@@ -79,3 +79,19 @@ export async function createRoleRequest(formData, submittedBy) {
   const data = await res.json();
   return normalizeRoleRequest(data);
 }
+
+// PATCH /api/role-requests/{backendId}/ — partial update (edit fields and/or status).
+export async function updateRoleRequest(backendId, payload) {
+  const res = await fetch(`${API_URL}${backendId}/`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseErrorResponse(res));
+  }
+
+  const data = await res.json();
+  return normalizeRoleRequest(data);
+}

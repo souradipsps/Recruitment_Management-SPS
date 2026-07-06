@@ -58,6 +58,12 @@ def create_approval_for_role_request(sender, instance, created, **kwargs):
 
         if instance.status == "Cancelled":
             ApprovalRequest.objects.filter(role_request=instance, status="Pending").update(status="Cancelled")
+        elif instance.status in ("Approved", "Rejected"):
+            # Direct approve/reject (e.g. HR accepting their own sent-back request) bypasses
+            # the /approvals/{id}/action/ endpoint, so mirror the status onto the active approval here.
+            ApprovalRequest.objects.filter(
+                role_request=instance, status__in=["Pending", "Sent Back"]
+            ).update(status=instance.status)
         elif instance.status == "Pending":
             # If it's updated to Pending (resubmitted), check if there is already an active Pending approval
             has_pending = ApprovalRequest.objects.filter(role_request=instance, status="Pending").exists()
