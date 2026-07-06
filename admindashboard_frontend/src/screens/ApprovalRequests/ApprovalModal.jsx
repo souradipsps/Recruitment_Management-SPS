@@ -1,0 +1,382 @@
+import { createPortal } from "react-dom";
+import { T } from "../../theme";
+import { statusVariant } from "../../theme";
+import { Badge, Btn, Select } from "../../components/ui";
+import { QUAL_OPTIONS, TYPE_OPTIONS, VACANCY_OPTIONS, DEPT_OPTIONS, CATEGORY_OPTIONS, ALL_SKILLS } from "../../data";
+import SkillsMultiSelect from "../../components/SkillsMultiSelect";
+import { labelCss } from "./constants";
+
+/**
+ * Full-screen portal modal showing request details, editable fields for
+ * Pending requests, activity history, comment textarea, and action buttons.
+ */
+export default function ApprovalModal({ sel, setSel, closeModal, isPending, comment, setComment, fieldErrors, setFieldErrors, takeAction, isMobile }) {
+  if (!sel) return null;
+
+  return createPortal(
+    <div
+      onClick={closeModal}
+      style={{
+        position: "fixed", inset: 0, zIndex: 200,
+        background: "rgba(15,23,42,0.45)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 16,
+        backdropFilter: "blur(4px)",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: T.surface, borderRadius: 16,
+          width: "100%", maxWidth: 540, maxHeight: "90vh", overflowY: "auto",
+          boxShadow: "0 24px 64px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.10)",
+          display: "flex", flexDirection: "column",
+        }}
+      >
+        {/* ── Sticky header ── */}
+        <div style={{
+          padding: "20px 24px 16px",
+          borderBottom: `1px solid ${T.border}`,
+          display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+          position: "sticky", top: 0, background: T.surface, zIndex: 1,
+          borderRadius: "16px 16px 0 0",
+        }}>
+          <div>
+            <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
+              <Badge label={sel.type || "Request"} variant="blue" />
+              <Badge label={sel.status} variant={statusVariant(sel.status)} />
+            </div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: T.ink }}>
+              {sel.type === "Role Request" ? "Role Request Details" : sel.role}
+            </div>
+            <div style={{ fontSize: 12, color: T.inkLight, marginTop: 3 }}>
+              {sel.type === "Role Request"
+                ? `${sel.requestedBy} · ${sel.date}`
+                : `${sel.dept && sel.dept !== "N/A" ? `${sel.dept} · ` : ""}${sel.requestedBy} · ${sel.date}`}
+            </div>
+          </div>
+          <button
+            onClick={closeModal}
+            style={{
+              background: T.canvas, border: `1px solid ${T.border}`, borderRadius: 8,
+              width: 32, height: 32, fontSize: 18, color: T.inkMid, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0, lineHeight: 1,
+            }}
+          >×</button>
+        </div>
+
+        {/* ── Body ── */}
+        <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ background: T.canvas, borderRadius: 10, padding: 16, border: `1px solid ${T.border}`, display: "flex", flexDirection: "column", gap: 12 }}>
+
+            {/* ── Role Request fields ── */}
+            {sel.type === "Role Request" && (
+              <div>
+                <div style={labelCss}>Department</div>
+                {isPending ? (
+                  <input value={sel.dept || ""} onChange={(e) => setSel({ ...sel, dept: e.target.value })} placeholder="e.g. Science"
+                    style={{ width: "100%", padding: 9, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }} />
+                ) : (
+                  <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{sel.dept || "—"}</div>
+                )}
+              </div>
+            )}
+
+            {sel.type === "Role Request" && (
+              <div>
+                <div style={labelCss}>Role Name</div>
+                {isPending ? (
+                  <input value={sel.role || ""} onChange={(e) => setSel({ ...sel, role: e.target.value })} placeholder="e.g. Mathematics Teacher"
+                    style={{ width: "100%", padding: 9, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }} />
+                ) : (
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{sel.role || "—"}</div>
+                )}
+              </div>
+            )}
+
+            {sel.type === "Role Request" && (
+              <div>
+                <div style={labelCss}>Category</div>
+                {isPending ? (
+                  <Select value={sel.category || ""} onChange={(e) => setSel({ ...sel, category: e.target.value })} options={CATEGORY_OPTIONS} placeholder="Select Category" />
+                ) : (
+                  <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>
+                    {CATEGORY_OPTIONS.find((c) => c.value === sel.category)?.label || sel.category || "—"}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Salary Range */}
+            {(sel.salary || sel.type === "Role Request") && (
+              <div>
+                <div style={labelCss}>Salary Range</div>
+                {sel.type === "Role Request" && isPending ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 3 }}>Min (₹)</div>
+                      <input
+                        value={sel.minSalary ?? (sel.salary ? sel.salary.replace(/^₹/, "").split("-")[0]?.trim() : "")}
+                        onChange={(e) => { setSel({ ...sel, minSalary: e.target.value }); setFieldErrors((p) => { const n = { ...p }; delete n.minSalary; return n; }); }}
+                        placeholder="e.g. 40,000"
+                        style={{ width: "100%", padding: 9, border: `1.5px solid ${fieldErrors.minSalary ? T.red : T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface }}
+                      />
+                      {fieldErrors.minSalary && <div style={{ color: T.red, fontSize: 11, marginTop: 3, fontWeight: 600 }}>{fieldErrors.minSalary}</div>}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 3 }}>Max (₹)</div>
+                      <input
+                        value={sel.maxSalary ?? (sel.salary ? sel.salary.replace(/^₹/, "").split("-")[1]?.trim() : "")}
+                        onChange={(e) => setSel({ ...sel, maxSalary: e.target.value })}
+                        placeholder="e.g. 60,000"
+                        style={{ width: "100%", padding: 9, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{sel.salary || "—"}</div>
+                )}
+              </div>
+            )}
+
+            {/* Experience */}
+            {(sel.experience || sel.exp || sel.type === "Role Request") && (
+              <div>
+                <div style={labelCss}>Experience</div>
+                {sel.type === "Role Request" && isPending ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 3 }}>Min (yrs)</div>
+                      <input
+                        value={sel.minExp ?? (sel.experience ? String(sel.experience).split("-")[0]?.trim() : "")}
+                        onChange={(e) => { setSel({ ...sel, minExp: e.target.value }); setFieldErrors((p) => { const n = { ...p }; delete n.minExp; return n; }); }}
+                        placeholder="e.g. 2"
+                        style={{ width: "100%", padding: 9, border: `1.5px solid ${fieldErrors.minExp ? T.red : T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface }}
+                      />
+                      {fieldErrors.minExp && <div style={{ color: T.red, fontSize: 11, marginTop: 3, fontWeight: 600 }}>{fieldErrors.minExp}</div>}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 3 }}>Max (yrs)</div>
+                      <input
+                        value={sel.maxExp ?? (sel.experience ? String(sel.experience).split("-")[1]?.trim() : "")}
+                        onChange={(e) => setSel({ ...sel, maxExp: e.target.value })}
+                        placeholder="e.g. 5"
+                        style={{ width: "100%", padding: 9, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>
+                    {sel.experience ? `${sel.experience} yrs` : sel.exp ? `${sel.exp} yrs` : "—"}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Job Request fields ── */}
+            {sel.type === "Job Request" && (
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
+                <div>
+                  <div style={labelCss}>Department</div>
+                  {isPending ? (
+                    <select value={sel.dept || ""} onChange={(e) => setSel({ ...sel, dept: e.target.value })}
+                      style={{ width: "100%", padding: "8px 10px", border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", background: T.surface, color: T.ink }}>
+                      <option value="">Select department…</option>
+                      {DEPT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  ) : (
+                    <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{sel.dept && sel.dept !== "N/A" ? sel.dept : "—"}</div>
+                  )}
+                </div>
+                <div>
+                  <div style={labelCss}>Location</div>
+                  {isPending ? (
+                    <input value={sel.location || ""} onChange={(e) => setSel({ ...sel, location: e.target.value })} placeholder="Enter location"
+                      style={{ width: "100%", padding: 9, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }} />
+                  ) : (
+                    <div style={{ fontSize: 13, color: T.ink }}>{sel.location || "—"}</div>
+                  )}
+                </div>
+                <div>
+                  <div style={labelCss}>Category</div>
+                  {isPending ? (
+                    <select value={sel.category || ""} onChange={(e) => setSel({ ...sel, category: e.target.value })}
+                      style={{ width: "100%", padding: "8px 10px", border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", background: T.surface, color: T.ink }}>
+                      <option value="">Select category…</option>
+                      {CATEGORY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  ) : (
+                    <div style={{ fontSize: 13, color: T.ink }}>{sel.category || "—"}</div>
+                  )}
+                </div>
+                <div>
+                  <div style={labelCss}>Vacancies</div>
+                  {isPending ? (
+                    <select value={sel.vacancies || ""} onChange={(e) => setSel({ ...sel, vacancies: e.target.value })}
+                      style={{ width: "100%", padding: "8px 10px", border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", background: T.surface, color: T.ink }}>
+                      <option value="">Select…</option>
+                      {VACANCY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  ) : (
+                    <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{sel.vacancies || "—"}</div>
+                  )}
+                </div>
+                <div>
+                  <div style={labelCss}>Experience</div>
+                  {isPending ? (
+                    <input value={sel.exp || ""} onChange={(e) => setSel({ ...sel, exp: e.target.value })} placeholder="Enter experience"
+                      style={{ width: "100%", padding: 9, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }} />
+                  ) : (
+                    <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{sel.exp || "—"}</div>
+                  )}
+                </div>
+                <div>
+                  <div style={labelCss}>Educational Qualification</div>
+                  {isPending ? (
+                    <select value={sel.qual || ""} onChange={(e) => setSel({ ...sel, qual: e.target.value })}
+                      style={{ width: "100%", padding: "8px 10px", border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", background: T.surface, color: T.ink }}>
+                      <option value="">Select…</option>
+                      {QUAL_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  ) : (
+                    <div style={{ fontSize: 13, color: T.ink }}>{sel.qual || "—"}</div>
+                  )}
+                </div>
+                <div>
+                  <div style={labelCss}>Employment Type</div>
+                  {isPending ? (
+                    <select value={sel.empType || ""} onChange={(e) => setSel({ ...sel, empType: e.target.value })}
+                      style={{ width: "100%", padding: "8px 10px", border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", background: T.surface, color: T.ink }}>
+                      <option value="">Select…</option>
+                      {TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  ) : (
+                    <div style={{ fontSize: 13, color: T.ink }}>{sel.empType || "—"}</div>
+                  )}
+                </div>
+                <div style={{ gridColumn: isMobile ? "auto" : "span 2" }}>
+                  <div style={labelCss}>Salary Range</div>
+                  {isPending ? (
+                    <input value={sel.salary || ""} onChange={(e) => setSel({ ...sel, salary: e.target.value })} placeholder="Enter salary range"
+                      style={{ width: "100%", padding: 9, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }} />
+                  ) : (
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{sel.salary || "—"}</div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {sel.type === "Job Request" && (
+              <div>
+                <div style={labelCss}>Required Skills</div>
+                {isPending ? (
+                  <SkillsMultiSelect options={ALL_SKILLS} selected={sel.skills || []} onChange={(v) => setSel({ ...sel, skills: v })} placeholder="Select required skills…" />
+                ) : (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                    {(sel.skills || []).length > 0
+                      ? (sel.skills || []).map((s) => (
+                          <span key={s} style={{ background: T.primaryLight || "#EDE9FE", color: T.primary, padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 600 }}>{s}</span>
+                        ))
+                      : <span style={{ fontSize: 13, color: T.inkFaint }}>—</span>
+                    }
+                  </div>
+                )}
+              </div>
+            )}
+
+            {sel.type === "Job Request" && (
+              <div>
+                <div style={labelCss}>Job Description</div>
+                {isPending ? (
+                  <textarea value={sel.description || ""} onChange={(e) => setSel({ ...sel, description: e.target.value })} placeholder="Enter job description…"
+                    style={{ width: "100%", minHeight: 80, padding: 10, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", resize: "vertical", boxSizing: "border-box", background: T.surface, color: T.ink }} />
+                ) : (
+                  <div style={{ fontSize: 13, color: T.ink, lineHeight: 1.6 }}>{sel.description || "—"}</div>
+                )}
+              </div>
+            )}
+
+            {sel.just && (
+              <div>
+                <div style={labelCss}>Justification</div>
+                <div style={{ fontSize: 13, color: T.ink, lineHeight: 1.6 }}>{sel.just}</div>
+              </div>
+            )}
+          </div>
+
+          {/* Activity history timeline */}
+          {sel.history?.length > 0 && (
+            <div>
+              <div style={{ ...labelCss, marginBottom: 12 }}>Activity History</div>
+              {sel.history.map((h, i) => (
+                <div key={i} style={{ display: "flex", gap: 12, marginBottom: 10 }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: i === sel.history.length - 1 ? T.blue : T.border, marginTop: 3, flexShrink: 0 }} />
+                    {i < sel.history.length - 1 && <div style={{ width: 2, flex: 1, background: T.border, margin: "3px 0" }} />}
+                  </div>
+                  <div style={{ paddingBottom: i < sel.history.length - 1 ? 4 : 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: T.ink }}>
+                      {h.act} <span style={{ fontWeight: 400, color: T.inkLight }}>by {h.by}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: T.inkFaint }}>{h.date}</div>
+                    {h.note && (
+                      <div style={{ marginTop: 4, fontSize: 12, color: T.amber, background: T.amberLight, padding: "6px 10px", borderRadius: 7, border: `1px solid #FDE68A` }}>
+                        {h.note}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Comment / resolved status */}
+          {isPending ? (
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: T.inkLight, display: "block", marginBottom: 6 }}>
+                Comment <span style={{ color: T.inkFaint, fontWeight: 400 }}>(required for Sent Back)</span>
+              </label>
+              <textarea
+                placeholder="Add a comment or reason…"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                style={{
+                  border: `1.5px solid ${T.border}`, borderRadius: 8, padding: 10, fontSize: 13,
+                  width: "100%", minHeight: 80, resize: "vertical", outline: "none",
+                  boxSizing: "border-box", color: T.ink, background: T.canvas,
+                }}
+              />
+            </div>
+          ) : (
+            <div style={{
+              background: sel.status === "Approved" ? T.greenLight : sel.status === "Rejected" ? T.redLight : T.amberLight,
+              borderRadius: 10, padding: "12px 16px",
+              border: `1px solid ${sel.status === "Approved" ? "#A7F3D0" : sel.status === "Rejected" ? "#FECACA" : "#FDE68A"}`,
+            }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: sel.status === "Approved" ? T.green : sel.status === "Rejected" ? T.red : T.amber }}>
+                {sel.status === "Approved" ? "✓ Approved" : sel.status === "Rejected" ? "✕ Rejected" : "↺ Sent Back"}
+              </div>
+              {sel.comment && <div style={{ fontSize: 12, color: T.inkMid, marginTop: 4 }}>{sel.comment}</div>}
+            </div>
+          )}
+        </div>
+
+        {/* ── Action button footer (Pending only) ── */}
+        {isPending && (
+          <div style={{
+            padding: "16px 24px",
+            borderTop: `1px solid ${T.border}`,
+            display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap",
+            background: T.canvas, borderRadius: "0 0 16px 16px",
+          }}>
+            <Btn label="Sendback" variant="amber" small onClick={() => { if (!comment.trim()) { alert("Please add a comment before sending back."); return; } takeAction("Sent Back"); }} />
+            <Btn label="Reject"   variant="danger"  small onClick={() => { if (!sel) return; takeAction("Rejected"); }} />
+            <Btn label="Accept"   variant="success" small onClick={() => { takeAction("Approved"); }} />
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body
+  );
+}
