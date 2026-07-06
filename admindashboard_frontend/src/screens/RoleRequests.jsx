@@ -3,7 +3,6 @@ import { T } from "../theme";
 import { statusVariant } from "../theme";
 import { useBreakpoint } from "../hooks";
 import { Card, SectionTitle, Table, Mono, Btn, Input, Badge, FormField, Modal, ModalHeader, Textarea, Select } from "../components/ui";
-import { CATEGORY_OPTIONS } from "../data";
 import { createRoleRequest } from "../api/roleRequestsApi";
 
 const getStatusStyle = (status) => {
@@ -465,20 +464,12 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                 )}
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 14, marginBottom: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14, marginBottom: 14 }}>
                 <FormField label="Department" required>
                   <Input placeholder="Enter department" value={form.dept} onChange={(e) => updateForm(index, "dept", e.target.value)} />
                 </FormField>
                 <FormField label="Role Name" required>
                   <Input placeholder="Enter role" value={form.role} onChange={(e) => updateForm(index, "role", e.target.value)} />
-                </FormField>
-                <FormField label="Category" required>
-                  <Select
-                    value={form.category}
-                    onChange={(e) => updateForm(index, "category", e.target.value)}
-                    options={CATEGORY_OPTIONS}
-                    placeholder="Select Category"
-                  />
                 </FormField>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <FormField label="Min Experience (Yrs)" required>
@@ -652,10 +643,6 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                         <div style={{ fontSize: 12, fontWeight: 600 }}>{typeof r.id === "string" ? r.id.substring(0, 18) : String(r.id)}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: 10, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>Category</div>
-                        <div style={{ fontSize: 12, fontWeight: 600 }}>{CATEGORY_OPTIONS.find((c) => c.value === r.category)?.label || r.category || "—"}</div>
-                      </div>
-                      <div>
                         <div style={{ fontSize: 10, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>Experience</div>
                         <div style={{ fontSize: 12, fontWeight: 600 }}>{r.experience ? `${r.experience} yrs` : "—"}</div>
                       </div>
@@ -722,14 +709,13 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
               setOriginalRequest(filteredRequests[index]);
               setShowViewModal(true);
             }}
-            cols={["Request ID", "Department", "Role", "Category", "Experience", "Salary Range", "Justification", "Date", "Status"]}
+            cols={["Request ID", "Department", "Role", "Experience", "Salary Range", "Justification", "Date", "Status"]}
             rows={filteredRequests.map((r) => {
               const ss = getStatusStyle(r.status);
               return [
                 <Mono v={typeof r.id === "string" ? r.id.substring(0, 18) : String(r.id)} />,
                 r.dept || "—",
                 <strong>{r.role || "—"}</strong>,
-                CATEGORY_OPTIONS.find((c) => c.value === r.category)?.label || r.category || "—",
                 r.experience ? `${r.experience} yrs` : "—",
                 r.salaryRange ? `₹${r.salaryRange}` : "—",
                 <span style={{ fontSize: 12, color: T.inkLight, maxWidth: 180, display: "inline-block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.just || "—"}</span>,
@@ -821,21 +807,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                   )}
                 </div>
 
-                <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Category</div>
-                  {selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back" ? (
-                    <Select
-                      value={selectedRequest.category || ""}
-                      onChange={(e) => setSelectedRequest({ ...selectedRequest, category: e.target.value })}
-                      options={CATEGORY_OPTIONS}
-                      placeholder="Select Category"
-                    />
-                  ) : (
-                    <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>
-                      {CATEGORY_OPTIONS.find((c) => c.value === selectedRequest.category)?.label || selectedRequest.category || "—"}
-                    </div>
-                  )}
-                </div>
+
 
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Salary Range</div>
