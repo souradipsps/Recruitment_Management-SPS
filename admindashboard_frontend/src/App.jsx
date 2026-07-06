@@ -3,6 +3,7 @@ import { T, font } from "./theme";
 import { useBreakpoint, usePersistentState, useSessionState } from "./hooks";
 import { NAV, EXISTING_ROLES, POSTINGS, JOB_APPLICATIONS, GENERAL_APPLICATIONS, INTERVIEWS, OFFERS } from "./data";
 import { fetchJobRequests } from "./api/jobRequestsApi";
+import { fetchApprovals } from "./api/approvalsApi";
 
 import Auth from "./screens/Auth";
 import ModuleSelector from "./screens/ModuleSelector";
@@ -50,6 +51,15 @@ export default function App() {
       .catch((err) => console.error("Failed to load job requests:", err));
     return () => { active = false; };
   }, [setJobRequests]);
+
+  // Load approval requests from the API on mount (backend auto-creates these on submission).
+  useEffect(() => {
+    let active = true;
+    fetchApprovals()
+      .then((data) => { if (active) setApprovalRequests(data); })
+      .catch((err) => console.error("Failed to load approvals:", err));
+    return () => { active = false; };
+  }, [setApprovalRequests]);
 
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
