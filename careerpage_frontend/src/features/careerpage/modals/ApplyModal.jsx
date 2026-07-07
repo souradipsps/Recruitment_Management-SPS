@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import "./css/ApplyModal.css";
 import { MAROON } from "../../../lib/constants";
 import logoImg from "../../../assets/logo.png";
+import { updateCandidateProfile, submitGeneralApplication } from "../services/applicationsService";
 
 const ALL_ROLES = [
   "Senior Mathematics Teacher", "English Language & Literature Teacher", "Physics Teacher",
@@ -94,7 +95,9 @@ function SkillsMultiSelect({ options, selected, onChange, placeholder }) {
 export function ApplyModal({ onClose, signupData, onSubmitData }) {
   const fileRef = useRef(null);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [fileName, setFileName] = useState("");
+  const [resumeFile, setResumeFile] = useState(null);
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [selectedSkills, setSelectedSkills] = useState([]);
 
@@ -118,7 +121,7 @@ export function ApplyModal({ onClose, signupData, onSubmitData }) {
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!firstName.trim()) { toast.error("First name is required"); return; }
     if (!lastName.trim()) { toast.error("Last name is required"); return; }
@@ -142,8 +145,25 @@ export function ApplyModal({ onClose, signupData, onSubmitData }) {
       extracurricular: form.extracurricular, extracurricularOther: form.extracurricularOther,
       selectedRoles, selectedSkills, linkedin: form.linkedin, portfolio: form.portfolio, resumeFile: fileName,
     };
-    onSubmitData?.(data);
-    setSubmitted(true);
+
+    setSubmitting(true);
+    try {
+      await updateCandidateProfile(
+        { ...form, firstName, lastName, selectedRoles, selectedSkills },
+        resumeFile,
+      );
+      await submitGeneralApplication({
+        preferredRole: selectedRoles.join(", "),
+        experience: form.experience,
+        qualification: `${form.education} (${form.degreeName})`,
+      });
+      onSubmitData?.(data);
+      setSubmitted(true);
+    } catch (err) {
+      toast.error(err.message || "Could not submit your application. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -347,6 +367,7 @@ export function ApplyModal({ onClose, signupData, onSubmitData }) {
                     if (f) {
                       if (f.size > 5 * 1024 * 1024) { toast.error("File exceeds 5 MB limit."); return; }
                       setFileName(f.name);
+                      setResumeFile(f);
                     }
                   }} />
                 </div>
@@ -354,8 +375,10 @@ export function ApplyModal({ onClose, signupData, onSubmitData }) {
 
               {/* Actions */}
               <div className="am-form-footer">
-                <button type="button" onClick={onClose} className="am-btn-cancel">Cancel</button>
-                <button type="submit" className="am-btn-submit">Submit Application</button>
+                <button type="button" onClick={onClose} className="am-btn-cancel" disabled={submitting}>Cancel</button>
+                <button type="submit" className="am-btn-submit" disabled={submitting}>
+                  {submitting ? "Submitting…" : "Submit Application"}
+                </button>
               </div>
 
             </form>

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { T, statusVariant } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
 import { Card, SectionTitle, Table, Mono, Badge, Input, Btn, Modal, ModalHeader, Select, FormField } from "../components/ui";
-import { updateApplicationStatus } from "../api/applicationsApi";
+import { updateApplicationStatus, updateGeneralApplicationStatus } from "../api/applicationsApi";
 
 const STATUS_OPTIONS = [
   { value: "Shortlisted", label: "Shortlisted" },
@@ -117,20 +117,16 @@ export default function Applications({
   const genCount = filteredGenApplications.length;
 
   // Job-post applications are backed by PATCH /applications/{id}/update_status/;
-  // general applications (profiles) have no such endpoint and stay local-only.
+  // general applications (profiles) are backed by PATCH /general-applications/{id}/.
   const updateStatus = async (app, status) => {
     setStatusError("");
-
-    if (!isJob) {
-      setData((prev) => prev.map((a) => (a.id === app.id ? { ...a, status } : a)));
-      if (selectedApp?.id === app.id) setSelectedApp((prev) => ({ ...prev, status }));
-      setStatusModalApp(null);
-      return;
-    }
-
     setStatusUpdating(true);
     try {
-      await updateApplicationStatus(app.backendId, status);
+      if (isJob) {
+        await updateApplicationStatus(app.backendId, status);
+      } else {
+        await updateGeneralApplicationStatus(app.backendId, status);
+      }
       setData((prev) => prev.map((a) => (a.id === app.id ? { ...a, status } : a)));
       if (selectedApp?.id === app.id) setSelectedApp((prev) => ({ ...prev, status }));
       setStatusModalApp(null);
@@ -691,7 +687,7 @@ export default function Applications({
             />
           ) : (
             <Table
-              cols={["App ID", "Candidate", "Preferred Role", "Department", "Experience", "Qualification", "Applied Date", "Status", "Actions"]}
+              cols={["App ID", "Candidate", "Preferred Role", "Location", "Experience", "Qualification", "Applied Date", "Status", "Actions"]}
               onRowClick={(index) => setSelectedApp(displayFiltered[index])}
               onRowDoubleClick={isMobile ? (index) => updateStatus(displayFiltered[index], "Shortlisted") : undefined}
               rows={displayFiltered.map((a) => [
@@ -701,7 +697,7 @@ export default function Applications({
                   <div><strong>{a.name}</strong><div style={{ fontSize: 11, color: T.inkFaint }}>{a.email}</div></div>
                 </div>,
                 a.preferredRole || "—",
-                <span style={{ fontSize: 12, color: T.inkMid }}>{a.preferredDept || "—"}</span>,
+                <span style={{ fontSize: 12, color: T.inkMid }}>{a.location || "—"}</span>,
                 a.exp,
                 a.qualification || "—",
                 a.applied,
@@ -822,7 +818,7 @@ export default function Applications({
                   : [
                       { icon: "🆔", label: "Application ID", value: selectedApp.id },
                       { icon: "💼", label: "Preferred Role", value: selectedApp.preferredRole || "—" },
-                      { icon: "🏢", label: "Preferred Dept", value: selectedApp.preferredDept || "—" },
+                      { icon: "📍", label: "Location", value: selectedApp.location || "—" },
                       { icon: "⏳", label: "Experience", value: selectedApp.exp },
                       { icon: "🎓", label: "Qualification", value: selectedApp.qualification || "—" },
                       { icon: "📅", label: "Applied Date", value: selectedApp.applied },
