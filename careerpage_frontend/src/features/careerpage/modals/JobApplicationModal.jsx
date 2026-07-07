@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import "./css/JobApplicationModal.css";
 import { MAROON } from "../../../lib/constants";
 import logoImg from "../../../assets/logo.png";
-import { submitApplication } from "../services/applicationsService";
+import { updateUserProfile, submitJobApplication } from "../services/applicationsService";
 
 const ALL_ROLES = [
   "Senior Mathematics Teacher", "English Language & Literature Teacher", "Physics Teacher",
@@ -167,21 +167,16 @@ const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileDat
     if (hasReferral === "Yes" && !referralEmpId.trim()) { toast.error("Please enter the Employee ID for the referral"); return; }
     if (!resumeFile) { toast.error("Please upload your resume in your profile dashboard before applying for this job"); return; }
 
-    // Backend expects one "qualification" string; combine degree + professional
-    // qualification (falling back to the free-text "Other" value when chosen).
-    const professionalQualText = professionalQual === "Other" ? professionalQualOther.trim() : professionalQual;
-    const qualification = professionalQualText ? `${degreeName.trim()}, ${professionalQualText}` : degreeName.trim();
-
     setSubmitting(true);
     try {
-      await submitApplication({
-        postingId: job.id,
-        experience,
-        qualification,
-        coverLetter,
-        noticePeriod: availability,
-        hasReferral: hasReferral === "Yes",
-        referralEmpId: hasReferral === "Yes" ? referralEmpId.trim() : "",
+      await updateUserProfile({
+        firstName: profileData.firstName, lastName: profileData.lastName, phone: profileData.phone,
+        location: profileData.location, education, degreeName,
+        professionalQualification: professionalQual, professionalQualificationOther: professionalQualOther,
+        experience, salary, extracurricular, extracurricularOther, selectedRoles, selectedSkills, linkedin, portfolio,
+      });
+      await submitJobApplication(job.id, {
+        experience, education, degreeName, coverLetter, noticePeriod: availability, hasReferral, referralEmpId,
       });
 
       onSubmit(job.id, { coverLetter, noticePeriod: availability, hasReferral, referralEmpId }, {
@@ -291,7 +286,7 @@ const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileDat
                   <div>
                     <label className="jm-label">Years of Experience <span className="jm-required">*</span></label>
                     <select required className="jm-select jm-select--readonly" value={experience} disabled>
-                      <option value="">Select experience</option><option>0–1 years (Fresher)</option><option>1–3 years</option><option>3–5 years</option><option>5–8 years</option><option>8+ years</option>
+                      <option value="">Select experience</option><option value="0-1">0–1 years (Fresher)</option><option value="1-2">1–2 years</option><option value="2-4">2–4 years</option><option value="3-5">3–5 years</option><option value="5-8">5–8 years</option><option value="8+">8+ years</option>
                     </select>
                   </div>
                   <div className="sm:col-start-1">

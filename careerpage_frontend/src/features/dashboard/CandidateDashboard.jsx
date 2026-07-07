@@ -5,12 +5,10 @@ import { toast } from "sonner";
 import logoImg from "../../assets/logo.png";
 
 import { MAROON, GOLD } from "../../lib/constants";
+import { updateUserProfile } from "../careerpage/services/applicationsService";
 
 // Mock data & configurations
 import { notifications } from "../../mockData/dashboardMockData";
-import { fetchMyApplications } from "../careerpage/services/applicationsService";
-import { fetchPublicJobs } from "../careerpage/services/jobsService";
-import { updateUserProfile, normalizeProfile } from "../careerpage/services/authService";
 
 // Layout
 import { DashboardSidebar } from "./components/layout/DashboardSidebar";
@@ -33,6 +31,18 @@ import { UnsavedChangesModal } from "./components/popup/UnsavedChangesModal";
 // page load / browser refresh. Module-level so it survives component re-mounts
 // (navigating away and back) but resets when the JS bundle is re-evaluated.
 let dashboardLoadedOnce = false;
+
+// `profile.experience` holds the backend's raw choice code (e.g. "3-5") since
+// that's what the select's `value` now is — this maps it back to a friendly
+// label for read-only display (e.g. the generated resume preview).
+const EXPERIENCE_LABELS = {
+  "0-1": "0–1 years (Fresher)",
+  "1-2": "1–2 years",
+  "2-4": "2–4 years",
+  "3-5": "3–5 years",
+  "5-8": "5–8 years",
+  "8+": "8+ years",
+};
 
 export function CandidateDashboard({
   onClose,
@@ -92,6 +102,7 @@ export function CandidateDashboard({
 
   const [profilePic, setProfilePic] = useState(null);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const [lastSavedProfile, setLastSavedProfile] = useState({
     name: initialProfileData?.fullName
@@ -143,7 +154,10 @@ export function CandidateDashboard({
   // Resume states
   const [resumeFile, setResumeFile] = useState(initialProfileData?.resumeFile || null);
   const [resumeUrl, setResumeUrl] = useState(initialProfileData?.resumeUrl || null);
-  const [selectedResumeFileObj, setSelectedResumeFileObj] = useState(null);
+  // The actual File object for a newly-picked resume this session (null if the
+  // candidate hasn't chosen a new file — resumeFile/resumeUrl above only track
+  // the display name / local preview URL, not something we can re-upload).
+  const [resumeFileObj, setResumeFileObj] = useState(null);
   const [fileSizeError, setFileSizeError] = useState("");
 
   // Refs for auto-scrolling
@@ -175,48 +189,22 @@ export function CandidateDashboard({
   const [cameraTargetDocKey, setCameraTargetDocKey] = useState(null);
   const [showPhotoPopup, setShowPhotoPopup] = useState(false);
 
-  // Applications fetched from the backend (GET /applications/mine/), enriched
-  // with department/location/type by cross-referencing the live public
-  // postings list (that endpoint doesn't return those fields itself).
-  const [dynamicApplications, setDynamicApplications] = useState([]);
-  const [applicationsLoading, setApplicationsLoading] = useState(true);
-  const [applicationsError, setApplicationsError] = useState(null);
-
-  const loadApplications = () => {
-    setApplicationsLoading(true);
-    setApplicationsError(null);
-    Promise.all([fetchMyApplications(), fetchPublicJobs().catch(() => [])])
-      .then(([myApplications, postings]) => {
-        const postingsById = new Map(postings.map((p) => [p.id, p]));
-        setDynamicApplications(
-          myApplications.map((a) => {
-            const posting = postingsById.get(a.postingId);
-            return {
-              id: a.postingId,
-              appId: a.appId,
-              title: posting?.title || a.title,
-              department: posting?.department || "—",
-              location: a.location || posting?.location || "—",
-              type: posting?.type || "—",
-              appliedDate: a.appliedDate
-                ? new Date(a.appliedDate).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })
-                : "—",
-              status: a.status,
-            };
-          })
-        );
-      })
-      .catch((err) => setApplicationsError(err.message || "Failed to load your applications."))
-      .finally(() => setApplicationsLoading(false));
-  };
-
-  useEffect(() => {
-    loadApplications();
-  }, []);
+  // Dynamic applications based on allJobs and appliedJobIds
+  const dynamicApplications = allJobs
+    .filter((j) => appliedJobIds.includes(j.id))
+    .map((j) => ({
+      id: j.id,
+      title: j.title,
+      department: j.department,
+      location: j.location,
+      appliedDate: new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+      status: "Under Review",
+      type: j.type,
+    }));
 
   const [dashboardNotifications, setDashboardNotifications] = useState(() =>
     notifications.map((n) => ({ ...n, isNew: !n.read }))
@@ -465,7 +453,7 @@ export function CandidateDashboard({
     });
     setResumeFile(lastSavedProfile.resumeFile);
     setResumeUrl(initialProfileData?.resumeUrl || null);
-    setSelectedResumeFileObj(null);
+    setResumeFileObj(null);
   };
 
   // Execute a pending navigation action after the unsaved-changes prompt resolves
@@ -502,7 +490,7 @@ export function CandidateDashboard({
     if (resumeUrl) URL.revokeObjectURL(resumeUrl);
     setResumeFile(f.name);
     setResumeUrl(URL.createObjectURL(f));
-    setSelectedResumeFileObj(f);
+    setResumeFileObj(f);
   };
 
   // Open dynamic resume preview
@@ -658,7 +646,7 @@ export function CandidateDashboard({
                 </div>
                 <div class="meta-item">
                   <div class="meta-label">Years of Experience</div>
-                  <div class="meta-value">${profile.experience || "None"}</div>
+                  <div class="meta-value">${EXPERIENCE_LABELS[profile.experience] || "None"}</div>
                 </div>
                 <div class="meta-item">
                   <div class="meta-label">Expected Salary</div>
@@ -737,23 +725,59 @@ export function CandidateDashboard({
       toast.error("Phone number must be exactly 10 digits");
       return false;
     }
+
+    setSaving(true);
     try {
-      const updatedUser = await updateUserProfile(profile, selectedResumeFileObj);
-      const updatedData = normalizeProfile(updatedUser);
-      onProfileUpdate?.(updatedData);
-      setLastSavedProfile({
-        ...profile,
-        resumeFile: updatedData.resumeFile,
-      });
-      setSelectedResumeFileObj(null);
-      setSaved(true);
-      toast.success("Profile changes saved successfully!");
-      setTimeout(() => setSaved(false), 2000);
-      return true;
+      await updateUserProfile(
+        {
+          firstName: profile.name, lastName: profile.lastName, phone: profile.phone,
+          location: profile.location, education: profile.highestEducation, degreeName: profile.degreeName,
+          professionalQualification: profile.professionalQualification,
+          professionalQualificationOther: profile.professionalQualificationOther,
+          experience: profile.experience, salary: profile.salary,
+          extracurricular: profile.extracurricular, extracurricularOther: profile.extracurricularOther,
+          selectedRoles: profile.roles, selectedSkills: profile.skills,
+          linkedin: profile.linkedin, portfolio: profile.portfolio,
+        },
+        resumeFileObj,
+      );
     } catch (err) {
-      toast.error(err.message || "Failed to save profile changes. Please try again.");
+      toast.error(err.message || "Could not save your profile. Please try again.");
       return false;
+    } finally {
+      setSaving(false);
     }
+
+    setSaved(true);
+    toast.success("Profile changes saved successfully!", { duration: 2000 });
+    const updatedData = {
+      fullName: [profile.name, profile.lastName].filter(Boolean).join(" "),
+      email: profile.email || "",
+      phone: profile.phone || "",
+      location: profile.location || "",
+      education: profile.highestEducation || "",
+      degreeName: profile.degreeName || "",
+      professionalQualification: profile.professionalQualification || "",
+      professionalQualificationOther: profile.professionalQualificationOther || "",
+      experience: profile.experience || "",
+      salary: profile.salary || "",
+      extracurricular: profile.extracurricular || "",
+      extracurricularOther: profile.extracurricularOther || "",
+      selectedRoles: profile.roles || [],
+      selectedSkills: profile.skills || [],
+      linkedin: profile.linkedin || "",
+      portfolio: profile.portfolio || "",
+      resumeFile: resumeFile || "",
+      resumeUrl: resumeUrl || "",
+    };
+    onProfileUpdate?.(updatedData);
+    setLastSavedProfile({
+      ...profile,
+      resumeFile: resumeFile,
+    });
+    setResumeFileObj(null);
+    setTimeout(() => setSaved(false), 2000);
+    return true;
   };
 
   // Onboarding documents submission validation
@@ -1112,29 +1136,11 @@ export function CandidateDashboard({
 
               {/* Applications Tab */}
               {activeTab === "applications" && (
-                applicationsLoading ? (
-                  <div style={{ padding: "40px 0", textAlign: "center", color: "#6b7280" }}>
-                    Loading your applications…
-                  </div>
-                ) : applicationsError ? (
-                  <div style={{ padding: "24px", textAlign: "center", color: "#b91c1c" }}>
-                    {applicationsError}
-                    <div>
-                      <button
-                        onClick={loadApplications}
-                        style={{ marginTop: 12, background: MAROON, color: "#fff", border: "none", borderRadius: 6, padding: "8px 16px", cursor: "pointer", fontWeight: 600 }}
-                      >
-                        Retry
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <ApplicationsSection
-                    dynamicApplications={dynamicApplications}
-                    allJobs={allJobs}
-                    setSelectedJobDesc={setSelectedJobDesc}
-                  />
-                )
+                <ApplicationsSection
+                  dynamicApplications={dynamicApplications}
+                  allJobs={allJobs}
+                  setSelectedJobDesc={setSelectedJobDesc}
+                />
               )}
 
               {/* Profile & Resume Tab */}
@@ -1149,6 +1155,7 @@ export function CandidateDashboard({
                   handleViewResume={handleViewResume}
                   handleSave={handleSave}
                   saved={saved}
+                  saving={saving}
                   personalSectionRef={personalSectionRef}
                   professionalSectionRef={professionalSectionRef}
                   resumeSectionRef={resumeSectionRef}
