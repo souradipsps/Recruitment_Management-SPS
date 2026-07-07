@@ -30,6 +30,7 @@ export default function AppModals({ app }) {
     mergedProfileData,
     reloadWithLoader,
     handleLogout,
+    loadUserProfile,
     setShowLogin,
     setApplyAfterSignup,
     setLoggedInUser,
@@ -56,16 +57,18 @@ export default function AppModals({ app }) {
               setApplyAfterSignup(false);
             }}
             initialTab={loginTab}
-            onLoginSuccess={(name) => {
+            onLoginSuccess={async (name) => {
               setLoggedInUser(name);
               setShowLogin(false);
               setShowDashboard(false);
+              await loadUserProfile();
               reloadWithLoader();
             }}
-            onSignupSuccess={(data) => {
+            onSignupSuccess={async (data) => {
               setLoggedInUser(data.name);
               setSignupData(data);
               setApplyAfterSignup(false);
+              await loadUserProfile();
               if (applyAfterSignup) setShowApply(true);
               reloadWithLoader();
             }}

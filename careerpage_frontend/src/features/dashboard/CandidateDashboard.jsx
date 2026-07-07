@@ -10,6 +10,7 @@ import { MAROON, GOLD } from "../../lib/constants";
 import { notifications } from "../../mockData/dashboardMockData";
 import { fetchMyApplications } from "../careerpage/services/applicationsService";
 import { fetchPublicJobs } from "../careerpage/services/jobsService";
+import { updateUserProfile, normalizeProfile } from "../careerpage/services/authService";
 
 // Layout
 import { DashboardSidebar } from "./components/layout/DashboardSidebar";
@@ -142,6 +143,7 @@ export function CandidateDashboard({
   // Resume states
   const [resumeFile, setResumeFile] = useState(initialProfileData?.resumeFile || null);
   const [resumeUrl, setResumeUrl] = useState(initialProfileData?.resumeUrl || null);
+  const [selectedResumeFileObj, setSelectedResumeFileObj] = useState(null);
   const [fileSizeError, setFileSizeError] = useState("");
 
   // Refs for auto-scrolling
@@ -194,7 +196,7 @@ export function CandidateDashboard({
               appId: a.appId,
               title: posting?.title || a.title,
               department: posting?.department || "—",
-              location: posting?.location || "—",
+              location: a.location || posting?.location || "—",
               type: posting?.type || "—",
               appliedDate: a.appliedDate
                 ? new Date(a.appliedDate).toLocaleDateString("en-US", {
@@ -463,6 +465,7 @@ export function CandidateDashboard({
     });
     setResumeFile(lastSavedProfile.resumeFile);
     setResumeUrl(initialProfileData?.resumeUrl || null);
+    setSelectedResumeFileObj(null);
   };
 
   // Execute a pending navigation action after the unsaved-changes prompt resolves
@@ -499,6 +502,7 @@ export function CandidateDashboard({
     if (resumeUrl) URL.revokeObjectURL(resumeUrl);
     setResumeFile(f.name);
     setResumeUrl(URL.createObjectURL(f));
+    setSelectedResumeFileObj(f);
   };
 
   // Open dynamic resume preview
@@ -728,40 +732,28 @@ export function CandidateDashboard({
   };
 
   // Profile verification & save changes
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!profile.phone || profile.phone.length !== 10) {
       toast.error("Phone number must be exactly 10 digits");
       return false;
     }
-    setSaved(true);
-    toast.success("Profile changes saved successfully!", { duration: 2000 });
-    const updatedData = {
-      fullName: [profile.name, profile.lastName].filter(Boolean).join(" "),
-      email: profile.email || "",
-      phone: profile.phone || "",
-      location: profile.location || "",
-      education: profile.highestEducation || "",
-      degreeName: profile.degreeName || "",
-      professionalQualification: profile.professionalQualification || "",
-      professionalQualificationOther: profile.professionalQualificationOther || "",
-      experience: profile.experience || "",
-      salary: profile.salary || "",
-      extracurricular: profile.extracurricular || "",
-      extracurricularOther: profile.extracurricularOther || "",
-      selectedRoles: profile.roles || [],
-      selectedSkills: profile.skills || [],
-      linkedin: profile.linkedin || "",
-      portfolio: profile.portfolio || "",
-      resumeFile: resumeFile || "",
-      resumeUrl: resumeUrl || "",
-    };
-    onProfileUpdate?.(updatedData);
-    setLastSavedProfile({
-      ...profile,
-      resumeFile: resumeFile,
-    });
-    setTimeout(() => setSaved(false), 2000);
-    return true;
+    try {
+      const updatedUser = await updateUserProfile(profile, selectedResumeFileObj);
+      const updatedData = normalizeProfile(updatedUser);
+      onProfileUpdate?.(updatedData);
+      setLastSavedProfile({
+        ...profile,
+        resumeFile: updatedData.resumeFile,
+      });
+      setSelectedResumeFileObj(null);
+      setSaved(true);
+      toast.success("Profile changes saved successfully!");
+      setTimeout(() => setSaved(false), 2000);
+      return true;
+    } catch (err) {
+      toast.error(err.message || "Failed to save profile changes. Please try again.");
+      return false;
+    }
   };
 
   // Onboarding documents submission validation
@@ -1241,8 +1233,8 @@ export function CandidateDashboard({
           revertUnsavedChanges();
           proceedNavigation(action);
         }}
-        onSave={() => {
-          const savedSuccessfully = handleSave();
+        onSave={async () => {
+          const savedSuccessfully = await handleSave();
           if (savedSuccessfully) {
             const action = pendingNavigation;
             setPendingNavigation(null);

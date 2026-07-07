@@ -181,6 +181,7 @@ const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileDat
         coverLetter,
         noticePeriod: availability,
         hasReferral: hasReferral === "Yes",
+        referralEmpId: hasReferral === "Yes" ? referralEmpId.trim() : "",
       });
 
       onSubmit(job.id, { coverLetter, noticePeriod: availability, hasReferral, referralEmpId }, {

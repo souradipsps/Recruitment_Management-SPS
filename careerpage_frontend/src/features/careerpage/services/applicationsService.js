@@ -37,10 +37,10 @@ async function readErrorMessage(res, fallback) {
 /**
  * Submit a job application for a specific published posting.
  * POST /api/applications/
- * @param {{ postingId: number, experience: string, qualification: string, coverLetter?: string, noticePeriod?: string, hasReferral?: boolean }} data
+ * @param {{ postingId: number, experience: string, qualification: string, coverLetter?: string, noticePeriod?: string, hasReferral?: boolean, referralEmpId?: string }} data
  * @returns {Promise<object>} the created application record
  */
-export async function submitApplication({ postingId, experience, qualification, coverLetter, noticePeriod, hasReferral }) {
+export async function submitApplication({ postingId, experience, qualification, coverLetter, noticePeriod, hasReferral, referralEmpId }) {
   let res;
   try {
     res = await fetch(`${BASE_URL}/applications/`, {
@@ -53,6 +53,7 @@ export async function submitApplication({ postingId, experience, qualification, 
         cover_letter: coverLetter ?? "",
         notice_period: noticePeriod ?? "",
         has_referral: !!hasReferral,
+        ...(hasReferral && referralEmpId ? { referral_emp_id: referralEmpId } : {}),
       }),
     });
   } catch {
@@ -67,12 +68,15 @@ export async function submitApplication({ postingId, experience, qualification, 
 }
 
 // Map one raw "mine" record onto the shape the dashboard components expect.
+// The live API returns richer data than documented (location, resume, etc.)
+// on top of the documented fields — use it directly where available.
 function normalizeMyApplication(raw) {
   return {
     backendId: raw.id,
     appId: raw.app_id ?? null,
     postingId: raw.posting,
     title: raw.posting_title || raw.role || "Untitled Position",
+    location: raw.location || null,
     status: raw.status || "Applied",
     appliedDate: raw.applied_date || null,
   };

@@ -7,6 +7,7 @@ import { buildMergedProfileData } from "./lib/profileData";
 import { Loader } from "./components/common/Loader";
 import { CareerPage } from "./features/careerpage/CareerPage";
 import AppModals from "./features/careerpage/AppModals";
+import { fetchUserProfile, normalizeProfile } from "./features/careerpage/services/authService";
 
 // App shell: owns the cross-cutting auth / apply / dashboard state and wires
 // the public CareerPage together with the modals and candidate dashboard.
@@ -24,6 +25,22 @@ export default function App() {
   useEffect(() => {
     const timer = setTimeout(() => setInitialLoading(false), 1500);
     return () => clearTimeout(timer);
+  }, []);
+
+  const loadUserProfile = async () => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) return;
+    try {
+      const userData = await fetchUserProfile();
+      setLoggedInUser(userData.full_name || userData.email.split("@")[0]);
+      setSavedProfileData(normalizeProfile(userData));
+    } catch (err) {
+      console.error("Error loading user profile:", err);
+    }
+  };
+
+  useEffect(() => {
+    loadUserProfile();
   }, []);
 
   useEffect(() => {
@@ -88,6 +105,10 @@ export default function App() {
 
   const handleLogout = () => {
     setLoggedInUser("");
+    setSavedProfileData(null);
+    setSignupData(null);
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
     setShowDashboard(false);
     setCameFromApply(false);
     setCameFromSection(undefined);
@@ -131,6 +152,7 @@ export default function App() {
     mergedProfileData,
     reloadWithLoader,
     handleLogout,
+    loadUserProfile,
     setShowLogin,
     setApplyAfterSignup,
     setLoggedInUser,

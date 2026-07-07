@@ -13,10 +13,9 @@ const authHeaders = () => ({
 });
 
 // Map one API record -> the shape the Applications screen expects.
-// GET /applications/ only returns id, app_id, role, posting, candidate_name,
-// status, applied_date — fields the current table also shows (email, phone,
-// experience, qualification, referredBy, resume) are not part of this
-// endpoint's response, so they're placeheld with "—" rather than invented.
+// The live API returns richer data than documented — candidate contact info,
+// experience, qualification, referral, and resume are all present on the
+// response and used directly rather than placeheld.
 export const normalizeApplication = (r) => ({
   id: r.app_id || String(r.id),
   backendId: r.id,
@@ -25,12 +24,12 @@ export const normalizeApplication = (r) => ({
   jobPostingId: r.posting ?? null,
   status: r.status || "Applied",
   applied: r.applied_date || "",
-  email: "—",
-  exp: "—",
-  qualification: "—",
-  referredBy: "—",
-  phone: "—",
-  resume: null,
+  email: r.candidate_email || "—",
+  exp: r.experience || "—",
+  qualification: r.qualification || "—",
+  referredBy: r.has_referral ? (r.referral_emp_id || r.referred_by || "—") : "—",
+  phone: r.candidate_phone || "—",
+  resume: r.resume || null,
 });
 
 // GET /api/applications/ -> normalized array (admin: all job-posting applications).
