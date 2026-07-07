@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import logoImg from "../../assets/logo.png";
 
 import { MAROON, GOLD } from "../../lib/constants";
-import { updateUserProfile } from "../careerpage/services/applicationsService";
 
 // Mock data & configurations
 import { notifications } from "../../mockData/dashboardMockData";
@@ -31,18 +30,6 @@ import { UnsavedChangesModal } from "./components/popup/UnsavedChangesModal";
 // page load / browser refresh. Module-level so it survives component re-mounts
 // (navigating away and back) but resets when the JS bundle is re-evaluated.
 let dashboardLoadedOnce = false;
-
-// `profile.experience` holds the backend's raw choice code (e.g. "3-5") since
-// that's what the select's `value` now is — this maps it back to a friendly
-// label for read-only display (e.g. the generated resume preview).
-const EXPERIENCE_LABELS = {
-  "0-1": "0–1 years (Fresher)",
-  "1-2": "1–2 years",
-  "2-4": "2–4 years",
-  "3-5": "3–5 years",
-  "5-8": "5–8 years",
-  "8+": "8+ years",
-};
 
 export function CandidateDashboard({
   onClose,
@@ -102,7 +89,6 @@ export function CandidateDashboard({
 
   const [profilePic, setProfilePic] = useState(null);
   const [saved, setSaved] = useState(false);
-  const [saving, setSaving] = useState(false);
 
   const [lastSavedProfile, setLastSavedProfile] = useState({
     name: initialProfileData?.fullName
@@ -154,10 +140,6 @@ export function CandidateDashboard({
   // Resume states
   const [resumeFile, setResumeFile] = useState(initialProfileData?.resumeFile || null);
   const [resumeUrl, setResumeUrl] = useState(initialProfileData?.resumeUrl || null);
-  // The actual File object for a newly-picked resume this session (null if the
-  // candidate hasn't chosen a new file — resumeFile/resumeUrl above only track
-  // the display name / local preview URL, not something we can re-upload).
-  const [resumeFileObj, setResumeFileObj] = useState(null);
   const [fileSizeError, setFileSizeError] = useState("");
 
   // Refs for auto-scrolling
@@ -453,7 +435,6 @@ export function CandidateDashboard({
     });
     setResumeFile(lastSavedProfile.resumeFile);
     setResumeUrl(initialProfileData?.resumeUrl || null);
-    setResumeFileObj(null);
   };
 
   // Execute a pending navigation action after the unsaved-changes prompt resolves
@@ -490,7 +471,6 @@ export function CandidateDashboard({
     if (resumeUrl) URL.revokeObjectURL(resumeUrl);
     setResumeFile(f.name);
     setResumeUrl(URL.createObjectURL(f));
-    setResumeFileObj(f);
   };
 
   // Open dynamic resume preview
@@ -646,7 +626,7 @@ export function CandidateDashboard({
                 </div>
                 <div class="meta-item">
                   <div class="meta-label">Years of Experience</div>
-                  <div class="meta-value">${EXPERIENCE_LABELS[profile.experience] || "None"}</div>
+                  <div class="meta-value">${profile.experience || "None"}</div>
                 </div>
                 <div class="meta-item">
                   <div class="meta-label">Expected Salary</div>
@@ -720,34 +700,11 @@ export function CandidateDashboard({
   };
 
   // Profile verification & save changes
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!profile.phone || profile.phone.length !== 10) {
       toast.error("Phone number must be exactly 10 digits");
       return false;
     }
-
-    setSaving(true);
-    try {
-      await updateUserProfile(
-        {
-          firstName: profile.name, lastName: profile.lastName, phone: profile.phone,
-          location: profile.location, education: profile.highestEducation, degreeName: profile.degreeName,
-          professionalQualification: profile.professionalQualification,
-          professionalQualificationOther: profile.professionalQualificationOther,
-          experience: profile.experience, salary: profile.salary,
-          extracurricular: profile.extracurricular, extracurricularOther: profile.extracurricularOther,
-          selectedRoles: profile.roles, selectedSkills: profile.skills,
-          linkedin: profile.linkedin, portfolio: profile.portfolio,
-        },
-        resumeFileObj,
-      );
-    } catch (err) {
-      toast.error(err.message || "Could not save your profile. Please try again.");
-      return false;
-    } finally {
-      setSaving(false);
-    }
-
     setSaved(true);
     toast.success("Profile changes saved successfully!", { duration: 2000 });
     const updatedData = {
@@ -775,7 +732,6 @@ export function CandidateDashboard({
       ...profile,
       resumeFile: resumeFile,
     });
-    setResumeFileObj(null);
     setTimeout(() => setSaved(false), 2000);
     return true;
   };
@@ -1155,7 +1111,6 @@ export function CandidateDashboard({
                   handleViewResume={handleViewResume}
                   handleSave={handleSave}
                   saved={saved}
-                  saving={saving}
                   personalSectionRef={personalSectionRef}
                   professionalSectionRef={professionalSectionRef}
                   resumeSectionRef={resumeSectionRef}
@@ -1240,8 +1195,8 @@ export function CandidateDashboard({
           revertUnsavedChanges();
           proceedNavigation(action);
         }}
-        onSave={async () => {
-          const savedSuccessfully = await handleSave();
+        onSave={() => {
+          const savedSuccessfully = handleSave();
           if (savedSuccessfully) {
             const action = pendingNavigation;
             setPendingNavigation(null);
