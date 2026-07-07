@@ -4,6 +4,7 @@ import { statusVariant } from "../theme";
 import { useBreakpoint } from "../hooks";
 import { Card, SectionTitle, Table, Mono, Btn, Input, Badge, FormField, Modal, ModalHeader, Textarea, Select } from "../components/ui";
 import { createRoleRequest, updateRoleRequest } from "../api/roleRequestsApi";
+import { fetchApprovals } from "../api/approvalsApi";
 
 const getStatusStyle = (status) => {
   switch (status) {
@@ -221,6 +222,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
       const newRequests = updatedForms.map((f, i) => ({
         ...f,
         id: created[i].id,
+        backendId: created[i].backendId,
         status: created[i].status || "Pending",
         submittedBy: created[i].submittedBy || submittedBy,
         date: now,
@@ -228,25 +230,25 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
         history: [{ act: "Submitted", by: submittedBy, date: now, note: "" }],
       }));
       setRoleRequests((prev) => [...prev, ...newRequests]);
-      setApprovalRequests((prev) => [
-        ...prev,
-        ...newRequests.map((r) => ({
-          id: `APR-${Date.now()}-${Math.random()}`,
-          dept: r.dept,
-          role: r.role,
-          experience: r.experience,
-          requestedBy: submittedBy,
-          date: r.date,
-          salary: r.salaryRange ? `₹${r.salaryRange}` : "",
-          just: r.just,
-          status: r.status,
-          comment: "",
-          history: r.history,
-          sourceId: r.id,
-          type: "Role Request",
-          category: r.category,
-        })),
-      ]);
+
+      // The backend auto-creates the corresponding Approval record(s) for each
+      // Role Request. Re-fetch the real list instead of fabricating local
+      // stand-ins here — a fabricated entry has no backendId, so approving/
+      // rejecting it silently no-ops against the API while a duplicate,
+      // backend-sourced entry (with a real backendId) does update the database.
+      // Job Request approvals are handled by their own screen, so only the
+      // "Role Request" entries are replaced; anything else is left untouched.
+      try {
+        const freshApprovals = await fetchApprovals();
+        const freshRoleRequestApprovals = freshApprovals.filter((a) => a.type === "Role Request");
+        setApprovalRequests((prev) => [
+          ...prev.filter((a) => a.type !== "Role Request"),
+          ...freshRoleRequestApprovals,
+        ]);
+      } catch (err) {
+        console.error("Failed to refresh approvals after submitting role request:", err);
+      }
+
       setRoleForms([emptyForm()]);
       setShowForm(false);
       setEditingId(null);

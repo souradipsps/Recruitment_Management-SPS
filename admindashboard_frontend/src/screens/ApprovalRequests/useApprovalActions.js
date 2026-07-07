@@ -1,5 +1,6 @@
 import { takeApprovalAction } from "../../api/approvalsApi";
 import { updateJobRequestFields } from "../../api/jobRequestsApi";
+import { updateRoleRequest } from "../../api/roleRequestsApi";
 
 const parseSal = (v) => parseFloat((v || "").replace(/,/g, "")) || 0;
 
@@ -25,7 +26,7 @@ export function useApprovalActions({
   const performAction = async (r, action, customComment) => {
     // takeApprovalAction only sends the action verb + note — any field edits
     // made in this modal (department, role, salary, etc.) must be saved to the
-    // underlying Job Request separately, or they'd silently vanish.
+    // underlying Job/Role Request separately, or they'd silently vanish.
     if (r.type === "Job Request" && r.sourceDbId != null) {
       try {
         await updateJobRequestFields(r.sourceDbId, {
@@ -44,6 +45,22 @@ export function useApprovalActions({
         });
       } catch (err) {
         console.error("Failed to save job request edits:", err);
+        alert(`Could not save changes: ${err.message}`);
+        return false;
+      }
+    }
+
+    if (r.type === "Role Request" && r.sourceDbId != null) {
+      try {
+        await updateRoleRequest(r.sourceDbId, {
+          department: r.dept,
+          role: r.role,
+          justification: r.just,
+          salary_range: r.salary ? r.salary.replace(/^₹/, "") : "",
+          experience: r.experience,
+        });
+      } catch (err) {
+        console.error("Failed to save role request edits:", err);
         alert(`Could not save changes: ${err.message}`);
         return false;
       }
