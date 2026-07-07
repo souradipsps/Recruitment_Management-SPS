@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import "./css/ApplyModal.css";
 import { MAROON } from "../../../lib/constants";
 import logoImg from "../../../assets/logo.png";
+import { updateUserProfile, submitGeneralApplication } from "../services/applicationsService";
 
 const ALL_ROLES = [
   "Senior Mathematics Teacher", "English Language & Literature Teacher", "Physics Teacher",
@@ -94,7 +95,9 @@ function SkillsMultiSelect({ options, selected, onChange, placeholder }) {
 export function ApplyModal({ onClose, signupData, onSubmitData }) {
   const fileRef = useRef(null);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [fileName, setFileName] = useState("");
+  const [resumeFile, setResumeFile] = useState(null);
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [selectedSkills, setSelectedSkills] = useState([]);
 
@@ -118,7 +121,7 @@ export function ApplyModal({ onClose, signupData, onSubmitData }) {
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!firstName.trim()) { toast.error("First name is required"); return; }
     if (!lastName.trim()) { toast.error("Last name is required"); return; }
@@ -132,18 +135,41 @@ export function ApplyModal({ onClose, signupData, onSubmitData }) {
     if (selectedSkills.length === 0) { toast.error("Please select at least one Skill / Strength"); return; }
     if (!fileName) { toast.error("Please upload your CV / Resume"); return; }
 
-    const fullName = [firstName, lastName].filter(Boolean).join(" ");
-    const data = {
-      fullName, email: form.email, phone: form.phone, location: form.location,
-      education: form.education, degreeName: form.degreeName,
-      professionalQualification: form.professionalQualification,
-      professionalQualificationOther: form.professionalQualificationOther,
-      experience: form.experience, salary: form.salary,
-      extracurricular: form.extracurricular, extracurricularOther: form.extracurricularOther,
-      selectedRoles, selectedSkills, linkedin: form.linkedin, portfolio: form.portfolio, resumeFile: fileName,
-    };
-    onSubmitData?.(data);
-    setSubmitted(true);
+    setSubmitting(true);
+    try {
+      await updateUserProfile(
+        {
+          firstName, lastName, phone: form.phone,
+          location: form.location, education: form.education, degreeName: form.degreeName,
+          professionalQualification: form.professionalQualification,
+          professionalQualificationOther: form.professionalQualificationOther,
+          experience: form.experience, salary: form.salary,
+          extracurricular: form.extracurricular, extracurricularOther: form.extracurricularOther,
+          selectedRoles, selectedSkills, linkedin: form.linkedin, portfolio: form.portfolio,
+        },
+        resumeFile,
+      );
+      await submitGeneralApplication({
+        selectedRoles, experience: form.experience, education: form.education, degreeName: form.degreeName,
+      });
+
+      const fullName = [firstName, lastName].filter(Boolean).join(" ");
+      const data = {
+        fullName, email: form.email, phone: form.phone, location: form.location,
+        education: form.education, degreeName: form.degreeName,
+        professionalQualification: form.professionalQualification,
+        professionalQualificationOther: form.professionalQualificationOther,
+        experience: form.experience, salary: form.salary,
+        extracurricular: form.extracurricular, extracurricularOther: form.extracurricularOther,
+        selectedRoles, selectedSkills, linkedin: form.linkedin, portfolio: form.portfolio, resumeFile: fileName,
+      };
+      onSubmitData?.(data);
+      setSubmitted(true);
+    } catch (err) {
+      toast.error(err.message || "Could not submit your application. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -279,7 +305,7 @@ export function ApplyModal({ onClose, signupData, onSubmitData }) {
                     </label>
                     <select required className="am-select" value={form.experience} onChange={(e) => set("experience", e.target.value)}>
                       <option value="">Select experience</option>
-                      <option>0–1 years (Fresher)</option><option>1–3 years</option><option>3–5 years</option><option>5–8 years</option><option>8+ years</option>
+                      <option value="0-1">0–1 years (Fresher)</option><option value="1-2">1–2 years</option><option value="2-4">2–4 years</option><option value="3-5">3–5 years</option><option value="5-8">5–8 years</option><option value="8+">8+ years</option>
                     </select>
                   </div>
                   <div className="sm:col-start-1">
@@ -347,6 +373,7 @@ export function ApplyModal({ onClose, signupData, onSubmitData }) {
                     if (f) {
                       if (f.size > 5 * 1024 * 1024) { toast.error("File exceeds 5 MB limit."); return; }
                       setFileName(f.name);
+                      setResumeFile(f);
                     }
                   }} />
                 </div>
@@ -354,8 +381,10 @@ export function ApplyModal({ onClose, signupData, onSubmitData }) {
 
               {/* Actions */}
               <div className="am-form-footer">
-                <button type="button" onClick={onClose} className="am-btn-cancel">Cancel</button>
-                <button type="submit" className="am-btn-submit">Submit Application</button>
+                <button type="button" onClick={onClose} className="am-btn-cancel" disabled={submitting}>Cancel</button>
+                <button type="submit" className="am-btn-submit" disabled={submitting}>
+                  {submitting ? "Submitting…" : "Submit Application"}
+                </button>
               </div>
 
             </form>

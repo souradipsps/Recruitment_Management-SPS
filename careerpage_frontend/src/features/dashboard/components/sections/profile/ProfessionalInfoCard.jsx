@@ -93,11 +93,12 @@ export function ProfessionalInfoCard({ profile, setProfile, sectionRef }) {
             className="pr-input"
           >
             <option value="">Select experience</option>
-            <option>0–1 years (Fresher)</option>
-            <option>1–3 years</option>
-            <option>3–5 years</option>
-            <option>5–8 years</option>
-            <option>8+ years</option>
+            <option value="0-1">0–1 years (Fresher)</option>
+            <option value="1-2">1–2 years</option>
+            <option value="2-4">2–4 years</option>
+            <option value="3-5">3–5 years</option>
+            <option value="5-8">5–8 years</option>
+            <option value="8+">8+ years</option>
           </select>
         </div>
 

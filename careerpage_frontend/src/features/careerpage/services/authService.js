@@ -20,7 +20,7 @@ if (!BASE_URL) {
 
 // Turn a Django REST Framework error body into one readable sentence.
 // DRF returns either { field: ["msg", ...], ... } or { detail: "msg" }.
-function parseApiError(body, fallback) {
+export function parseApiError(body, fallback) {
   if (!body || typeof body !== "object") return fallback;
   if (typeof body.detail === "string") return body.detail;
   const firstKey = Object.keys(body)[0];
