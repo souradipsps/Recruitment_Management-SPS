@@ -7,6 +7,7 @@ import { fetchApprovals } from "./api/approvalsApi";
 import { fetchRoles } from "./api/rolesApi";
 import { fetchJobPostings } from "./api/jobPostingsApi";
 import { fetchRoleRequests } from "./api/roleRequestsApi";
+import { fetchApplications } from "./api/applicationsApi";
 
 import Auth from "./screens/Auth";
 import ModuleSelector from "./screens/ModuleSelector";
@@ -89,6 +90,16 @@ export default function App() {
       .catch((err) => console.error("Failed to load role requests:", err));
     return () => { active = false; };
   }, [setRoleRequests]);
+
+  // Load job-posting applications from the API on mount. General applications
+  // remain mock data (GENERAL_APPLICATIONS) — that's a separate resource.
+  useEffect(() => {
+    let active = true;
+    fetchApplications()
+      .then((data) => { if (active) setJobApplications(data); })
+      .catch((err) => console.error("Failed to load applications:", err));
+    return () => { active = false; };
+  }, [setJobApplications]);
 
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
