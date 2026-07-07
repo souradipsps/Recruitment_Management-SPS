@@ -8,6 +8,7 @@ import {
   buildApplicationFormProfile,
   applyProfessionalData,
 } from "../../lib/profileData";
+import { mapUserResponseToSavedProfile } from "./services/applicationsService";
 
 // Renders the four overlay views (login, dashboard, job application, apply)
 // driven by `deferredView`. All shell state and setters arrive via the `app`
@@ -56,8 +57,18 @@ export default function AppModals({ app }) {
               setApplyAfterSignup(false);
             }}
             initialTab={loginTab}
-            onLoginSuccess={(name) => {
+            onLoginSuccess={(name, userData) => {
               setLoggedInUser(name);
+              if (userData) {
+                setSignupData({
+                  name: userData.first_name,
+                  lastName: userData.last_name,
+                  email: userData.email,
+                  phone: userData.phone,
+                });
+                const saved = mapUserResponseToSavedProfile(userData);
+                if (saved) setSavedProfileData(saved);
+              }
               setShowLogin(false);
               setShowDashboard(false);
               reloadWithLoader();
