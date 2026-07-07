@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import "./css/ApplyModal.css";
 import { MAROON } from "../../../lib/constants";
 import logoImg from "../../../assets/logo.png";
-import { updateCandidateProfile, submitGeneralApplication } from "../services/applicationsService";
+import { updateUserProfile, submitGeneralApplication } from "../services/applicationsService";
 
 const ALL_ROLES = [
   "Senior Mathematics Teacher", "English Language & Literature Teacher", "Physics Teacher",
@@ -135,28 +135,34 @@ export function ApplyModal({ onClose, signupData, onSubmitData }) {
     if (selectedSkills.length === 0) { toast.error("Please select at least one Skill / Strength"); return; }
     if (!fileName) { toast.error("Please upload your CV / Resume"); return; }
 
-    const fullName = [firstName, lastName].filter(Boolean).join(" ");
-    const data = {
-      fullName, email: form.email, phone: form.phone, location: form.location,
-      education: form.education, degreeName: form.degreeName,
-      professionalQualification: form.professionalQualification,
-      professionalQualificationOther: form.professionalQualificationOther,
-      experience: form.experience, salary: form.salary,
-      extracurricular: form.extracurricular, extracurricularOther: form.extracurricularOther,
-      selectedRoles, selectedSkills, linkedin: form.linkedin, portfolio: form.portfolio, resumeFile: fileName,
-    };
-
     setSubmitting(true);
     try {
-      await updateCandidateProfile(
-        { ...form, firstName, lastName, selectedRoles, selectedSkills },
+      await updateUserProfile(
+        {
+          firstName, lastName, phone: form.phone,
+          location: form.location, education: form.education, degreeName: form.degreeName,
+          professionalQualification: form.professionalQualification,
+          professionalQualificationOther: form.professionalQualificationOther,
+          experience: form.experience, salary: form.salary,
+          extracurricular: form.extracurricular, extracurricularOther: form.extracurricularOther,
+          selectedRoles, selectedSkills, linkedin: form.linkedin, portfolio: form.portfolio,
+        },
         resumeFile,
       );
       await submitGeneralApplication({
-        preferredRole: selectedRoles.join(", "),
-        experience: form.experience,
-        qualification: `${form.education} (${form.degreeName})`,
+        selectedRoles, experience: form.experience, education: form.education, degreeName: form.degreeName,
       });
+
+      const fullName = [firstName, lastName].filter(Boolean).join(" ");
+      const data = {
+        fullName, email: form.email, phone: form.phone, location: form.location,
+        education: form.education, degreeName: form.degreeName,
+        professionalQualification: form.professionalQualification,
+        professionalQualificationOther: form.professionalQualificationOther,
+        experience: form.experience, salary: form.salary,
+        extracurricular: form.extracurricular, extracurricularOther: form.extracurricularOther,
+        selectedRoles, selectedSkills, linkedin: form.linkedin, portfolio: form.portfolio, resumeFile: fileName,
+      };
       onSubmitData?.(data);
       setSubmitted(true);
     } catch (err) {
@@ -299,7 +305,7 @@ export function ApplyModal({ onClose, signupData, onSubmitData }) {
                     </label>
                     <select required className="am-select" value={form.experience} onChange={(e) => set("experience", e.target.value)}>
                       <option value="">Select experience</option>
-                      <option>0–1 years (Fresher)</option><option>1–3 years</option><option>3–5 years</option><option>5–8 years</option><option>8+ years</option>
+                      <option value="0-1">0–1 years (Fresher)</option><option value="1-2">1–2 years</option><option value="2-4">2–4 years</option><option value="3-5">3–5 years</option><option value="5-8">5–8 years</option><option value="8+">8+ years</option>
                     </select>
                   </div>
                   <div className="sm:col-start-1">

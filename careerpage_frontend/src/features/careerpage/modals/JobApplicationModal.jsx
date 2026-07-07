@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import "./css/JobApplicationModal.css";
 import { MAROON } from "../../../lib/constants";
 import logoImg from "../../../assets/logo.png";
+import { updateUserProfile, submitJobApplication } from "../services/applicationsService";
 
 const ALL_ROLES = [
   "Senior Mathematics Teacher", "English Language & Literature Teacher", "Physics Teacher",
@@ -102,6 +103,7 @@ function SkillsMultiSelect({ options, selected, onChange, placeholder, readOnly 
 
 const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileData, resumeFile, resumeUrl, draftData, savedProfileData, scrollToSection }) => {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const [education, setEducation] = useState(draftData?.education ?? savedProfileData?.education ?? "");
   const [degreeName, setDegreeName] = useState(draftData?.degreeName ?? savedProfileData?.degreeName ?? "");
@@ -149,7 +151,7 @@ const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileDat
 
   if (!job) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!profileData.firstName?.trim() || !profileData.lastName?.trim() || !profileData.email?.trim() || !profileData.phone?.trim() || !profileData.location?.trim()) {
       toast.error("Please complete all personal information fields in your profile before applying."); return;
@@ -165,11 +167,28 @@ const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileDat
     if (hasReferral === "Yes" && !referralEmpId.trim()) { toast.error("Please enter the Employee ID for the referral"); return; }
     if (!resumeFile) { toast.error("Please upload your resume in your profile dashboard before applying for this job"); return; }
 
-    onSubmit(job.id, { coverLetter, noticePeriod: availability, hasReferral, referralEmpId }, {
-      education, degreeName, professionalQualification: professionalQual, professionalQualificationOther: professionalQualOther,
-      experience, salary, extracurricular, extracurricularOther, selectedRoles, selectedSkills, linkedin, portfolio,
-    });
-    setSubmitted(true);
+    setSubmitting(true);
+    try {
+      await updateUserProfile({
+        firstName: profileData.firstName, lastName: profileData.lastName, phone: profileData.phone,
+        location: profileData.location, education, degreeName,
+        professionalQualification: professionalQual, professionalQualificationOther: professionalQualOther,
+        experience, salary, extracurricular, extracurricularOther, selectedRoles, selectedSkills, linkedin, portfolio,
+      });
+      await submitJobApplication(job.id, {
+        experience, education, degreeName, coverLetter, noticePeriod: availability, hasReferral, referralEmpId,
+      });
+
+      onSubmit(job.id, { coverLetter, noticePeriod: availability, hasReferral, referralEmpId }, {
+        education, degreeName, professionalQualification: professionalQual, professionalQualificationOther: professionalQualOther,
+        experience, salary, extracurricular, extracurricularOther, selectedRoles, selectedSkills, linkedin, portfolio,
+      });
+      setSubmitted(true);
+    } catch (err) {
+      toast.error(err.message || "Could not submit your application. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -267,7 +286,7 @@ const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileDat
                   <div>
                     <label className="jm-label">Years of Experience <span className="jm-required">*</span></label>
                     <select required className="jm-select jm-select--readonly" value={experience} disabled>
-                      <option value="">Select experience</option><option>0–1 years (Fresher)</option><option>1–3 years</option><option>3–5 years</option><option>5–8 years</option><option>8+ years</option>
+                      <option value="">Select experience</option><option value="0-1">0–1 years (Fresher)</option><option value="1-2">1–2 years</option><option value="2-4">2–4 years</option><option value="3-5">3–5 years</option><option value="5-8">5–8 years</option><option value="8+">8+ years</option>
                     </select>
                   </div>
                   <div className="sm:col-start-1">
@@ -345,8 +364,8 @@ const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileDat
                 )}
               </div>
 
-              <button type="submit" className="jm-btn-submit">
-                Submit Application
+              <button type="submit" className="jm-btn-submit" disabled={submitting}>
+                {submitting ? "Submitting…" : "Submit Application"}
               </button>
             </form>
           )}

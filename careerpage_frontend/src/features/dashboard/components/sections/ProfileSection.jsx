@@ -15,6 +15,7 @@ export function ProfileSection({
   handleViewResume,
   handleSave,
   saved,
+  saving,
   personalSectionRef,
   professionalSectionRef,
   resumeSectionRef,
@@ -56,8 +57,9 @@ export function ProfileSection({
       <button
         onClick={handleSave}
         className="ps-save-btn"
+        disabled={saving}
       >
-        {saved ? "Saved ✓" : "Save Changes"}
+        {saving ? "Saving…" : saved ? "Saved ✓" : "Save Changes"}
       </button>
     </motion.div>
   );
