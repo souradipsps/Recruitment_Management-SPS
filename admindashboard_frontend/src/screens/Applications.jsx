@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { T, statusVariant } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
 import { Card, SectionTitle, Table, Mono, Badge, Input, Btn, Modal, ModalHeader, Select, FormField } from "../components/ui";
+import { updateApplicationStatus } from "../api/applicationsApi";
 
 const STATUS_OPTIONS = [
   { value: "Shortlisted", label: "Shortlisted" },
@@ -30,6 +31,8 @@ export default function Applications({
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [filterActiveIndex, setFilterActiveIndex] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [statusError, setStatusError] = useState("");
 
   const hScroll = useHorizontalScroll();
   const scrollRef = useRef(null);
@@ -113,10 +116,29 @@ export default function Applications({
   const jobCount = filteredJobApplications.length;
   const genCount = filteredGenApplications.length;
 
-  const updateStatus = (app, status) => {
-    setData((prev) => prev.map((a) => (a.id === app.id ? { ...a, status } : a)));
-    if (selectedApp?.id === app.id) setSelectedApp((prev) => ({ ...prev, status }));
-    setStatusModalApp(null);
+  // Job-post applications are backed by PATCH /applications/{id}/update_status/;
+  // general applications (profiles) have no such endpoint and stay local-only.
+  const updateStatus = async (app, status) => {
+    setStatusError("");
+
+    if (!isJob) {
+      setData((prev) => prev.map((a) => (a.id === app.id ? { ...a, status } : a)));
+      if (selectedApp?.id === app.id) setSelectedApp((prev) => ({ ...prev, status }));
+      setStatusModalApp(null);
+      return;
+    }
+
+    setStatusUpdating(true);
+    try {
+      await updateApplicationStatus(app.backendId, status);
+      setData((prev) => prev.map((a) => (a.id === app.id ? { ...a, status } : a)));
+      if (selectedApp?.id === app.id) setSelectedApp((prev) => ({ ...prev, status }));
+      setStatusModalApp(null);
+    } catch (err) {
+      setStatusError(err.message || "Failed to update application status.");
+    } finally {
+      setStatusUpdating(false);
+    }
   };
 
   const scrollCarousel = (dir) => {
@@ -176,6 +198,12 @@ export default function Applications({
   return (
     <div>
       <SectionTitle title="Applications" sub="Track every candidate from application to final decision" />
+
+      {statusError && (
+        <div style={{ background: T.redLight, color: T.red, border: `1px solid ${T.red}33`, borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13, fontWeight: 600 }}>
+          {statusError}
+        </div>
+      )}
 
       {enrichedPostings.length > 0 && (
         <div style={{ marginBottom: 20 }}>
@@ -823,8 +851,8 @@ export default function Applications({
                   📄 View Resume
                 </a>
                 <div style={{ display: "flex", gap: 8, width: isMobile ? "100%" : "auto" }}>
-                  <Btn label={selectedApp.status === "Shortlisted" ? "✓ Shortlisted" : "Shortlist"} variant={selectedApp.status === "Shortlisted" ? "success" : "outline"} onClick={() => updateStatus(selectedApp, "Shortlisted")} style={{ flex: isMobile ? 1 : undefined }} />
-                  <Btn label={selectedApp.status === "Rejected" ? "✗ Rejected" : "Reject"} variant={selectedApp.status === "Rejected" ? "danger" : "outline"} onClick={() => updateStatus(selectedApp, "Rejected")} style={{ flex: isMobile ? 1 : undefined }} />
+                  <Btn label={selectedApp.status === "Shortlisted" ? "✓ Shortlisted" : "Shortlist"} variant={selectedApp.status === "Shortlisted" ? "success" : "outline"} onClick={() => updateStatus(selectedApp, "Shortlisted")} disabled={statusUpdating} style={{ flex: isMobile ? 1 : undefined }} />
+                  <Btn label={selectedApp.status === "Rejected" ? "✗ Rejected" : "Reject"} variant={selectedApp.status === "Rejected" ? "danger" : "outline"} onClick={() => updateStatus(selectedApp, "Rejected")} disabled={statusUpdating} style={{ flex: isMobile ? 1 : undefined }} />
                 </div>
               </div>
             </div>
@@ -857,7 +885,7 @@ export default function Applications({
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
               <Btn label="Cancel" variant="ghost" onClick={() => setStatusModalApp(null)} />
-              <Btn label="Update" onClick={() => updateStatus(statusModalApp, newStatus)} style={newStatus === statusModalApp.status ? { opacity: 0.4, cursor: "not-allowed" } : {}} />
+              <Btn label="Update" onClick={() => updateStatus(statusModalApp, newStatus)} disabled={statusUpdating || newStatus === statusModalApp.status} style={newStatus === statusModalApp.status ? { opacity: 0.4, cursor: "not-allowed" } : {}} />
             </div>
           </>
         )}

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import "./css/JobApplicationModal.css";
 import { MAROON } from "../../../lib/constants";
 import logoImg from "../../../assets/logo.png";
+import { submitApplication } from "../services/applicationsService";
 
 const ALL_ROLES = [
   "Senior Mathematics Teacher", "English Language & Literature Teacher", "Physics Teacher",
@@ -102,6 +103,7 @@ function SkillsMultiSelect({ options, selected, onChange, placeholder, readOnly 
 
 const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileData, resumeFile, resumeUrl, draftData, savedProfileData, scrollToSection }) => {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const [education, setEducation] = useState(draftData?.education ?? savedProfileData?.education ?? "");
   const [degreeName, setDegreeName] = useState(draftData?.degreeName ?? savedProfileData?.degreeName ?? "");
@@ -149,7 +151,7 @@ const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileDat
 
   if (!job) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!profileData.firstName?.trim() || !profileData.lastName?.trim() || !profileData.email?.trim() || !profileData.phone?.trim() || !profileData.location?.trim()) {
       toast.error("Please complete all personal information fields in your profile before applying."); return;
@@ -165,11 +167,32 @@ const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileDat
     if (hasReferral === "Yes" && !referralEmpId.trim()) { toast.error("Please enter the Employee ID for the referral"); return; }
     if (!resumeFile) { toast.error("Please upload your resume in your profile dashboard before applying for this job"); return; }
 
-    onSubmit(job.id, { coverLetter, noticePeriod: availability, hasReferral, referralEmpId }, {
-      education, degreeName, professionalQualification: professionalQual, professionalQualificationOther: professionalQualOther,
-      experience, salary, extracurricular, extracurricularOther, selectedRoles, selectedSkills, linkedin, portfolio,
-    });
-    setSubmitted(true);
+    // Backend expects one "qualification" string; combine degree + professional
+    // qualification (falling back to the free-text "Other" value when chosen).
+    const professionalQualText = professionalQual === "Other" ? professionalQualOther.trim() : professionalQual;
+    const qualification = professionalQualText ? `${degreeName.trim()}, ${professionalQualText}` : degreeName.trim();
+
+    setSubmitting(true);
+    try {
+      await submitApplication({
+        postingId: job.id,
+        experience,
+        qualification,
+        coverLetter,
+        noticePeriod: availability,
+        hasReferral: hasReferral === "Yes",
+      });
+
+      onSubmit(job.id, { coverLetter, noticePeriod: availability, hasReferral, referralEmpId }, {
+        education, degreeName, professionalQualification: professionalQual, professionalQualificationOther: professionalQualOther,
+        experience, salary, extracurricular, extracurricularOther, selectedRoles, selectedSkills, linkedin, portfolio,
+      });
+      setSubmitted(true);
+    } catch (err) {
+      toast.error(err.message || "Could not submit your application. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -345,8 +368,8 @@ const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileDat
                 )}
               </div>
 
-              <button type="submit" className="jm-btn-submit">
-                Submit Application
+              <button type="submit" className="jm-btn-submit" disabled={submitting}>
+                {submitting ? "Submitting…" : "Submit Application"}
               </button>
             </form>
           )}

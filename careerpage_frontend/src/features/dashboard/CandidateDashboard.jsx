@@ -8,6 +8,8 @@ import { MAROON, GOLD } from "../../lib/constants";
 
 // Mock data & configurations
 import { notifications } from "../../mockData/dashboardMockData";
+import { fetchMyApplications } from "../careerpage/services/applicationsService";
+import { fetchPublicJobs } from "../careerpage/services/jobsService";
 
 // Layout
 import { DashboardSidebar } from "./components/layout/DashboardSidebar";
@@ -171,22 +173,48 @@ export function CandidateDashboard({
   const [cameraTargetDocKey, setCameraTargetDocKey] = useState(null);
   const [showPhotoPopup, setShowPhotoPopup] = useState(false);
 
-  // Dynamic applications based on allJobs and appliedJobIds
-  const dynamicApplications = allJobs
-    .filter((j) => appliedJobIds.includes(j.id))
-    .map((j) => ({
-      id: j.id,
-      title: j.title,
-      department: j.department,
-      location: j.location,
-      appliedDate: new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
-      status: "Under Review",
-      type: j.type,
-    }));
+  // Applications fetched from the backend (GET /applications/mine/), enriched
+  // with department/location/type by cross-referencing the live public
+  // postings list (that endpoint doesn't return those fields itself).
+  const [dynamicApplications, setDynamicApplications] = useState([]);
+  const [applicationsLoading, setApplicationsLoading] = useState(true);
+  const [applicationsError, setApplicationsError] = useState(null);
+
+  const loadApplications = () => {
+    setApplicationsLoading(true);
+    setApplicationsError(null);
+    Promise.all([fetchMyApplications(), fetchPublicJobs().catch(() => [])])
+      .then(([myApplications, postings]) => {
+        const postingsById = new Map(postings.map((p) => [p.id, p]));
+        setDynamicApplications(
+          myApplications.map((a) => {
+            const posting = postingsById.get(a.postingId);
+            return {
+              id: a.postingId,
+              appId: a.appId,
+              title: posting?.title || a.title,
+              department: posting?.department || "—",
+              location: posting?.location || "—",
+              type: posting?.type || "—",
+              appliedDate: a.appliedDate
+                ? new Date(a.appliedDate).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })
+                : "—",
+              status: a.status,
+            };
+          })
+        );
+      })
+      .catch((err) => setApplicationsError(err.message || "Failed to load your applications."))
+      .finally(() => setApplicationsLoading(false));
+  };
+
+  useEffect(() => {
+    loadApplications();
+  }, []);
 
   const [dashboardNotifications, setDashboardNotifications] = useState(() =>
     notifications.map((n) => ({ ...n, isNew: !n.read }))
@@ -1092,11 +1120,29 @@ export function CandidateDashboard({
 
               {/* Applications Tab */}
               {activeTab === "applications" && (
-                <ApplicationsSection
-                  dynamicApplications={dynamicApplications}
-                  allJobs={allJobs}
-                  setSelectedJobDesc={setSelectedJobDesc}
-                />
+                applicationsLoading ? (
+                  <div style={{ padding: "40px 0", textAlign: "center", color: "#6b7280" }}>
+                    Loading your applications…
+                  </div>
+                ) : applicationsError ? (
+                  <div style={{ padding: "24px", textAlign: "center", color: "#b91c1c" }}>
+                    {applicationsError}
+                    <div>
+                      <button
+                        onClick={loadApplications}
+                        style={{ marginTop: 12, background: MAROON, color: "#fff", border: "none", borderRadius: 6, padding: "8px 16px", cursor: "pointer", fontWeight: 600 }}
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <ApplicationsSection
+                    dynamicApplications={dynamicApplications}
+                    allJobs={allJobs}
+                    setSelectedJobDesc={setSelectedJobDesc}
+                  />
+                )
               )}
 
               {/* Profile & Resume Tab */}
