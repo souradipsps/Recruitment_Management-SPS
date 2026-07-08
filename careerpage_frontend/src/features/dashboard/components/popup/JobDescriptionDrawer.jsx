@@ -5,10 +5,12 @@ import "../css/popup/JobDescriptionDrawer.css";
 
 export function JobDescriptionDrawer({
   selectedJobDesc,
-  appliedJobIds = [],
-  applicationsData = {},
+  jobApplications = [],
   onClose,
 }) {
+  const matchedApplication = selectedJobDesc
+    ? jobApplications.find((app) => app.posting === selectedJobDesc.id)
+    : null;
   return (
     <AnimatePresence>
       {selectedJobDesc && (
@@ -79,50 +81,44 @@ export function JobDescriptionDrawer({
               </div>
             )}
 
-            {/* Additional Information Submitted */}
-            {appliedJobIds.includes(selectedJobDesc.id) && (
+            {/* Additional Information Submitted — sourced from the candidate's
+                real submitted application (GET /api/applications/), not local
+                session state, so it's accurate even right after a fresh login. */}
+            {matchedApplication && (
               <div className="jd-additional">
                 <h4 className="jd-additional-title">
                   Your Additional Information
                 </h4>
-                {(() => {
-                  const appData = applicationsData[selectedJobDesc.id] || {
-                    coverLetter: "Interested in the position.",
-                    noticePeriod: "Immediate",
-                    hasReferral: "No",
-                    referralEmpId: "",
-                  };
-                  return (
-                    <div className="jd-info-box">
-                      <div>
-                        <span className="jd-info-label">
-                          Notice Period
-                        </span>
-                        <div className="jd-info-value">
-                          {appData.noticePeriod}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="jd-info-label">
-                          Referral Information
-                        </span>
-                        <div className="jd-info-value">
-                          {appData.hasReferral === "Yes" ? `Yes (Employee ID: ${appData.referralEmpId})` : "No Referral"}
-                        </div>
-                      </div>
-                      {appData.coverLetter && (
-                        <div>
-                          <span className="jd-info-label">
-                            Cover Letter / SOP
-                          </span>
-                          <div className="jd-info-value--pre">
-                            {appData.coverLetter}
-                          </div>
-                        </div>
-                      )}
+                <div className="jd-info-box">
+                  <div>
+                    <span className="jd-info-label">
+                      Notice Period
+                    </span>
+                    <div className="jd-info-value">
+                      {matchedApplication.notice_period || "Not specified"}
                     </div>
-                  );
-                })()}
+                  </div>
+                  <div>
+                    <span className="jd-info-label">
+                      Referral Information
+                    </span>
+                    <div className="jd-info-value">
+                      {matchedApplication.has_referral
+                        ? `Yes (Employee ID: ${matchedApplication.referral_emp_id || "Not specified"})`
+                        : "No Referral"}
+                    </div>
+                  </div>
+                  {matchedApplication.cover_letter && (
+                    <div>
+                      <span className="jd-info-label">
+                        Cover Letter / SOP
+                      </span>
+                      <div className="jd-info-value--pre">
+                        {matchedApplication.cover_letter}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

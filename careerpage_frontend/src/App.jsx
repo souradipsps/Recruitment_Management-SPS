@@ -45,7 +45,6 @@ export default function App() {
   const [cameFromApply, setCameFromApply] = useState(false);
   const [cameFromSection, setCameFromSection] = useState(undefined);
   const [applicationDraft, setApplicationDraft] = useState(null);
-  const [applicationsData, setApplicationsData] = useState({});
   const [selectedJob, setSelectedJob] = useState(null);
   const [loginTab, setLoginTab] = useState("login");
 
@@ -124,7 +123,6 @@ export default function App() {
     loggedInUser,
     signupData,
     appliedJobIds,
-    applicationsData,
     selectedJob,
     savedProfileData,
     applicationDraft,
@@ -141,7 +139,6 @@ export default function App() {
     setCameFromApply,
     setCameFromSection,
     setAppliedJobIds,
-    setApplicationsData,
     setApplicationDraft,
     setSavedProfileData,
     setDashboardInitialTab,

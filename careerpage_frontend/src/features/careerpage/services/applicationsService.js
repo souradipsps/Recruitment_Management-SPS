@@ -151,6 +151,30 @@ export function mapUserResponseToSavedProfile(userData) {
 }
 
 /**
+ * Fetch the current candidate's own job applications (job-specific, tied to a
+ * posting — not the talent-pool general applications).
+ * GET /api/applications/
+ * @returns {Promise<object[]>} raw JobApplication records
+ */
+export async function fetchMyJobApplications() {
+  const token = requireAuthToken();
+
+  const res = await fetch(`${BASE_URL}/applications/`, {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Accept": "application/json",
+    },
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseApiError(data, "Could not load your applications."));
+  }
+  // Endpoint is paginated ({ results: [...] }); tolerate a bare array too.
+  return Array.isArray(data) ? data : data?.results ?? [];
+}
+
+/**
  * Submit a General Application (talent pool) — not tied to a job posting.
  * POST /api/general-applications/
  * @param {{ selectedRoles: string[], experience: string, education: string, degreeName: string }} fields
