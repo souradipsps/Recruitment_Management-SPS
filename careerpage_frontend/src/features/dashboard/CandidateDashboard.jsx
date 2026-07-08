@@ -1,11 +1,12 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Menu, Bell, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import logoImg from "../../assets/logo.png";
 
 import { MAROON, GOLD } from "../../lib/constants";
-import { updateUserProfile } from "../careerpage/services/applicationsService";
+import { updateUserProfile, fetchMyJobApplications } from "../careerpage/services/applicationsService";
+import { fetchPublicJobs } from "../careerpage/services/jobsService";
 
 // Mock data & configurations
 import { notifications } from "../../mockData/dashboardMockData";
@@ -48,14 +49,11 @@ export function CandidateDashboard({
   onClose,
   userName = "Candidate",
   signupData,
-  appliedJobIds = [],
-  allJobs = [],
   onLogout,
   initialProfileData,
   initialTab = "dashboard",
   initialSection,
   onProfileUpdate,
-  applicationsData = {},
   cameFromApply = false,
 }) {
   // Navigation & UI state
@@ -189,22 +187,48 @@ export function CandidateDashboard({
   const [cameraTargetDocKey, setCameraTargetDocKey] = useState(null);
   const [showPhotoPopup, setShowPhotoPopup] = useState(false);
 
-  // Dynamic applications based on allJobs and appliedJobIds
-  const dynamicApplications = allJobs
-    .filter((j) => appliedJobIds.includes(j.id))
-    .map((j) => ({
-      id: j.id,
-      title: j.title,
-      department: j.department,
-      location: j.location,
-      appliedDate: new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
-      status: "Under Review",
-      type: j.type,
-    }));
+  // Real job applications fetched from the backend (GET /api/applications/),
+  // plus the live job postings so we can attach department/location/type —
+  // the application record itself only carries the posting id/title, not the
+  // full job listing.
+  const [jobApplications, setJobApplications] = useState([]);
+  const [liveJobs, setLiveJobs] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([fetchMyJobApplications(), fetchPublicJobs()])
+      .then(([applications, jobs]) => {
+        if (cancelled) return;
+        setJobApplications(applications);
+        setLiveJobs(jobs);
+      })
+      .catch((err) => {
+        if (!cancelled) toast.error(err.message || "Could not load your applications.");
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Dynamic applications based on the candidate's real submitted applications.
+  const dynamicApplications = useMemo(() => {
+    return jobApplications.map((app) => {
+      const liveJob = liveJobs.find((j) => j.id === app.posting);
+      return {
+        id: app.posting ?? app.id,
+        title: app.posting_title || app.role || "Untitled Position",
+        department: liveJob?.department || "General",
+        location: liveJob?.location || "",
+        type: liveJob?.type || "",
+        appliedDate: app.applied_date
+          ? new Date(app.applied_date).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })
+          : "",
+        status: app.status || "Applied",
+      };
+    });
+  }, [jobApplications, liveJobs]);
 
   const [dashboardNotifications, setDashboardNotifications] = useState(() =>
     notifications.map((n) => ({ ...n, isNew: !n.read }))
@@ -1138,7 +1162,7 @@ export function CandidateDashboard({
               {activeTab === "applications" && (
                 <ApplicationsSection
                   dynamicApplications={dynamicApplications}
-                  allJobs={allJobs}
+                  allJobs={liveJobs}
                   setSelectedJobDesc={setSelectedJobDesc}
                 />
               )}
@@ -1225,8 +1249,7 @@ export function CandidateDashboard({
       {/* Job Description Drawer Overlay */}
       <JobDescriptionDrawer
         selectedJobDesc={selectedJobDesc}
-        appliedJobIds={appliedJobIds}
-        applicationsData={applicationsData}
+        jobApplications={jobApplications}
         onClose={() => setSelectedJobDesc(null)}
       />
 

@@ -1,5 +1,4 @@
 import { AnimatePresence } from "motion/react";
-import { jobs } from "../../mockData/jobs";
 import { LoginModal } from "./modals/LoginModal";
 import { ApplyModal } from "./modals/ApplyModal";
 import JobApplicationModal from "./modals/JobApplicationModal";
@@ -23,8 +22,6 @@ export default function AppModals({ app }) {
     dashboardInitialTab,
     loggedInUser,
     signupData,
-    appliedJobIds,
-    applicationsData,
     selectedJob,
     savedProfileData,
     applicationDraft,
@@ -41,7 +38,6 @@ export default function AppModals({ app }) {
     setCameFromApply,
     setCameFromSection,
     setAppliedJobIds,
-    setApplicationsData,
     setApplicationDraft,
     setSavedProfileData,
     setDashboardInitialTab,
@@ -101,8 +97,6 @@ export default function AppModals({ app }) {
             onLogout={handleLogout}
             userName={loggedInUser}
             signupData={signupData}
-            appliedJobIds={appliedJobIds}
-            allJobs={jobs}
             initialProfileData={mergedProfileData}
             initialTab={dashboardInitialTab}
             initialSection={cameFromSection}
@@ -110,7 +104,6 @@ export default function AppModals({ app }) {
               setSavedProfileData(updatedData);
               setApplicationDraft(null);
             }}
-            applicationsData={applicationsData}
             cameFromApply={cameFromApply}
           />
         )}
@@ -135,9 +128,8 @@ export default function AppModals({ app }) {
               setApplicationDraft(null);
               setCameFromSection(undefined);
             }}
-            onSubmit={(jobId, formData, professionalData) => {
+            onSubmit={(jobId, _formData, professionalData) => {
               setAppliedJobIds((prev) => [...prev, jobId]);
-              setApplicationsData((prev) => ({ ...prev, [jobId]: formData }));
               setApplicationDraft(null);
               setCameFromSection(undefined);
               if (professionalData) {
