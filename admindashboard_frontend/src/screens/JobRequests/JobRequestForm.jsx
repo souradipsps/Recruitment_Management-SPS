@@ -44,8 +44,7 @@ export default function JobRequestForm({
                 value={form.role}
                 onChange={(e) => handleRoleChange(index, e.target.value)}
                 options={getRoleOptionsForDept(form.department)}
-                placeholder={form.department ? "Select role…" : "Select department first"}
-                disabled={!form.department}
+                placeholder="Select role…"
               />
             </FormField>
             <FormField label="Experience" required>

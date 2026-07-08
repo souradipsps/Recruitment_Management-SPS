@@ -87,6 +87,9 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
       (r) => r.role === selectedRole && (!department || r.dept === department),
     );
     if (matchingRole) {
+      if (!department && matchingRole.dept) {
+        updateForm(index, "department", matchingRole.dept);
+      }
       updateForm(index, "exp", matchingRole.experience || "");
       updateForm(index, "salary", matchingRole.salaryRange || "");
       updateForm(index, "type", matchingRole.type || "");
@@ -106,6 +109,7 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     setSelectedRequest({
       ...selectedRequest,
       role: selectedRole,
+      department: (!selectedRequest.department && matchingRole) ? (matchingRole.dept || "") : selectedRequest.department,
       exp: matchingRole ? (matchingRole.experience || "") : selectedRequest.exp,
       salary: matchingRole ? (matchingRole.salaryRange || "") : selectedRequest.salary,
       type: matchingRole ? (matchingRole.type || "") : selectedRequest.type,

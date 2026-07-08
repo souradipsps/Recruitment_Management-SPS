@@ -121,9 +121,7 @@ export default function JobRequestDetailModal({
                   : f.key === "role"
                   ? getRoleOptionsForDept(selectedRequest.department)
                   : f.options;
-                const placeholder = f.key === "role" && !selectedRequest.department
-                  ? "Select department first"
-                  : f.placeholder;
+                const placeholder = f.placeholder;
                 return (
                   <div key={f.key} style={{ gridColumn: f.span2 && !isMobile ? "span 2" : "auto" }}>
                     <Label>{f.label}</Label>
@@ -134,7 +132,6 @@ export default function JobRequestDetailModal({
                           onChange={onChange}
                           options={options}
                           placeholder={placeholder}
-                          disabled={f.key === "role" && !selectedRequest.department}
                         />
                       ) : (
                         <Input value={value} onChange={onChange} placeholder={f.placeholder} />
