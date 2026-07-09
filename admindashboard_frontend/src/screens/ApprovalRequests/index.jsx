@@ -29,7 +29,8 @@ export default function ApprovalRequests({
 
   const [sel, setSel]               = useState(null);
   const [comment, setComment]       = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("Approved");
+  const [typeFilter, setTypeFilter] = useState("All");
   const [search, setSearch]         = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
 
@@ -50,26 +51,27 @@ export default function ApprovalRequests({
   });
 
   const filtered = requests
+    .filter((r) => r.status === statusFilter)
     .filter((r) => {
-      if (statusFilter === "All") {
-        // Exclude pending from 'All' to avoid duplication with the top tile
-        return r.status !== "Pending";
+      if (typeFilter === "All") {
+        return true;
       }
-      return r.status === statusFilter;
+      return r.type === typeFilter;
     })
     .filter((r) => {
-      const q = search.toLowerCase();
-      return (
-        (r.role        || "").toLowerCase().includes(q) ||
-        (r.dept        || "").toLowerCase().includes(q) ||
-        (String(r.sourceId) || "").toLowerCase().includes(q) ||
-        (r.requestedBy || "").toLowerCase().includes(q) ||
-        (r.date        || "").toLowerCase().includes(q)
+      const query = search.trim().toLowerCase();
+      if (!query) return true;
+      const terms = query.split(/\s+/);
+      return terms.every((term) =>
+        (r.role        || "").toLowerCase().includes(term) ||
+        (r.dept        || "").toLowerCase().includes(term) ||
+        (r.requestedBy || "").toLowerCase().includes(term)
       );
     });
 
   const pendingRequests = requests.filter((r) => r.status === "Pending");
   const pendingCount = pendingRequests.length;
+
   const isPending    = sel?.status === "Pending";
 
   return (
@@ -154,6 +156,8 @@ export default function ApprovalRequests({
           setSearch={setSearch}
           statusFilter={statusFilter}
           setStatusFilter={setStatusFilter}
+          typeFilter={typeFilter}
+          setTypeFilter={setTypeFilter}
           pendingCount={0}
           isMobile={isMobile}
         />
