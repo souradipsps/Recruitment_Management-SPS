@@ -16,6 +16,7 @@ export const normalizeRoleRequest = (r) => ({
   backendId: r.id,                    // numeric pk, kept for future PATCH/DELETE
   dept: r.department || "",
   role: r.role || "",
+  type: r.type || "",
   category: r.category || "",
   experience: r.experience || "",
   salaryRange: r.salary_range || "",
@@ -60,6 +61,7 @@ export async function createRoleRequest(formData, submittedBy) {
   const payload = {
     department: formData.dept,
     role: formData.role,
+    type: formData.type,
     justification: formData.just,
     salary_range: formData.salaryRange,
     experience: formData.experience,
