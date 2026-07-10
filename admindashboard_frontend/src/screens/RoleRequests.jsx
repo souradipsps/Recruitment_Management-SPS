@@ -236,18 +236,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
       // stand-ins here — a fabricated entry has no backendId, so approving/
       // rejecting it silently no-ops against the API while a duplicate,
       // backend-sourced entry (with a real backendId) does update the database.
-      // Job Request approvals are handled by their own screen, so only the
-      // "Role Request" entries are replaced; anything else is left untouched.
-      try {
-        const freshApprovals = await fetchApprovals();
-        const freshRoleRequestApprovals = freshApprovals.filter((a) => a.type === "Role Request");
-        setApprovalRequests((prev) => [
-          ...prev.filter((a) => a.type !== "Role Request"),
-          ...freshRoleRequestApprovals,
-        ]);
-      } catch (err) {
-        console.error("Failed to refresh approvals after submitting role request:", err);
-      }
+      await refreshRoleRequestApprovals();
 
       setRoleForms([emptyForm()]);
       setShowForm(false);
@@ -259,6 +248,24 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
       setSubmitError(err.message || "Failed to submit role request. Please try again.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Re-fetches the authoritative approvals list and replaces all Role Request
+  // entries with it. Needed because a single role request can have multiple
+  // ApprovalRequest rows sharing the same sourceId (one per resubmit cycle) -
+  // patching by sourceId in place would touch every one of those rows instead
+  // of just the currently active one.
+  const refreshRoleRequestApprovals = async () => {
+    try {
+      const freshApprovals = await fetchApprovals();
+      const freshRoleRequestApprovals = freshApprovals.filter((a) => a.type === "Role Request");
+      setApprovalRequests((prev) => [
+        ...prev.filter((a) => a.type !== "Role Request"),
+        ...freshRoleRequestApprovals,
+      ]);
+    } catch (err) {
+      console.error("Failed to refresh approvals:", err);
     }
   };
 
@@ -292,21 +299,13 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
 
       setRoleRequests((prev) => prev.map((r) => r.id === selectedRequest.id ? updated : r));
 
-      setApprovalRequests((prev) =>
-        prev.map((apr) =>
-          String(apr.sourceId) === String(selectedRequest.id)
-            ? {
-                ...apr,
-                dept: updated.dept,
-                role: updated.role,
-                experience: updated.experience,
-                salary: updated.salaryRange ? `₹${updated.salaryRange}` : "",
-                just: updated.just,
-                status: updated.status,
-              }
-            : apr
-        )
-      );
+      // Resubmitting can spawn a brand-new ApprovalRequest row on the backend
+      // (see jobs/signals.py) while the prior Sent-Back/Rejected row for the
+      // same request_id still exists. Patching in place by sourceId would flip
+      // every historical row to the new status too, producing duplicate
+      // "Pending" cards until the next hard refresh. Re-fetch instead so local
+      // state always mirrors exactly which approval row is actually active.
+      await refreshRoleRequestApprovals();
 
       setShowViewModal(false);
       setSelectedRequest(null);
@@ -353,13 +352,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
       const updated = await updateRoleRequest(selectedRequest.backendId, { status: "Approved" });
 
       setRoleRequests((prev) => prev.map((r) => r.id === selectedRequest.id ? updated : r));
-      setApprovalRequests((prev) =>
-        prev.map((apr) =>
-          String(apr.sourceId) === String(selectedRequest.id)
-            ? { ...apr, status: "Approved" }
-            : apr
-        )
-      );
+      await refreshRoleRequestApprovals();
 
       if (setExistingRoles) {
         setExistingRoles((prev) => {
@@ -411,11 +404,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
     try {
       const updated = await updateRoleRequest(target.backendId, { status: "Cancelled" });
       setRoleRequests((prev) => prev.map((r) => (r.id === reqId ? updated : r)));
-      setApprovalRequests((prev) =>
-        prev.map((apr) =>
-          String(apr.sourceId) === String(reqId) ? { ...apr, status: "Cancelled" } : apr
-        )
-      );
+      await refreshRoleRequestApprovals();
       setShowViewModal(false);
       setSelectedRequest(null);
       setOriginalRequest(null);
