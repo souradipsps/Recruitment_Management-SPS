@@ -50,6 +50,7 @@ export const normalizeApproval = (r) => ({
   description: r.description || "",
   skills: toSkillsArray(r.skills_required),
   comment: "",
+  just: r.justification || "",
   history: toHistory(r.history),
 });
 
