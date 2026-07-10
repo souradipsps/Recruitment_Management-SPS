@@ -200,7 +200,7 @@ export function useApprovalActions({
 
     setFieldErrors({});
     const ok = await performAction(updatedSel, action, comment);
-    if (ok) closeModal();
+    if (ok && action !== "Sent Back") closeModal();
   };
 
   return { performAction, takeAction };

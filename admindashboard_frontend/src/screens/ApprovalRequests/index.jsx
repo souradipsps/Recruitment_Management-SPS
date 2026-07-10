@@ -91,6 +91,7 @@ export default function ApprovalRequests({
         takeAction={takeAction}
         isMobile={isMobile}
         existingRoles={existingRoles}
+        requests={requests}
       />
 
       {/* Top Card: Pending Requests */}

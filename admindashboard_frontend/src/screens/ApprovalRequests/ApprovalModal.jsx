@@ -13,8 +13,35 @@ const isActiveRole = (r) => (r.currentStatus || r.status) === "Active";
  * Full-screen portal modal showing request details, editable fields for
  * Pending requests, activity history, comment textarea, and action buttons.
  */
-export default function ApprovalModal({ sel, setSel, closeModal, isPending, comment, setComment, fieldErrors, setFieldErrors, takeAction, isMobile, existingRoles }) {
+export default function ApprovalModal({ sel, setSel, closeModal, isPending, comment, setComment, fieldErrors, setFieldErrors, takeAction, isMobile, existingRoles, requests }) {
   if (!sel) return null;
+
+  // Aggregate the full approval timeline across ALL ApprovalRequest objects
+  // linked to the same underlying request in frontend state.
+  const siblingApprovals = (requests || []).filter(
+    (r) => r.sourceId === sel.sourceId || r.id === sel.id
+  );
+  const sortedSiblings = [...siblingApprovals].sort((a, b) => (a.backendId || 0) - (b.backendId || 0));
+
+  const aggregatedHistory = [];
+  if (sortedSiblings.length > 0) {
+    const oldest = sortedSiblings[0];
+    aggregatedHistory.push({
+      act: "Submitted",
+      by: oldest.requestedBy || "User",
+      date: oldest.date,
+      note: ""
+    });
+  }
+  for (const sibling of sortedSiblings) {
+    if (sibling.history) {
+      for (const h of sibling.history) {
+        if (h.act !== "Submitted") {
+          aggregatedHistory.push(h);
+        }
+      }
+    }
+  }
 
   // Department list sourced from existing (sanctioned) roles that have at least one Active role.
   const deptOptions = [...new Set((existingRoles || []).filter(isActiveRole).map((r) => r.dept).filter(Boolean))]
@@ -358,16 +385,16 @@ export default function ApprovalModal({ sel, setSel, closeModal, isPending, comm
           </div>
 
           {/* Activity history timeline */}
-          {sel.history?.length > 0 && (
+          {aggregatedHistory.length > 0 && (
             <div>
               <div style={{ ...labelCss, marginBottom: 12 }}>Activity History</div>
-              {sel.history.map((h, i) => (
+              {aggregatedHistory.map((h, i) => (
                 <div key={i} style={{ display: "flex", gap: 12, marginBottom: 10 }}>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: i === sel.history.length - 1 ? T.blue : T.border, marginTop: 3, flexShrink: 0 }} />
-                    {i < sel.history.length - 1 && <div style={{ width: 2, flex: 1, background: T.border, margin: "3px 0" }} />}
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: i === aggregatedHistory.length - 1 ? T.blue : T.border, marginTop: 3, flexShrink: 0 }} />
+                    {i < aggregatedHistory.length - 1 && <div style={{ width: 2, flex: 1, background: T.border, margin: "3px 0" }} />}
                   </div>
-                  <div style={{ paddingBottom: i < sel.history.length - 1 ? 4 : 0 }}>
+                  <div style={{ paddingBottom: i < aggregatedHistory.length - 1 ? 4 : 0 }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: T.ink }}>
                       {h.act} <span style={{ fontWeight: 400, color: T.inkLight }}>by {h.by}</span>
                     </div>
