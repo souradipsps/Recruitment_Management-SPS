@@ -5,6 +5,7 @@ import { useBreakpoint } from "../hooks";
 import { Card, SectionTitle, Table, Mono, Btn, Input, Badge, FormField, Modal, ModalHeader, Textarea, Select } from "../components/ui";
 import { createRoleRequest, updateRoleRequest } from "../api/roleRequestsApi";
 import { fetchApprovals } from "../api/approvalsApi";
+import { TYPE_OPTIONS } from "../data";
 
 const getStatusStyle = (status) => {
   switch (status) {
@@ -20,6 +21,7 @@ const emptyForm = () => ({
   id: Date.now() + Math.random(),
   dept: "",
   role: "",
+  type: "",
   category: "",
   minExperience: "",
   maxExperience: "",
@@ -99,6 +101,11 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
       }
       if (!f.role || !f.role.trim()) {
         errs.role = "Role name is required";
+        valid = false;
+      }
+
+      if (!f.type || !f.type.trim()) {
+        errs.type = "Employee type is required";
         valid = false;
       }
 
@@ -279,6 +286,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
     const payload = {
       department: selectedRequest.dept,
       role: selectedRequest.role,
+      type: selectedRequest.type,
       justification: selectedRequest.just,
       salary_range: combinedSalary,
       experience: combinedExperience,
@@ -299,6 +307,8 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                 ...apr,
                 dept: updated.dept,
                 role: updated.role,
+                type: updated.type,
+                empType: updated.type,
                 experience: updated.experience,
                 salary: updated.salaryRange ? `₹${updated.salaryRange}` : "",
                 just: updated.just,
@@ -332,6 +342,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
     return (
       selectedRequest.dept !== originalRequest.dept ||
       selectedRequest.role !== originalRequest.role ||
+      selectedRequest.type !== originalRequest.type ||
       selectedRequest.just !== originalRequest.just ||
       currMinSal !== origMinSal ||
       currMaxSal !== origMaxSal ||
@@ -367,7 +378,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
           if (exists) return prev;
           const cleanedSalary = updated.salaryRange ? updated.salaryRange.replace(/^₹/, "") : "";
           return [...prev, {
-            id: `ROL-${Date.now()}`, dept: updated.dept, role: updated.role, type: "Full-time",
+            id: `ROL-${Date.now()}`, dept: updated.dept, role: updated.role, type: updated.type || "Full-time",
             headcount: 1, filled: 0, currentFilled: 0, status: "Inactive", currentStatus: "Inactive",
             experience: updated.experience || "—",
             salaryRange: cleanedSalary || "—",
@@ -559,6 +570,20 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                     </div>
                   )}
                 </FormField>
+                <FormField label="Employee Type" required>
+                  <Select
+                    value={form.type}
+                    onChange={(e) => updateForm(index, "type", e.target.value)}
+                    options={TYPE_OPTIONS}
+                    placeholder="Select type…"
+                    style={formErrors[index]?.type ? { borderColor: T.red } : {}}
+                  />
+                  {formErrors[index]?.type && (
+                    <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+                      {formErrors[index].type}
+                    </div>
+                  )}
+                </FormField>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <FormField label="Min Experience (Yrs)" required>
                     <Input
@@ -742,6 +767,10 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                         <div style={{ fontSize: 12, fontWeight: 600 }}>{typeof r.id === "string" ? r.id.substring(0, 18) : String(r.id)}</div>
                       </div>
                       <div>
+                        <div style={{ fontSize: 10, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>Employee Type</div>
+                        <div style={{ fontSize: 12, fontWeight: 600 }}>{r.type || "—"}</div>
+                      </div>
+                      <div>
                         <div style={{ fontSize: 10, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>Experience</div>
                         <div style={{ fontSize: 12, fontWeight: 600 }}>{r.experience ? `${r.experience} yrs` : "—"}</div>
                       </div>
@@ -809,13 +838,14 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
               setModalError("");
               setShowViewModal(true);
             }}
-            cols={["Request ID", "Department", "Role", "Experience", "Salary Range", "Justification", "Status"]}
+            cols={["Request ID", "Department", "Role", "Employee Type", "Experience", "Salary Range", "Justification", "Status"]}
             rows={filteredRequests.map((r) => {
               const ss = getStatusStyle(r.status);
               return [
                 <Mono v={typeof r.id === "string" ? r.id.substring(0, 18) : String(r.id)} />,
                 r.dept || "—",
                 <strong>{r.role || "—"}</strong>,
+                r.type || "—",
                 r.experience ? `${r.experience} yrs` : "—",
                 r.salaryRange ? `₹${r.salaryRange}` : "—",
                 <span style={{ fontSize: 12, color: T.inkLight, maxWidth: 180, display: "inline-block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.just || "—"}</span>,
@@ -907,6 +937,20 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                 </div>
 
 
+
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Employee Type</div>
+                  {selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back" ? (
+                    <Select
+                      value={selectedRequest.type || ""}
+                      onChange={(e) => setSelectedRequest({ ...selectedRequest, type: e.target.value })}
+                      options={TYPE_OPTIONS}
+                      placeholder="Select type…"
+                    />
+                  ) : (
+                    <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{selectedRequest.type || "—"}</div>
+                  )}
+                </div>
 
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Salary Range</div>
