@@ -35,7 +35,7 @@ export default function JobPostings({ postings, setPostings, jobRequests, existi
   const selectedRole = postings.find((p) => p.id === selectedPostingId)?.role ?? null;
 
   const selectPosting = (id) => {
-    setSelectedPostingId((prev) => (prev === id ? null : id));
+    setSelectedPostingId(id);
     setSearch("");
   };
 
@@ -167,7 +167,7 @@ export default function JobPostings({ postings, setPostings, jobRequests, existi
                     }
                   }}
                   style={{
-                    flexShrink: 0, width: "100%", border: `2px solid ${!selectedPostingId ? T.primary : T.border}`,
+                    flexShrink: 0, width: "100%", border: `2px solid ${!selectedPostingId ? T.primary : T.borderMid}`,
                     borderRadius: 16, padding: "18px 20px", cursor: "pointer",
                     background: !selectedPostingId ? T.primaryLight : T.surface,
                     display: "flex", flexDirection: "row", alignItems: "center", gap: 16,
@@ -206,7 +206,7 @@ export default function JobPostings({ postings, setPostings, jobRequests, existi
                         }
                       }}
                       style={{
-                        flexShrink: 0, width: "100%", border: `2px solid ${isSelected ? T.primary : T.border}`,
+                        flexShrink: 0, width: "100%", border: `2px solid ${isSelected ? T.primary : T.borderMid}`,
                         borderRadius: 16, padding: "18px 20px", cursor: "pointer",
                         background: isSelected ? T.primaryLight : T.surface,
                         transition: "all 0.2s",
@@ -282,54 +282,54 @@ export default function JobPostings({ postings, setPostings, jobRequests, existi
                 onMouseMove={hScroll.onMouseMove}
                 onMouseUp={hScroll.onMouseUp}
                 onMouseLeave={hScroll.onMouseLeave}
-                style={{ display: "flex", gap: 14, overflowX: "auto", paddingBottom: 8, WebkitOverflowScrolling: "touch", cursor: "grab", userSelect: "none" }}
+                style={{ display: "flex", gap: 14, overflowX: "auto", padding: "12px 24px 16px 24px", WebkitOverflowScrolling: "touch", cursor: "grab", userSelect: "none" }}
               >
-              <div
-                onClick={() => selectPosting(null)}
-                style={{
-                  flexShrink: 0, width: 200, border: `2px solid ${!selectedPostingId ? T.primary : T.border}`,
-                  borderRadius: 14, padding: "16px 18px", cursor: "pointer",
-                  background: !selectedPostingId ? T.primaryLight : T.surface,
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  gap: 8, transition: "all 0.15s", minHeight: 140,
-                }}
-              >
-                <div style={{ fontSize: 24, opacity: 0.5 }}>◈</div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: !selectedPostingId ? T.primary : T.ink, textAlign: "center" }}>All Postings</div>
-                <div style={{ fontSize: 11, color: T.inkFaint, textAlign: "center" }}>{postings.reduce((s, p) => s + (p.apps || 0), 0)} applications</div>
-              </div>
+                <div
+                  onClick={() => selectPosting(null)}
+                  style={{
+                    flexShrink: 0, width: 200, border: `2px solid ${!selectedPostingId ? T.primary : T.borderMid}`,
+                    borderRadius: 14, padding: "16px 18px", cursor: "pointer",
+                    background: !selectedPostingId ? T.primaryLight : T.surface,
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                    gap: 8, transition: "all 0.15s", minHeight: 140,
+                  }}
+                >
+                  <div style={{ fontSize: 24, opacity: 0.5 }}>◈</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: !selectedPostingId ? T.primary : T.ink, textAlign: "center" }}>All Postings</div>
+                  <div style={{ fontSize: 11, color: T.inkFaint, textAlign: "center" }}>{postings.reduce((s, p) => s + (p.apps || 0), 0)} applications</div>
+                </div>
 
-              {postings.map((p) => {
-                const isSelected = selectedPostingId === p.id;
-                const details = getJobDetails(p);
-                return (
-                  <div
-                    key={p.id}
-                    onClick={() => selectPosting(p.id)}
-                    style={{
-                      flexShrink: 0, width: 280, border: `2px solid ${isSelected ? T.primary : T.border}`,
-                      borderRadius: 14, padding: "14px 16px", cursor: "pointer",
-                      background: isSelected ? T.primaryLight : T.surface,
-                      transition: "all 0.18s",
-                      display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 140,
-                      boxShadow: isSelected ? `0 4px 20px ${T.primary}22` : "0 1px 4px rgba(0,0,0,0.05)",
-                    }}
-                  >
-                    <div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 4 }}>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, lineHeight: 1.3, flex: 1 }}>{p.role}</div>
-                        <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 99, padding: "2px 7px", background: details.type === "Full-time" ? T.primaryLight : T.tealLight, color: details.type === "Full-time" ? T.primary : T.teal }}>{details.type}</span>
+                {postings.map((p) => {
+                  const isSelected = selectedPostingId === p.id;
+                  const details = getJobDetails(p);
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => selectPosting(p.id)}
+                      style={{
+                        flexShrink: 0, width: 280, border: `2px solid ${isSelected ? T.primary : T.borderMid}`,
+                        borderRadius: 14, padding: "14px 16px", cursor: "pointer",
+                        background: isSelected ? T.primaryLight : T.surface,
+                        transition: "all 0.18s",
+                        display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 140,
+                        boxShadow: isSelected ? `0 4px 20px ${T.primary}22` : "0 1px 4px rgba(0,0,0,0.05)",
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 4 }}>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, lineHeight: 1.3, flex: 1 }}>{p.role}</div>
+                          <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 99, padding: "2px 7px", background: details.type === "Full-time" ? T.primaryLight : T.tealLight, color: details.type === "Full-time" ? T.primary : T.teal }}>{details.type}</span>
+                        </div>
+                        <div style={{ fontSize: 11, color: T.inkLight }}>{p.channel} Posting</div>
                       </div>
-                      <div style={{ fontSize: 11, color: T.inkLight }}>{p.channel} Posting</div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+                        <span style={{ fontSize: 12, color: T.inkMid }}><strong>{p.apps ?? 0}</strong> applications</span>
+                        {isSelected && <span style={{ fontSize: 10, fontWeight: 700, background: T.primary, color: "#fff", borderRadius: 99, padding: "2px 8px" }}>Selected</span>}
+                      </div>
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-                      <span style={{ fontSize: 12, color: T.inkMid }}><strong>{p.apps ?? 0}</strong> applications</span>
-                      {isSelected && <span style={{ fontSize: 10, fontWeight: 700, background: T.primary, color: "#fff", borderRadius: 99, padding: "2px 8px" }}>Selected</span>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
