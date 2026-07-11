@@ -93,8 +93,8 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
   const statusFilteredInterviews = statusFilter === "All"
     ? scheduledInterviews
     : statusFilter === "Pending"
-    ? scheduledInterviews.filter((i) => i.status !== "Completed")
-    : scheduledInterviews.filter((i) => i.status === "Completed");
+      ? scheduledInterviews.filter((i) => i.status !== "Completed")
+      : scheduledInterviews.filter((i) => i.status === "Completed");
 
   const filteredInterviews = selectedRole
     ? statusFilteredInterviews.filter((i) => i.role === selectedRole)
@@ -103,7 +103,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
   const upcomingCount = scheduledInterviews.filter((i) => i.status !== "Completed").length;
   const evaluatedCount = scheduledInterviews.filter((i) => i.evaluations?.length > 0).length;
 
-  const selectJob = (id) => setSelectedJobId((prev) => (prev === id ? null : id));
+  const selectJob = (id) => setSelectedJobId(id);
 
   const scrollCarousel = (dir) =>
     hScroll.ref.current?.scrollBy({ left: dir === "left" ? -300 : 300, behavior: "smooth" });
@@ -363,7 +363,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
           {isMobile ? (
             <>
               <div ref={hScroll.ref} onScroll={(e) => { const scrollLeft = e.currentTarget.scrollLeft; const cardWidth = e.currentTarget.clientWidth; if (cardWidth > 0) { const newIndex = Math.round(scrollLeft / cardWidth); setFilterActiveIndex(newIndex); } }} style={{ display: "flex", overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none", gap: 12, paddingBottom: 4 }}>
-                <div onClick={() => { selectJob(null); setFilterActiveIndex(0); if (hScroll.ref.current) { const cards = hScroll.ref.current.children; if (cards[0]) cards[0].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); } }} style={{ flexShrink: 0, width: "100%", border: `2px solid ${!selectedJobId ? MAROON : T.border}`, borderRadius: 16, padding: "18px 20px", cursor: "pointer", background: !selectedJobId ? T.primaryLight : T.surface, display: "flex", flexDirection: "row", alignItems: "center", gap: 16, transition: "all 0.2s", boxShadow: !selectedJobId ? `0 4px 20px ${MAROON}22` : "0 1px 4px rgba(0,0,0,0.05)" }}>
+                <div onClick={() => { selectJob(null); setFilterActiveIndex(0); if (hScroll.ref.current) { const cards = hScroll.ref.current.children; if (cards[0]) cards[0].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); } }} style={{ flexShrink: 0, width: "100%", border: `2px solid ${!selectedJobId ? MAROON : T.borderMid}`, borderRadius: 16, padding: "18px 20px", cursor: "pointer", background: !selectedJobId ? T.primaryLight : T.surface, display: "flex", flexDirection: "row", alignItems: "center", gap: 16, transition: "all 0.2s", boxShadow: !selectedJobId ? `0 4px 20px ${MAROON}22` : "0 1px 4px rgba(0,0,0,0.05)" }}>
                   <div style={{ width: 52, height: 52, borderRadius: "50%", flexShrink: 0, background: !selectedJobId ? MAROON : T.border, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, color: "#fff" }}>◈</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 15, fontWeight: 800, color: !selectedJobId ? MAROON : T.ink }}>All Interviews</div>
@@ -376,7 +376,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
                   const isSelected = selectedJobId === p.id;
                   const initials = p.role.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
                   return (
-                    <div key={p.id} onClick={() => { selectJob(p.id); setFilterActiveIndex(idx + 1); if (hScroll.ref.current) { const cards = hScroll.ref.current.children; if (cards[idx + 1]) cards[idx + 1].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); } }} style={{ flexShrink: 0, width: "100%", border: `2px solid ${isSelected ? MAROON : T.border}`, borderRadius: 16, padding: "18px 20px", cursor: "pointer", background: isSelected ? T.primaryLight : T.surface, transition: "all 0.2s", boxShadow: isSelected ? `0 4px 20px ${MAROON}22` : "0 1px 4px rgba(0,0,0,0.05)" }}>
+                    <div key={p.id} onClick={() => { selectJob(p.id); setFilterActiveIndex(idx + 1); if (hScroll.ref.current) { const cards = hScroll.ref.current.children; if (cards[idx + 1]) cards[idx + 1].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); } }} style={{ flexShrink: 0, width: "100%", border: `2px solid ${isSelected ? MAROON : T.borderMid}`, borderRadius: 16, padding: "18px 20px", cursor: "pointer", background: isSelected ? T.primaryLight : T.surface, transition: "all 0.2s", boxShadow: isSelected ? `0 4px 20px ${MAROON}22` : "0 1px 4px rgba(0,0,0,0.05)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                         <div style={{ width: 52, height: 52, borderRadius: "50%", flexShrink: 0, background: isSelected ? MAROON : "#E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 800, color: isSelected ? "#fff" : T.inkMid }}>{initials}</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -409,8 +409,8 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
             <div style={{ position: "relative" }}>
               <div style={{ position: "absolute", left: 0, top: 0, bottom: 8, width: 40, zIndex: 2, background: `linear-gradient(to right, ${T.canvas}, transparent)`, pointerEvents: "none" }} />
               <div style={{ position: "absolute", right: 0, top: 0, bottom: 8, width: 40, zIndex: 2, background: `linear-gradient(to left, ${T.canvas}, transparent)`, pointerEvents: "none" }} />
-              <div ref={hScroll.ref} onWheel={hScroll.onWheel} onMouseDown={hScroll.onMouseDown} onMouseMove={hScroll.onMouseMove} onMouseUp={hScroll.onMouseUp} onMouseLeave={hScroll.onMouseLeave} className="carousel-scroll" style={{ display: "flex", gap: 14, overflowX: "auto", paddingBottom: 8, WebkitOverflowScrolling: "touch", cursor: "grab", userSelect: "none" }}>
-                <div onClick={() => selectJob(null)} style={{ flexShrink: 0, width: 190, border: `2px solid ${!selectedJobId ? MAROON : T.border}`, borderRadius: 14, padding: "16px 18px", cursor: "pointer", background: !selectedJobId ? T.primaryLight : T.surface, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.15s", minHeight: 125, boxShadow: !selectedJobId ? `0 4px 20px ${MAROON}22` : "0 1px 4px rgba(0,0,0,0.05)" }}>
+              <div ref={hScroll.ref} onWheel={hScroll.onWheel} onMouseDown={hScroll.onMouseDown} onMouseMove={hScroll.onMouseMove} onMouseUp={hScroll.onMouseUp} onMouseLeave={hScroll.onMouseLeave} className="carousel-scroll" style={{ display: "flex", gap: 14, overflowX: "auto", padding: "12px 24px 16px 24px", WebkitOverflowScrolling: "touch", cursor: "grab", userSelect: "none" }}>
+                <div onClick={() => selectJob(null)} style={{ flexShrink: 0, width: 190, border: `2px solid ${!selectedJobId ? MAROON : T.borderMid}`, borderRadius: 14, padding: "16px 18px", cursor: "pointer", background: !selectedJobId ? T.primaryLight : T.surface, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.15s", minHeight: 125, boxShadow: !selectedJobId ? `0 4px 20px ${MAROON}22` : "0 1px 4px rgba(0,0,0,0.05)" }}>
                   <div style={{ fontSize: 24, opacity: 0.45 }}>◈</div>
                   <div style={{ fontSize: 13, fontWeight: 800, color: !selectedJobId ? MAROON : T.ink, textAlign: "center" }}>All Interviews</div>
                   <div style={{ fontSize: 11, color: T.inkFaint }}>{scheduledInterviews.length} scheduled</div>
@@ -420,7 +420,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
                 {enrichedPostings.map((p) => {
                   const isSelected = selectedJobId === p.id;
                   return (
-                    <div key={p.id} onClick={() => selectJob(p.id)} style={{ flexShrink: 0, width: 250, border: `2px solid ${isSelected ? MAROON : T.border}`, borderRadius: 14, padding: "14px 16px", cursor: "pointer", background: isSelected ? T.primaryLight : T.surface, transition: "all 0.18s", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 125, boxShadow: isSelected ? `0 4px 20px ${MAROON}22` : "0 1px 4px rgba(0,0,0,0.05)" }}>
+                    <div key={p.id} onClick={() => selectJob(p.id)} style={{ flexShrink: 0, width: 250, border: `2px solid ${isSelected ? MAROON : T.borderMid}`, borderRadius: 14, padding: "14px 16px", cursor: "pointer", background: isSelected ? T.primaryLight : T.surface, transition: "all 0.18s", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 125, boxShadow: isSelected ? `0 4px 20px ${MAROON}22` : "0 1px 4px rgba(0,0,0,0.05)" }}>
                       <div>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 4 }}>
                           <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, lineHeight: 1.3, flex: 1 }}>{p.role}</div>

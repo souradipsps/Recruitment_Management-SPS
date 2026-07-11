@@ -55,6 +55,7 @@ export function useApprovalActions({
         await updateRoleRequest(r.sourceDbId, {
           department: r.dept,
           role: r.role,
+          type: r.empType,
           justification: r.just,
           salary_range: r.salary ? r.salary.replace(/^₹/, "") : "",
           experience: r.experience,
@@ -93,6 +94,7 @@ export function useApprovalActions({
             ...item,
             dept: r.dept,
             role: r.role,
+            type: r.empType || item.type,
             status: action,
             comment: customComment || "",
             history: updated.history,
@@ -141,7 +143,7 @@ export function useApprovalActions({
         if (exists) return prev;
         const cleanedSalary = r.salary ? r.salary.replace(/^₹/, "") : "";
         return [...prev, {
-          id: `ROL-${Date.now()}`, dept: r.dept, role: r.role, type: "Full-time",
+          id: `ROL-${Date.now()}`, dept: r.dept, role: r.role, type: r.empType || "Full-time",
           headcount: 1, filled: 0, currentFilled: 0, status: "Inactive", currentStatus: "Inactive",
           experience: r.experience || "—",
           salaryRange: cleanedSalary || "—",

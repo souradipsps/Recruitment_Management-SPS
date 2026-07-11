@@ -78,6 +78,7 @@ export default function ScreenRouter({ active, s, navigate, onGiveOffer }) {
           setGeneralApplications={s.setGeneralApplications}
           jobPostings={s.jobPostings}
           jobRequests={s.jobRequests}
+          onNavigate={navigate}
         />
       );
     case "interview-panel":

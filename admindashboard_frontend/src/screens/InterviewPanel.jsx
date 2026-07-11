@@ -202,7 +202,7 @@ export default function InterviewPanel({
 
   // Enrich job postings with shortlisted candidate counts for the carousel
   const enrichedPostings = jobPostings.map((p) => {
-    const count = shortlistedCandidates.filter((c) => c.jobPostingId === p.id || c.role === p.role).length;
+    const count = shortlistedCandidates.filter((c) => c.jobPostingId === p.id || (p.backendId && String(c.jobPostingId) === String(p.backendId)) || c.role === p.role).length;
     return {
       ...p,
       count,
@@ -214,7 +214,8 @@ export default function InterviewPanel({
   // Candidates after job filter (before round filter) — used to compute available rounds
   const jobFilteredCandidates = candidatesWithInterviews.filter((c) => {
     if (selectedPostingId) {
-      return c.jobPostingId === selectedPostingId || c.role === selectedRole;
+      const posting = jobPostings.find((p) => p.id === selectedPostingId);
+      return c.jobPostingId === selectedPostingId || (posting && posting.backendId && String(c.jobPostingId) === String(posting.backendId)) || c.role === selectedRole;
     }
     return true;
   });
@@ -544,7 +545,7 @@ export default function InterviewPanel({
   };
 
   const selectPosting = (id) => {
-    setSelectedPostingId((prev) => (prev === id ? null : id));
+    setSelectedPostingId(id);
     setSearch("");
     setRoundFilter(1); // reset round filter when job changes
   };
@@ -746,7 +747,7 @@ export default function InterviewPanel({
                   }}
                   style={{
                     flexShrink: 0, width: "100%", scrollSnapAlign: "center",
-                    border: `2px solid ${!selectedPostingId ? T.primary : T.border}`,
+                    border: `2px solid ${!selectedPostingId ? T.primary : T.borderMid}`,
                     borderRadius: 16, padding: "18px 20px", cursor: "pointer",
                     background: !selectedPostingId ? T.primaryLight : T.surface,
                     transition: "all 0.2s",
@@ -802,7 +803,7 @@ export default function InterviewPanel({
                       }}
                       style={{
                         flexShrink: 0, width: "100%", scrollSnapAlign: "center",
-                        border: `2px solid ${isSelected ? T.primary : T.border}`,
+                        border: `2px solid ${isSelected ? T.primary : T.borderMid}`,
                         borderRadius: 16, padding: "18px 20px", cursor: "pointer",
                         background: isSelected ? T.primaryLight : T.surface,
                         transition: "all 0.2s",
@@ -890,55 +891,55 @@ export default function InterviewPanel({
                 onMouseMove={hScroll.onMouseMove}
                 onMouseUp={hScroll.onMouseUp}
                 onMouseLeave={hScroll.onMouseLeave}
-                style={{ display: "flex", gap: 14, overflowX: "auto", paddingBottom: 8, WebkitOverflowScrolling: "touch", cursor: "grab", userSelect: "none" }}
+                style={{ display: "flex", gap: 14, overflowX: "auto", padding: "12px 24px 16px 24px", WebkitOverflowScrolling: "touch", cursor: "grab", userSelect: "none" }}
               >
-              <div
-                onClick={() => selectPosting(null)}
-                style={{
-                  flexShrink: 0, width: 200,
-                  border: `2px solid ${!selectedPostingId ? T.primary : T.border}`,
-                  borderRadius: 14, padding: "16px 18px", cursor: "pointer",
-                  background: !selectedPostingId ? T.primaryLight : T.surface,
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  gap: 8, transition: "all 0.15s", minHeight: 140,
-                }}
-              >
-                <div style={{ fontSize: 24, opacity: 0.5 }}>◈</div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: !selectedPostingId ? T.primary : T.ink, textAlign: "center" }}>All Shortlisted</div>
-                <div style={{ fontSize: 11, color: T.inkFaint, textAlign: "center" }}>{shortlistedCandidates.length} candidates</div>
-              </div>
+                <div
+                  onClick={() => selectPosting(null)}
+                  style={{
+                    flexShrink: 0, width: 200,
+                    border: `2px solid ${!selectedPostingId ? T.primary : T.borderMid}`,
+                    borderRadius: 14, padding: "16px 18px", cursor: "pointer",
+                    background: !selectedPostingId ? T.primaryLight : T.surface,
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                    gap: 8, transition: "all 0.15s", minHeight: 140,
+                  }}
+                >
+                  <div style={{ fontSize: 24, opacity: 0.5 }}>◈</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: !selectedPostingId ? T.primary : T.ink, textAlign: "center" }}>All Shortlisted</div>
+                  <div style={{ fontSize: 11, color: T.inkFaint, textAlign: "center" }}>{shortlistedCandidates.length} candidates</div>
+                </div>
 
-              {enrichedPostings.map((p) => {
-                const isSelected = selectedPostingId === p.id;
-                return (
-                  <div
-                    key={p.id}
-                    onClick={() => selectPosting(p.id)}
-                    style={{
-                      flexShrink: 0, width: 280,
-                      border: `2px solid ${isSelected ? T.primary : T.border}`,
-                      borderRadius: 14, padding: "14px 16px", cursor: "pointer",
-                      background: isSelected ? T.primaryLight : T.surface,
-                      transition: "all 0.18s",
-                      display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 140,
-                      boxShadow: isSelected ? `0 4px 20px ${T.primary}22` : "0 1px 4px rgba(0,0,0,0.05)",
-                    }}
-                  >
-                    <div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 4 }}>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, lineHeight: 1.3, flex: 1 }}>{p.role}</div>
-                        <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 99, padding: "2px 7px", background: p.type === "Full-time" ? T.primaryLight : T.tealLight, color: p.type === "Full-time" ? T.primary : T.teal }}>{p.type}</span>
+                {enrichedPostings.map((p) => {
+                  const isSelected = selectedPostingId === p.id;
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => selectPosting(p.id)}
+                      style={{
+                        flexShrink: 0, width: 280,
+                        border: `2px solid ${isSelected ? T.primary : T.borderMid}`,
+                        borderRadius: 14, padding: "14px 16px", cursor: "pointer",
+                        background: isSelected ? T.primaryLight : T.surface,
+                        transition: "all 0.18s",
+                        display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 140,
+                        boxShadow: isSelected ? `0 4px 20px ${T.primary}22` : "0 1px 4px rgba(0,0,0,0.05)",
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 4 }}>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, lineHeight: 1.3, flex: 1 }}>{p.role}</div>
+                          <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 99, padding: "2px 7px", background: p.type === "Full-time" ? T.primaryLight : T.tealLight, color: p.type === "Full-time" ? T.primary : T.teal }}>{p.type}</span>
+                        </div>
+                        <div style={{ fontSize: 11, color: T.inkLight }}>{p.channel} Posting</div>
                       </div>
-                      <div style={{ fontSize: 11, color: T.inkLight }}>{p.channel} Posting</div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+                        <span style={{ fontSize: 12, color: T.inkMid }}><strong>{p.count}</strong> shortlisted</span>
+                        {isSelected && <span style={{ fontSize: 10, fontWeight: 700, background: T.primary, color: "#fff", borderRadius: 99, padding: "2px 8px" }}>Selected</span>}
+                      </div>
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-                      <span style={{ fontSize: 12, color: T.inkMid }}><strong>{p.count}</strong> shortlisted</span>
-                      {isSelected && <span style={{ fontSize: 10, fontWeight: 700, background: T.primary, color: "#fff", borderRadius: 99, padding: "2px 8px" }}>Selected</span>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -1447,435 +1448,435 @@ export default function InterviewPanel({
 
                   return (
                     <React.Fragment key={candidateKey(c)}>
-                    <tr
-                      onClick={() => setSelectedAppDetail(c)}
-                      style={{
-                        borderBottom: `1px solid ${T.border}`,
-                        cursor: "pointer",
-                        background: isChecked ? `${T.primary}05` : "transparent",
-                        transition: "background-color 0.15s ease",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = isChecked ? `${T.primary}09` : `${T.canvas}`;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = isChecked ? `${T.primary}05` : "transparent";
-                      }}
-                    >
-                      {/* Checkbox */}
-                      <td style={{ padding: "12px 8px", textAlign: "center", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
-                        <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            disabled={isPreviousRound}
-                            onChange={() => {
-                              toggleSelectCandidate(c);
-                            }}
-                            style={{ width: 16, height: 16, cursor: isPreviousRound ? "not-allowed" : "pointer" }}
-                          />
-                        </div>
-                      </td>
-
-                      {/* Candidate & Role */}
-                      <td style={{ padding: "12px 10px", verticalAlign: "middle" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          {avatar(c.name, 36, 12)}
-                          <div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span style={{ fontWeight: 700, color: T.ink, fontSize: 13 }}>{c.name}</span>
-                              {i.score !== null && (
-                                <span style={{
-                                  fontSize: 9, fontWeight: 800,
-                                  background: i.score >= 80 ? T.greenLight : i.score >= 60 ? T.amberLight : T.redLight,
-                                  color: i.score >= 80 ? T.green : i.score >= 60 ? T.amber : T.red,
-                                  border: `1px solid ${i.score >= 80 ? "#A7F3D0" : i.score >= 60 ? "#FDE68A" : "#FCA5A5"}`,
-                                  padding: "1px 5px", borderRadius: 4
-                                }}>
-                                  ★ {i.score}
-                                </span>
-                              )}
-                            </div>
-                            <div style={{ fontSize: 11, color: T.inkMid, marginTop: 1 }}>{c.role}</div>
-                            <div style={{ fontSize: 10, color: T.inkFaint }}>{c.email}</div>
+                      <tr
+                        onClick={() => setSelectedAppDetail(c)}
+                        style={{
+                          borderBottom: `1px solid ${T.border}`,
+                          cursor: "pointer",
+                          background: isChecked ? `${T.primary}05` : "transparent",
+                          transition: "background-color 0.15s ease",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = isChecked ? `${T.primary}09` : `${T.canvas}`;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = isChecked ? `${T.primary}05` : "transparent";
+                        }}
+                      >
+                        {/* Checkbox */}
+                        <td style={{ padding: "12px 8px", textAlign: "center", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
+                          <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              disabled={isPreviousRound}
+                              onChange={() => {
+                                toggleSelectCandidate(c);
+                              }}
+                              style={{ width: 16, height: 16, cursor: isPreviousRound ? "not-allowed" : "pointer" }}
+                            />
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Round */}
-                      <td style={{ padding: "12px 10px", textAlign: "center", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: 4, background: T.canvas, border: `1px solid ${T.border}`, borderRadius: 8, padding: "2px 4px" }}>
-                          <button
-                            onClick={() => handleDecrementCandidateRound(c, rnd)}
-                            disabled={rnd <= 1 || isPreviousRound}
-                            style={{
-                              width: 20, height: 20, borderRadius: 5, border: "none",
-                              background: (rnd <= 1 || isPreviousRound) ? "transparent" : T.primaryLight,
-                              color: (rnd <= 1 || isPreviousRound) ? T.inkFaint : T.primary,
-                              fontWeight: "bold",
-                              cursor: (rnd <= 1 || isPreviousRound) ? "not-allowed" : "pointer",
-                              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11,
-                              transition: "all 0.15s"
-                            }}
-                          >
-                            -
-                          </button>
-                          <span style={{ fontSize: 11.5, fontWeight: 700, minWidth: 55, textAlign: "center", color: T.ink }}>
-                            {getRoundOrdinal(rnd)}
-                          </span>
-                          <button
-                            onClick={() => handleIncrementCandidateRound(c, rnd)}
-                            disabled={rnd >= 10 || isPreviousRound}
-                            style={{
-                              width: 20, height: 20, borderRadius: 5, border: "none",
-                              background: (rnd >= 10 || isPreviousRound) ? "transparent" : T.primaryLight,
-                              color: (rnd >= 10 || isPreviousRound) ? T.inkFaint : T.primary,
-                              fontWeight: "bold",
-                              cursor: (rnd >= 10 || isPreviousRound) ? "not-allowed" : "pointer",
-                              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11,
-                              transition: "all 0.15s"
-                            }}
-                          >
-                            +
-                          </button>
-                        </div>
-                      </td>
-
-                      {/* Panelists */}
-                      <td style={{ padding: "12px 10px", verticalAlign: "middle" }}>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                          {i.panel && i.panel.length > 0 ? (
-                            i.panel.map((pName) => (
-                              <span key={pName} style={{
-                                fontSize: 10, fontWeight: 700, color: T.inkMid,
-                                background: T.canvas, border: `1px solid ${T.border}`,
-                                borderRadius: 4, padding: "2px 6px", whiteSpace: "nowrap"
-                              }} title={pName}>
-                                {pName.split(" ").map((n) => n[0]).join("")}
-                              </span>
-                            ))
-                          ) : (
-                            <span style={{ fontSize: 11, color: T.inkFaint, fontStyle: "italic" }}>—</span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Schedule */}
-                      <td style={{ padding: "12px 10px", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
-                        {i.date ? (
-                          <div
-                            onClick={(e) => { if (!isPreviousRound) { e.stopPropagation(); handleOpenSchedule(c); } }}
-                            style={{
-                              cursor: isPreviousRound ? "default" : "pointer",
-                              fontSize: 12,
-                              fontWeight: 600,
-                              color: T.ink,
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            <span>{i.date} at {i.time}</span>
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: 11, color: T.inkFaint }}>—</span>
-                        )}
-                      </td>
-
-                      {/* Mode */}
-                      <td style={{ padding: "12px 10px", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
-                        {modeCell(i.mode || "In-Person")}
-                      </td>
-
-                      {/* Link */}
-                      <td style={{ padding: "12px 10px", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
-                        {i.mode === "Online" && i.meetingLink ? (
-                          <a
-                            href={i.meetingLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              fontSize: 12, color: T.primary, textDecoration: "none",
-                              display: "inline-flex", alignItems: "center", justifyContent: "center",
-                              width: 24, height: 24, borderRadius: 6, background: T.primaryLight,
-                              border: `1px solid ${T.primary}44`,
-                              transition: "all 0.2s"
-                            }}
-                            className="btn-action-hover"
-                            title="Join Meeting"
-                          >
-                            🔗
-                          </a>
-                        ) : (
-                          <span style={{ fontSize: 11, color: T.inkFaint }}>—</span>
-                        )}
-                      </td>
-
-                      {/* Actions */}
-                      <td style={{ padding: "12px 10px", textAlign: "center", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
-                        <div style={{ display: "grid", gridTemplateColumns: "105px 75px 90px 80px 65px", gap: 6, justifyContent: "center", alignItems: "center" }}>
-                          {!i.date ? (
-                            <button
-                              onClick={() => handleOpenSchedule(c)}
-                              disabled={isPreviousRound}
-                              style={{ ...actionBtnStyle("primary", isPreviousRound), width: "100%", textAlign: "center" }}
-                              className={isPreviousRound ? "" : "btn-action-hover"}
-                            >
-                              📅 Schedule
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleOpenSchedule(c)}
-                              disabled={isPreviousRound}
-                              style={{ ...actionBtnStyle("reschedule", isPreviousRound), width: "100%", textAlign: "center" }}
-                              className={isPreviousRound ? "" : "btn-action-hover"}
-                              title={`Currently: ${i.date} at ${i.time}`}
-                            >
-                              🔄 Reschedule
-                            </button>
-                          )}
-                          <button
-                            onClick={() => setAssigningCandidate(c)}
-                            disabled={isPreviousRound}
-                            style={{ ...actionBtnStyle("amber", isPreviousRound), width: "100%", textAlign: "center" }}
-                            className={isPreviousRound ? "" : "btn-action-hover"}
-                          >
-                            Panelist
-                          </button>
-                          {i.date ? (
-                            <button
-                              onClick={() => setReminderCandidate(c)}
-                              disabled={isPreviousRound}
-                              style={{ ...actionBtnStyle("secondary", isPreviousRound), width: "100%", textAlign: "center" }}
-                              className={isPreviousRound ? "" : "btn-action-hover"}
-                            >
-                              🔔 Reminder
-                            </button>
-                          ) : (
-                            <div style={{ width: 90 }} />
-                          )}
-                          <button
-                            onClick={() => {
-                              const key = candidateKey(c);
-                              if (inlineEvalKey === key) {
-                                setInlineEvalKey(null);
-                                setScores({});
-                                setRecommendation("");
-                                setRemarks("");
-                              } else {
-                                setInlineEvalKey(key);
-                                setScores({});
-                                setRecommendation("");
-                                setRemarks("");
-                              }
-                            }}
-                            disabled={isPreviousRound}
-                            style={{
-                              ...actionBtnStyle(
-                                inlineEvalKey === candidateKey(c) ? "primary" : "secondary",
-                                isPreviousRound
-                              ),
-                              width: "100%",
-                              textAlign: "center",
-                              background: inlineEvalKey === candidateKey(c) ? T.primary : actionBtnStyle("secondary", isPreviousRound).background,
-                              color: inlineEvalKey === candidateKey(c) ? "#fff" : actionBtnStyle("secondary", isPreviousRound).color,
-                            }}
-                            className={isPreviousRound ? "" : "btn-action-hover"}
-                          >
-                            {inlineEvalKey === candidateKey(c) ? "✕ Close" : "📝 Evaluate"}
-                          </button>
-                          <button
-                            onClick={() => handleGiveOffer(c)}
-                            disabled={isPreviousRound}
-                            style={{ ...actionBtnStyle("success", isPreviousRound), width: "100%", textAlign: "center" }}
-                            className={isPreviousRound ? "" : "btn-action-hover"}
-                          >
-                            📜 Offer
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-
-                    {/* Inline Evaluation Form Row */}
-                    {inlineEvalKey === candidateKey(c) && (
-                      <tr>
-                        <td colSpan={8} style={{ padding: 0, background: T.canvas, borderBottom: `2px solid ${T.primary}22` }}>
-                          <div
-                            style={{
-                              padding: "20px 24px",
-                              background: `linear-gradient(135deg, ${T.primaryLight} 0%, ${T.canvas} 100%)`,
-                              borderTop: `2px solid ${T.primary}33`,
-                            }}
-                          >
-                            {/* Header */}
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                <span style={{ fontSize: 16, fontWeight: 800, color: T.primary }}>📝 Evaluate — {c.name}</span>
-                                <span style={{ fontSize: 12, color: T.inkMid, fontWeight: 600 }}>
-                                  {c.role} · {getRoundOrdinal(rnd)}
-                                  {i.date ? ` · ${i.date} at ${i.time}` : ""}
-                                </span>
+                        {/* Candidate & Role */}
+                        <td style={{ padding: "12px 10px", verticalAlign: "middle" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            {avatar(c.name, 36, 12)}
+                            <div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                <span style={{ fontWeight: 700, color: T.ink, fontSize: 13 }}>{c.name}</span>
+                                {i.score !== null && (
+                                  <span style={{
+                                    fontSize: 9, fontWeight: 800,
+                                    background: i.score >= 80 ? T.greenLight : i.score >= 60 ? T.amberLight : T.redLight,
+                                    color: i.score >= 80 ? T.green : i.score >= 60 ? T.amber : T.red,
+                                    border: `1px solid ${i.score >= 80 ? "#A7F3D0" : i.score >= 60 ? "#FDE68A" : "#FCA5A5"}`,
+                                    padding: "1px 5px", borderRadius: 4
+                                  }}>
+                                    ★ {i.score}
+                                  </span>
+                                )}
                               </div>
-                              <button
-                                onClick={() => {
-                                  setInlineEvalKey(null);
-                                  setScores({});
-                                  setRecommendation("");
-                                  setRemarks("");
-                                }}
-                                style={{
-                                  background: "none", border: `1.5px solid ${T.border}`, borderRadius: 8,
-                                  padding: "4px 12px", fontSize: 12, fontWeight: 700, color: T.inkMid,
-                                  cursor: "pointer",
-                                }}
-                                className="btn-action-hover"
-                              >
-                                ✕ Close
-                              </button>
-                            </div>
-
-                            {/* Scoring Grid */}
-                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 16 }}>
-                              {criteria.map((cr) => (
-                                <div key={cr} style={{ background: T.white, borderRadius: 10, padding: "12px 14px", border: `1px solid ${T.border}` }}>
-                                  <div style={{ fontSize: 12, fontWeight: 700, color: T.inkMid, marginBottom: 10 }}>{cr}</div>
-                                  <div style={{ display: "flex", gap: 6, justifyContent: "space-between" }}>
-                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                                      <div
-                                        key={n}
-                                        onClick={() => setScores((prev) => ({ ...prev, [cr]: n }))}
-                                        style={{
-                                          width: 32, height: 32, borderRadius: 8,
-                                          display: "flex", alignItems: "center", justifyContent: "center",
-                                          fontSize: 12, fontWeight: 700, cursor: "pointer",
-                                          background: scores[cr] >= n ? T.primary : T.primaryLight,
-                                          color: scores[cr] >= n ? "#fff" : T.primary,
-                                          border: `1.5px solid ${scores[cr] >= n ? T.primary : T.border}`,
-                                          transition: "all 0.1s",
-                                        }}
-                                      >
-                                        {n}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-
-                            {/* Recommendation + Remarks row */}
-                            <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start", marginBottom: 16 }}>
-                              <div style={{ flex: "0 0 auto" }}>
-                                <div style={{ fontSize: 12, fontWeight: 700, color: T.inkMid, marginBottom: 6 }}>Overall Recommendation</div>
-                                <div style={{ display: "flex", gap: 8 }}>
-                                  {["Selected", "Hold", "Rejected"].map((r) => (
-                                    <button
-                                      key={r}
-                                      onClick={() => setRecommendation(r)}
-                                      style={{
-                                        border: `1.5px solid ${recommendation === r ? T.primary : T.border}`,
-                                        borderRadius: 8, padding: "8px 18px", fontSize: 13, fontWeight: 700,
-                                        background: recommendation === r ? T.primaryLight : T.white,
-                                        color: recommendation === r ? T.primary : T.inkMid,
-                                        cursor: "pointer",
-                                      }}
-                                      className="btn-action-hover"
-                                    >
-                                      {r}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                              <div style={{ flex: 1, minWidth: 200 }}>
-                                <div style={{ fontSize: 12, fontWeight: 700, color: T.inkMid, marginBottom: 6 }}>Remarks</div>
-                                <textarea
-                                  placeholder="Any additional remarks…"
-                                  value={remarks}
-                                  onChange={(e) => setRemarks(e.target.value)}
-                                  style={{
-                                    border: `1.5px solid ${T.border}`, borderRadius: 8, padding: 10,
-                                    fontSize: 13, width: "100%", minHeight: 48, resize: "vertical",
-                                    boxSizing: "border-box", outline: "none", color: T.ink,
-                                    background: T.white,
-                                  }}
-                                />
-                              </div>
-                            </div>
-
-                            {/* Submit actions */}
-                            <div style={{ display: "flex", gap: 10 }}>
-                              <button
-                                onClick={() => {
-                                  if (!recommendation) {
-                                    alert("Please select a recommendation.");
-                                    return;
-                                  }
-                                  if (!setInterviews) return;
-                                  const scoreValues = Object.values(scores);
-                                  const avgScore = scoreValues.length > 0 ? Math.round((scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length) * 20) : null;
-                                  setInterviews((prev) => {
-                                    const exists = prev.some(
-                                      (iv) => iv.candidate === c.name && iv.role === c.role && iv.round === rnd
-                                    );
-                                    if (exists) {
-                                      return prev.map((iv) =>
-                                        iv.candidate === c.name && iv.role === c.role && iv.round === rnd
-                                          ? { ...iv, score: avgScore, rec: recommendation, status: "Completed", remarks }
-                                          : iv
-                                      );
-                                    } else {
-                                      return [
-                                        ...prev,
-                                        {
-                                          id: i.id || `INT-${Date.now()}`,
-                                          candidate: c.name,
-                                          role: c.role,
-                                          date: i.date || "",
-                                          time: i.time || "",
-                                          panel: i.panel || [],
-                                          score: avgScore,
-                                          rec: recommendation,
-                                          status: "Completed",
-                                          mode: i.mode || "In-Person",
-                                          meetingLink: i.meetingLink || "",
-                                          round: rnd,
-                                          remarks,
-                                        },
-                                      ];
-                                    }
-                                  });
-                                  setInlineEvalKey(null);
-                                  setScores({});
-                                  setRecommendation("");
-                                  setRemarks("");
-                                }}
-                                style={{
-                                  background: T.primary, color: "#fff", border: "none", borderRadius: 10,
-                                  padding: "9px 22px", fontSize: 13, fontWeight: 700, cursor: "pointer",
-                                  boxShadow: `0 4px 12px ${T.primary}33`,
-                                }}
-                                className="btn-action-hover"
-                              >
-                                ✓ Submit Evaluation
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setInlineEvalKey(null);
-                                  setScores({});
-                                  setRecommendation("");
-                                  setRemarks("");
-                                }}
-                                style={{
-                                  background: "none", border: `1.5px solid ${T.border}`, borderRadius: 10,
-                                  padding: "9px 22px", fontSize: 13, fontWeight: 700, cursor: "pointer",
-                                  color: T.inkMid,
-                                }}
-                                className="btn-action-hover"
-                              >
-                                Cancel
-                              </button>
+                              <div style={{ fontSize: 11, color: T.inkMid, marginTop: 1 }}>{c.role}</div>
+                              <div style={{ fontSize: 10, color: T.inkFaint }}>{c.email}</div>
                             </div>
                           </div>
                         </td>
+
+                        {/* Round */}
+                        <td style={{ padding: "12px 10px", textAlign: "center", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 4, background: T.canvas, border: `1px solid ${T.border}`, borderRadius: 8, padding: "2px 4px" }}>
+                            <button
+                              onClick={() => handleDecrementCandidateRound(c, rnd)}
+                              disabled={rnd <= 1 || isPreviousRound}
+                              style={{
+                                width: 20, height: 20, borderRadius: 5, border: "none",
+                                background: (rnd <= 1 || isPreviousRound) ? "transparent" : T.primaryLight,
+                                color: (rnd <= 1 || isPreviousRound) ? T.inkFaint : T.primary,
+                                fontWeight: "bold",
+                                cursor: (rnd <= 1 || isPreviousRound) ? "not-allowed" : "pointer",
+                                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11,
+                                transition: "all 0.15s"
+                              }}
+                            >
+                              -
+                            </button>
+                            <span style={{ fontSize: 11.5, fontWeight: 700, minWidth: 55, textAlign: "center", color: T.ink }}>
+                              {getRoundOrdinal(rnd)}
+                            </span>
+                            <button
+                              onClick={() => handleIncrementCandidateRound(c, rnd)}
+                              disabled={rnd >= 10 || isPreviousRound}
+                              style={{
+                                width: 20, height: 20, borderRadius: 5, border: "none",
+                                background: (rnd >= 10 || isPreviousRound) ? "transparent" : T.primaryLight,
+                                color: (rnd >= 10 || isPreviousRound) ? T.inkFaint : T.primary,
+                                fontWeight: "bold",
+                                cursor: (rnd >= 10 || isPreviousRound) ? "not-allowed" : "pointer",
+                                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11,
+                                transition: "all 0.15s"
+                              }}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* Panelists */}
+                        <td style={{ padding: "12px 10px", verticalAlign: "middle" }}>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                            {i.panel && i.panel.length > 0 ? (
+                              i.panel.map((pName) => (
+                                <span key={pName} style={{
+                                  fontSize: 10, fontWeight: 700, color: T.inkMid,
+                                  background: T.canvas, border: `1px solid ${T.border}`,
+                                  borderRadius: 4, padding: "2px 6px", whiteSpace: "nowrap"
+                                }} title={pName}>
+                                  {pName.split(" ").map((n) => n[0]).join("")}
+                                </span>
+                              ))
+                            ) : (
+                              <span style={{ fontSize: 11, color: T.inkFaint, fontStyle: "italic" }}>—</span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Schedule */}
+                        <td style={{ padding: "12px 10px", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
+                          {i.date ? (
+                            <div
+                              onClick={(e) => { if (!isPreviousRound) { e.stopPropagation(); handleOpenSchedule(c); } }}
+                              style={{
+                                cursor: isPreviousRound ? "default" : "pointer",
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: T.ink,
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              <span>{i.date} at {i.time}</span>
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: 11, color: T.inkFaint }}>—</span>
+                          )}
+                        </td>
+
+                        {/* Mode */}
+                        <td style={{ padding: "12px 10px", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
+                          {modeCell(i.mode || "In-Person")}
+                        </td>
+
+                        {/* Link */}
+                        <td style={{ padding: "12px 10px", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
+                          {i.mode === "Online" && i.meetingLink ? (
+                            <a
+                              href={i.meetingLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                fontSize: 12, color: T.primary, textDecoration: "none",
+                                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                width: 24, height: 24, borderRadius: 6, background: T.primaryLight,
+                                border: `1px solid ${T.primary}44`,
+                                transition: "all 0.2s"
+                              }}
+                              className="btn-action-hover"
+                              title="Join Meeting"
+                            >
+                              🔗
+                            </a>
+                          ) : (
+                            <span style={{ fontSize: 11, color: T.inkFaint }}>—</span>
+                          )}
+                        </td>
+
+                        {/* Actions */}
+                        <td style={{ padding: "12px 10px", textAlign: "center", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
+                          <div style={{ display: "grid", gridTemplateColumns: "105px 75px 90px 80px 65px", gap: 6, justifyContent: "center", alignItems: "center" }}>
+                            {!i.date ? (
+                              <button
+                                onClick={() => handleOpenSchedule(c)}
+                                disabled={isPreviousRound}
+                                style={{ ...actionBtnStyle("primary", isPreviousRound), width: "100%", textAlign: "center" }}
+                                className={isPreviousRound ? "" : "btn-action-hover"}
+                              >
+                                📅 Schedule
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleOpenSchedule(c)}
+                                disabled={isPreviousRound}
+                                style={{ ...actionBtnStyle("reschedule", isPreviousRound), width: "100%", textAlign: "center" }}
+                                className={isPreviousRound ? "" : "btn-action-hover"}
+                                title={`Currently: ${i.date} at ${i.time}`}
+                              >
+                                🔄 Reschedule
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setAssigningCandidate(c)}
+                              disabled={isPreviousRound}
+                              style={{ ...actionBtnStyle("amber", isPreviousRound), width: "100%", textAlign: "center" }}
+                              className={isPreviousRound ? "" : "btn-action-hover"}
+                            >
+                              Panelist
+                            </button>
+                            {i.date ? (
+                              <button
+                                onClick={() => setReminderCandidate(c)}
+                                disabled={isPreviousRound}
+                                style={{ ...actionBtnStyle("secondary", isPreviousRound), width: "100%", textAlign: "center" }}
+                                className={isPreviousRound ? "" : "btn-action-hover"}
+                              >
+                                🔔 Reminder
+                              </button>
+                            ) : (
+                              <div style={{ width: 90 }} />
+                            )}
+                            <button
+                              onClick={() => {
+                                const key = candidateKey(c);
+                                if (inlineEvalKey === key) {
+                                  setInlineEvalKey(null);
+                                  setScores({});
+                                  setRecommendation("");
+                                  setRemarks("");
+                                } else {
+                                  setInlineEvalKey(key);
+                                  setScores({});
+                                  setRecommendation("");
+                                  setRemarks("");
+                                }
+                              }}
+                              disabled={isPreviousRound}
+                              style={{
+                                ...actionBtnStyle(
+                                  inlineEvalKey === candidateKey(c) ? "primary" : "secondary",
+                                  isPreviousRound
+                                ),
+                                width: "100%",
+                                textAlign: "center",
+                                background: inlineEvalKey === candidateKey(c) ? T.primary : actionBtnStyle("secondary", isPreviousRound).background,
+                                color: inlineEvalKey === candidateKey(c) ? "#fff" : actionBtnStyle("secondary", isPreviousRound).color,
+                              }}
+                              className={isPreviousRound ? "" : "btn-action-hover"}
+                            >
+                              {inlineEvalKey === candidateKey(c) ? "✕ Close" : "📝 Evaluate"}
+                            </button>
+                            <button
+                              onClick={() => handleGiveOffer(c)}
+                              disabled={isPreviousRound}
+                              style={{ ...actionBtnStyle("success", isPreviousRound), width: "100%", textAlign: "center" }}
+                              className={isPreviousRound ? "" : "btn-action-hover"}
+                            >
+                              📜 Offer
+                            </button>
+                          </div>
+                        </td>
                       </tr>
-                    )}
+
+                      {/* Inline Evaluation Form Row */}
+                      {inlineEvalKey === candidateKey(c) && (
+                        <tr>
+                          <td colSpan={8} style={{ padding: 0, background: T.canvas, borderBottom: `2px solid ${T.primary}22` }}>
+                            <div
+                              style={{
+                                padding: "20px 24px",
+                                background: `linear-gradient(135deg, ${T.primaryLight} 0%, ${T.canvas} 100%)`,
+                                borderTop: `2px solid ${T.primary}33`,
+                              }}
+                            >
+                              {/* Header */}
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                  <span style={{ fontSize: 16, fontWeight: 800, color: T.primary }}>📝 Evaluate — {c.name}</span>
+                                  <span style={{ fontSize: 12, color: T.inkMid, fontWeight: 600 }}>
+                                    {c.role} · {getRoundOrdinal(rnd)}
+                                    {i.date ? ` · ${i.date} at ${i.time}` : ""}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    setInlineEvalKey(null);
+                                    setScores({});
+                                    setRecommendation("");
+                                    setRemarks("");
+                                  }}
+                                  style={{
+                                    background: "none", border: `1.5px solid ${T.border}`, borderRadius: 8,
+                                    padding: "4px 12px", fontSize: 12, fontWeight: 700, color: T.inkMid,
+                                    cursor: "pointer",
+                                  }}
+                                  className="btn-action-hover"
+                                >
+                                  ✕ Close
+                                </button>
+                              </div>
+
+                              {/* Scoring Grid */}
+                              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                                {criteria.map((cr) => (
+                                  <div key={cr} style={{ background: T.white, borderRadius: 10, padding: "12px 14px", border: `1px solid ${T.border}` }}>
+                                    <div style={{ fontSize: 12, fontWeight: 700, color: T.inkMid, marginBottom: 10 }}>{cr}</div>
+                                    <div style={{ display: "flex", gap: 6, justifyContent: "space-between" }}>
+                                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                                        <div
+                                          key={n}
+                                          onClick={() => setScores((prev) => ({ ...prev, [cr]: n }))}
+                                          style={{
+                                            width: 32, height: 32, borderRadius: 8,
+                                            display: "flex", alignItems: "center", justifyContent: "center",
+                                            fontSize: 12, fontWeight: 700, cursor: "pointer",
+                                            background: scores[cr] >= n ? T.primary : T.primaryLight,
+                                            color: scores[cr] >= n ? "#fff" : T.primary,
+                                            border: `1.5px solid ${scores[cr] >= n ? T.primary : T.border}`,
+                                            transition: "all 0.1s",
+                                          }}
+                                        >
+                                          {n}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Recommendation + Remarks row */}
+                              <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start", marginBottom: 16 }}>
+                                <div style={{ flex: "0 0 auto" }}>
+                                  <div style={{ fontSize: 12, fontWeight: 700, color: T.inkMid, marginBottom: 6 }}>Overall Recommendation</div>
+                                  <div style={{ display: "flex", gap: 8 }}>
+                                    {["Selected", "Hold", "Rejected"].map((r) => (
+                                      <button
+                                        key={r}
+                                        onClick={() => setRecommendation(r)}
+                                        style={{
+                                          border: `1.5px solid ${recommendation === r ? T.primary : T.border}`,
+                                          borderRadius: 8, padding: "8px 18px", fontSize: 13, fontWeight: 700,
+                                          background: recommendation === r ? T.primaryLight : T.white,
+                                          color: recommendation === r ? T.primary : T.inkMid,
+                                          cursor: "pointer",
+                                        }}
+                                        className="btn-action-hover"
+                                      >
+                                        {r}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div style={{ flex: 1, minWidth: 200 }}>
+                                  <div style={{ fontSize: 12, fontWeight: 700, color: T.inkMid, marginBottom: 6 }}>Remarks</div>
+                                  <textarea
+                                    placeholder="Any additional remarks…"
+                                    value={remarks}
+                                    onChange={(e) => setRemarks(e.target.value)}
+                                    style={{
+                                      border: `1.5px solid ${T.border}`, borderRadius: 8, padding: 10,
+                                      fontSize: 13, width: "100%", minHeight: 48, resize: "vertical",
+                                      boxSizing: "border-box", outline: "none", color: T.ink,
+                                      background: T.white,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Submit actions */}
+                              <div style={{ display: "flex", gap: 10 }}>
+                                <button
+                                  onClick={() => {
+                                    if (!recommendation) {
+                                      alert("Please select a recommendation.");
+                                      return;
+                                    }
+                                    if (!setInterviews) return;
+                                    const scoreValues = Object.values(scores);
+                                    const avgScore = scoreValues.length > 0 ? Math.round((scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length) * 20) : null;
+                                    setInterviews((prev) => {
+                                      const exists = prev.some(
+                                        (iv) => iv.candidate === c.name && iv.role === c.role && iv.round === rnd
+                                      );
+                                      if (exists) {
+                                        return prev.map((iv) =>
+                                          iv.candidate === c.name && iv.role === c.role && iv.round === rnd
+                                            ? { ...iv, score: avgScore, rec: recommendation, status: "Completed", remarks }
+                                            : iv
+                                        );
+                                      } else {
+                                        return [
+                                          ...prev,
+                                          {
+                                            id: i.id || `INT-${Date.now()}`,
+                                            candidate: c.name,
+                                            role: c.role,
+                                            date: i.date || "",
+                                            time: i.time || "",
+                                            panel: i.panel || [],
+                                            score: avgScore,
+                                            rec: recommendation,
+                                            status: "Completed",
+                                            mode: i.mode || "In-Person",
+                                            meetingLink: i.meetingLink || "",
+                                            round: rnd,
+                                            remarks,
+                                          },
+                                        ];
+                                      }
+                                    });
+                                    setInlineEvalKey(null);
+                                    setScores({});
+                                    setRecommendation("");
+                                    setRemarks("");
+                                  }}
+                                  style={{
+                                    background: T.primary, color: "#fff", border: "none", borderRadius: 10,
+                                    padding: "9px 22px", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                                    boxShadow: `0 4px 12px ${T.primary}33`,
+                                  }}
+                                  className="btn-action-hover"
+                                >
+                                  ✓ Submit Evaluation
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setInlineEvalKey(null);
+                                    setScores({});
+                                    setRecommendation("");
+                                    setRemarks("");
+                                  }}
+                                  style={{
+                                    background: "none", border: `1.5px solid ${T.border}`, borderRadius: 10,
+                                    padding: "9px 22px", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                                    color: T.inkMid,
+                                  }}
+                                  className="btn-action-hover"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
                     </React.Fragment>
                   );
                 })}

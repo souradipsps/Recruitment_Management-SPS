@@ -17,6 +17,7 @@ export default function Applications({
   setGeneralApplications,
   jobPostings = [],
   jobRequests = [],
+  onNavigate,
 }) {
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
@@ -54,7 +55,7 @@ export default function Applications({
 
   const enrichedPostings = jobPostings.map((p) => {
     const jr = jobRequests.find((r) => r.role === p.role);
-    const jobAppCount = jobApplications.filter((a) => a.jobPostingId === p.id).length;
+    const jobAppCount = jobApplications.filter((a) => a.jobPostingId === p.id || (p.backendId && String(a.jobPostingId) === String(p.backendId))).length;
     const genAppCount = generalApplications.filter((a) => a.preferredRole === p.role).length;
     return {
       ...p,
@@ -70,7 +71,10 @@ export default function Applications({
   const selectedRole = enrichedPostings.find((p) => p.id === selectedPostingId)?.role ?? null;
 
   const baseJobData = selectedPostingId
-    ? jobApplications.filter((a) => a.jobPostingId === selectedPostingId)
+    ? jobApplications.filter((a) => {
+      const posting = jobPostings.find((p) => p.id === selectedPostingId);
+      return a.jobPostingId === selectedPostingId || (posting && posting.backendId && String(a.jobPostingId) === String(posting.backendId));
+    })
     : jobApplications;
 
   const baseGenData = selectedRole
@@ -130,6 +134,12 @@ export default function Applications({
       setData((prev) => prev.map((a) => (a.id === app.id ? { ...a, status } : a)));
       if (selectedApp?.id === app.id) setSelectedApp((prev) => ({ ...prev, status }));
       setStatusModalApp(null);
+      if (status === "Shortlisted") {
+        setSelectedApp(null);
+        if (onNavigate) {
+          onNavigate("interview-panel");
+        }
+      }
     } catch (err) {
       setStatusError(err.message || "Failed to update application status.");
     } finally {
@@ -144,9 +154,15 @@ export default function Applications({
   };
 
   const selectPosting = (id) => {
-    setSelectedPostingId((prev) => (prev === id ? null : id));
+    setSelectedPostingId(id);
     setFilter("All");
     setSearch("");
+  };
+
+  const getJobPostingDisplayId = (jobPostingId) => {
+    if (!jobPostingId) return "—";
+    const posting = jobPostings.find((p) => p.id === jobPostingId || String(p.backendId) === String(jobPostingId));
+    return posting ? posting.id : jobPostingId;
   };
 
   const avatar = (name, size = 32, fontSize = 12) => (
@@ -262,7 +278,7 @@ export default function Applications({
                   }}
                   style={{
                     flexShrink: 0, width: "100%",
-                    border: `2px solid ${!selectedPostingId ? accentColor : T.border}`,
+                    border: `2px solid ${!selectedPostingId ? accentColor : T.borderMid}`,
                     borderRadius: 16, padding: "18px 20px", cursor: "pointer",
                     background: !selectedPostingId ? accentPale : T.surface,
                     display: "flex", flexDirection: "row", alignItems: "center", gap: 16,
@@ -299,7 +315,7 @@ export default function Applications({
                       }}
                       style={{
                         flexShrink: 0, width: "100%",
-                        border: `2px solid ${isSelected ? accentColor : T.border}`,
+                        border: `2px solid ${isSelected ? accentColor : T.borderMid}`,
                         borderRadius: 16, padding: "18px 20px", cursor: "pointer",
                         background: isSelected ? accentPale : T.surface,
                         transition: "all 0.2s",
@@ -364,12 +380,12 @@ export default function Applications({
                 onMouseMove={hScroll.onMouseMove}
                 onMouseUp={hScroll.onMouseUp}
                 onMouseLeave={hScroll.onMouseLeave}
-                style={{ display: "flex", gap: 14, overflowX: "auto", paddingBottom: 8, WebkitOverflowScrolling: "touch", cursor: "grab", userSelect: "none" }}
+                style={{ display: "flex", gap: 14, overflowX: "auto", padding: "12px 24px 16px 24px", WebkitOverflowScrolling: "touch", cursor: "grab", userSelect: "none" }}
               >
                 <div
                   onClick={() => selectPosting(null)}
                   style={{
-                    flexShrink: 0, width: 200, border: `2px solid ${!selectedPostingId ? accentColor : T.border}`,
+                    flexShrink: 0, width: 200, border: `2px solid ${!selectedPostingId ? accentColor : T.borderMid}`,
                     borderRadius: 14, padding: "16px 18px", cursor: "pointer",
                     background: !selectedPostingId ? accentPale : T.surface,
                     display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
@@ -393,7 +409,7 @@ export default function Applications({
                       key={p.id}
                       onClick={() => selectPosting(p.id)}
                       style={{
-                        flexShrink: 0, width: 300, border: `2px solid ${isSelected ? accentColor : T.border}`,
+                        flexShrink: 0, width: 300, border: `2px solid ${isSelected ? accentColor : T.borderMid}`,
                         borderRadius: 14, overflow: "hidden", cursor: "pointer",
                         background: isSelected ? accentPale : T.surface,
                         transition: "all 0.18s",
@@ -673,7 +689,7 @@ export default function Applications({
                   <div><strong>{a.name}</strong><div style={{ fontSize: 11, color: T.inkFaint }}>{a.email}</div></div>
                 </div>,
                 a.role,
-                <span style={{ fontSize: 12, color: T.inkMid }}>{a.jobPostingId || "—"}</span>,
+                <span style={{ fontSize: 12, color: T.inkMid }}>{getJobPostingDisplayId(a.jobPostingId)}</span>,
                 a.exp,
                 a.qualification || "—",
                 <span style={{ fontWeight: 600, color: a.referredBy && a.referredBy !== "None" ? T.accentDark : T.inkLight }}>{a.referredBy || "—"}</span>,
@@ -805,26 +821,26 @@ export default function Applications({
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10 }}>
                 {(isJob
                   ? [
-                      { icon: "🆔", label: "Application ID", value: selectedApp.id },
-                      { icon: "💼", label: "Role Applied", value: selectedApp.role },
-                      { icon: "📋", label: "Job Posting", value: selectedApp.jobPostingId || "—" },
-                      { icon: "⏳", label: "Experience", value: selectedApp.exp },
-                      { icon: "🎓", label: "Qualification", value: selectedApp.qualification || "—" },
-                      { icon: "👤", label: "Referred By", value: selectedApp.referredBy || "—" },
-                      { icon: "📅", label: "Applied Date", value: selectedApp.applied },
-                      { icon: "✉️", label: "Email", value: selectedApp.email },
-                      { icon: "📞", label: "Phone", value: selectedApp.phone || "—" },
-                    ]
+                    { icon: "🆔", label: "Application ID", value: selectedApp.id },
+                    { icon: "💼", label: "Role Applied", value: selectedApp.role },
+                    { icon: "📋", label: "Job Posting", value: getJobPostingDisplayId(selectedApp.jobPostingId) },
+                    { icon: "⏳", label: "Experience", value: selectedApp.exp },
+                    { icon: "🎓", label: "Qualification", value: selectedApp.qualification || "—" },
+                    { icon: "👤", label: "Referred By", value: selectedApp.referredBy || "—" },
+                    { icon: "📅", label: "Applied Date", value: selectedApp.applied },
+                    { icon: "✉️", label: "Email", value: selectedApp.email },
+                    { icon: "📞", label: "Phone", value: selectedApp.phone || "—" },
+                  ]
                   : [
-                      { icon: "🆔", label: "Application ID", value: selectedApp.id },
-                      { icon: "💼", label: "Preferred Role", value: selectedApp.preferredRole || "—" },
-                      { icon: "📍", label: "Location", value: selectedApp.location || "—" },
-                      { icon: "⏳", label: "Experience", value: selectedApp.exp },
-                      { icon: "🎓", label: "Qualification", value: selectedApp.qualification || "—" },
-                      { icon: "📅", label: "Applied Date", value: selectedApp.applied },
-                      { icon: "✉️", label: "Email", value: selectedApp.email },
-                      { icon: "📞", label: "Phone", value: selectedApp.phone || "—" },
-                    ]
+                    { icon: "🆔", label: "Application ID", value: selectedApp.id },
+                    { icon: "💼", label: "Preferred Role", value: selectedApp.preferredRole || "—" },
+                    { icon: "📍", label: "Location", value: selectedApp.location || "—" },
+                    { icon: "⏳", label: "Experience", value: selectedApp.exp },
+                    { icon: "🎓", label: "Qualification", value: selectedApp.qualification || "—" },
+                    { icon: "📅", label: "Applied Date", value: selectedApp.applied },
+                    { icon: "✉️", label: "Email", value: selectedApp.email },
+                    { icon: "📞", label: "Phone", value: selectedApp.phone || "—" },
+                  ]
                 ).map((item, idx) => (
                   <div key={idx} style={{ padding: "12px 14px", background: T.canvas, border: `1px solid ${T.border}`, borderRadius: 10, display: "flex", alignItems: "center", gap: 12 }}>
                     <span style={{ fontSize: 18, flexShrink: 0, lineHeight: 1 }}>{item.icon}</span>

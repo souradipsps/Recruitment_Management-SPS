@@ -145,6 +145,17 @@ export default function ApprovalModal({ sel, setSel, closeModal, isPending, comm
 
             {sel.type === "Role Request" && (
               <div>
+                <div style={labelCss}>Employee Type</div>
+                {isPending ? (
+                  <Select value={sel.empType || ""} onChange={(e) => setSel({ ...sel, empType: e.target.value })} options={TYPE_OPTIONS} placeholder="Select type…" />
+                ) : (
+                  <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{sel.empType || "—"}</div>
+                )}
+              </div>
+            )}
+
+            {sel.type === "Role Request" && (
+              <div>
                 <div style={labelCss}>Category</div>
                 {isPending ? (
                   <Select value={sel.category || ""} onChange={(e) => setSel({ ...sel, category: e.target.value })} options={CATEGORY_OPTIONS} placeholder="Select Category" />
