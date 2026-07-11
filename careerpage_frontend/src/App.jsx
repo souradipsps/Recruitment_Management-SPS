@@ -15,14 +15,14 @@ export default function App() {
 
   const [initialLoading, setInitialLoading] = useState(true);
 
-  // Show the branded loader for 4.0s, e.g. after login/signup or on logout.
+  // Show the branded loader for 1.5s, e.g. after login/signup or on logout.
   const reloadWithLoader = () => {
     setInitialLoading(true);
-    setTimeout(() => setInitialLoading(false), 4000);
+    setTimeout(() => setInitialLoading(false), 1500);
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => setInitialLoading(false), 4000);
+    const timer = setTimeout(() => setInitialLoading(false), 1500);
     return () => clearTimeout(timer);
   }, []);
 

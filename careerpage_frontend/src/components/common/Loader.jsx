@@ -18,9 +18,7 @@ export function Loader() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "rgba(92, 12, 33, 0.93)", /* Transparent maroon color */
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)"
+        background: "#5c0c21", /* Solid deep brand maroon */
       }}
     >
       <motion.div
@@ -31,6 +29,7 @@ export function Loader() {
         className="loader-logo-wrapper"
         style={{
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
         }}
@@ -38,7 +37,7 @@ export function Loader() {
         <div 
           className="loader-logo-container"
           style={{
-            height: 260, // Very big size
+            height: 350, // Increased size
             width: "auto"
           }}
         >
@@ -56,6 +55,14 @@ export function Loader() {
               WebkitMaskImage: `url(${loaderLogo})`
             }}
           />
+        </div>
+
+        {/* Premium big font loading text with animated moving dots */}
+        <div className="loader-text">
+          Loading
+          <span className="loader-dot">.</span>
+          <span className="loader-dot">.</span>
+          <span className="loader-dot">.</span>
         </div>
       </motion.div>
     </motion.div>
