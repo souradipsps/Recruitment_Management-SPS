@@ -17,6 +17,7 @@ export default function Applications({
   setGeneralApplications,
   jobPostings = [],
   jobRequests = [],
+  onNavigate,
 }) {
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
@@ -133,6 +134,12 @@ export default function Applications({
       setData((prev) => prev.map((a) => (a.id === app.id ? { ...a, status } : a)));
       if (selectedApp?.id === app.id) setSelectedApp((prev) => ({ ...prev, status }));
       setStatusModalApp(null);
+      if (status === "Shortlisted") {
+        setSelectedApp(null);
+        if (onNavigate) {
+          onNavigate("interview-panel");
+        }
+      }
     } catch (err) {
       setStatusError(err.message || "Failed to update application status.");
     } finally {
