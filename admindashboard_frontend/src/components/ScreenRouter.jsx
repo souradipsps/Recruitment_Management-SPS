@@ -92,6 +92,8 @@ export default function ScreenRouter({ active, s, navigate, onGiveOffer }) {
           panelists={s.panelists}
           setPanelists={s.setPanelists}
           onGiveOffer={onGiveOffer}
+          offers={s.offers}
+          setOffers={s.setOffers}
         />
       );
     case "panelist":
