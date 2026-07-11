@@ -11,7 +11,7 @@ import { ForgotPasswordForm } from "./login/ForgotPasswordForm";
 // Modal shell: renders the backdrop, header, tab bar and footer, and swaps
 // between the login / signup / forgot-password forms. Each form owns its own
 // state and talks to the backend through ../services/authService.
-export function LoginModal({ onClose, initialTab = "login", onLoginSuccess, onSignupSuccess }) {
+export function LoginModal({ onClose, initialTab = "login", onLoginSuccess, onSignupSuccess, onFormSubmit }) {
   const [tab, setTab] = useState(initialTab);
 
   return (
@@ -66,6 +66,7 @@ export function LoginModal({ onClose, initialTab = "login", onLoginSuccess, onSi
                 onClose={onClose}
                 onSwitchTab={setTab}
                 onForgotPassword={() => setTab("forgot")}
+                onFormSubmit={onFormSubmit}
               />
             )}
 
@@ -74,6 +75,7 @@ export function LoginModal({ onClose, initialTab = "login", onLoginSuccess, onSi
                 onSignupSuccess={onSignupSuccess}
                 onClose={onClose}
                 onSwitchTab={setTab}
+                onFormSubmit={onFormSubmit}
               />
             )}
 

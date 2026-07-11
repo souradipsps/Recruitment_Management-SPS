@@ -41,6 +41,7 @@ export default function AppModals({ app }) {
     setApplicationDraft,
     setSavedProfileData,
     setDashboardInitialTab,
+    setShowLoader,
   } = app;
 
   return (
@@ -53,6 +54,7 @@ export default function AppModals({ app }) {
               setApplyAfterSignup(false);
             }}
             initialTab={loginTab}
+            onFormSubmit={() => setShowLoader(true)}
             onLoginSuccess={(name, userData) => {
               setLoggedInUser(name);
               if (userData) {
@@ -128,6 +130,7 @@ export default function AppModals({ app }) {
               setApplicationDraft(null);
               setCameFromSection(undefined);
             }}
+            onFormSubmit={() => setShowLoader(true)}
             onSubmit={(jobId, _formData, professionalData) => {
               setAppliedJobIds((prev) => [...prev, jobId]);
               setApplicationDraft(null);
@@ -161,6 +164,7 @@ export default function AppModals({ app }) {
           <ApplyModal
             onClose={() => setShowApply(false)}
             signupData={signupData}
+            onFormSubmit={() => setShowLoader(true)}
             onSubmitData={(data) => {
               setSavedProfileData(data);
               setShowApply(false);

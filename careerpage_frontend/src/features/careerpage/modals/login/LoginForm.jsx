@@ -6,7 +6,7 @@ import { loginUser } from "../../services/authService";
 import { fetchUserProfile } from "../../services/applicationsService";
 
 // Login tab: identifier (email or 10-digit phone) + password.
-export function LoginForm({ onLoginSuccess, onClose, onSwitchTab, onForgotPassword }) {
+export function LoginForm({ onLoginSuccess, onClose, onSwitchTab, onForgotPassword, onFormSubmit }) {
   const [login, setLogin] = useState({ identifier: "", password: "" });
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
@@ -26,6 +26,7 @@ export function LoginForm({ onLoginSuccess, onClose, onSwitchTab, onForgotPasswo
 
     setError("");
     setSubmitting(true);
+    onFormSubmit?.(); // Show branded loader when form is submitted
     try {
       const { name } = await loginUser({ identifier: login.identifier, password: login.password });
 

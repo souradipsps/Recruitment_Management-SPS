@@ -9,7 +9,7 @@ const capitalizeWords = (str) => str.replace(/\b\w/g, (char) => char.toUpperCase
 
 // Signup tab: registration form plus the post-signup success screen that
 // auto-redirects to login after 5 seconds.
-export function SignupForm({ onSignupSuccess, onClose, onSwitchTab }) {
+export function SignupForm({ onSignupSuccess, onClose, onSwitchTab, onFormSubmit }) {
   const [signup, setSignup] = useState({ name: "", lastName: "", email: "", phone: "", password: "", confirm: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -47,6 +47,7 @@ export function SignupForm({ onSignupSuccess, onClose, onSwitchTab }) {
 
     setError("");
     setSubmitting(true);
+    onFormSubmit?.(); // Show branded loader when form is submitted
     try {
       await signupUser({
         name: signup.name, lastName: signup.lastName, email: signup.email,

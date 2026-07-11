@@ -1,10 +1,11 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { Toaster } from "sonner";
 import { AnimatePresence } from "motion/react";
 import { useKeepAwake } from "./lib/keepAwake";
 import { useViewTransition } from "./lib/useViewTransition";
 import { buildMergedProfileData } from "./lib/profileData";
 import { Loader } from "./components/common/Loader";
+import { LottieLoader } from "./components/common/LottieLoader";
 import { CareerPage } from "./features/careerpage/CareerPage";
 import AppModals from "./features/careerpage/AppModals";
 
@@ -13,18 +14,36 @@ import AppModals from "./features/careerpage/AppModals";
 export default function App() {
   useKeepAwake();
 
+  // ── Lottie loader: shown on every page refresh for 1.5 s ────────────────
   const [initialLoading, setInitialLoading] = useState(true);
-
-  // Show the branded loader for 1.5s, e.g. after login/signup or on logout.
-  const reloadWithLoader = () => {
-    setInitialLoading(true);
-    setTimeout(() => setInitialLoading(false), 1500);
-  };
-
   useEffect(() => {
-    const timer = setTimeout(() => setInitialLoading(false), 1500);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setInitialLoading(false), 1500);
+    return () => clearTimeout(t);
   }, []);
+
+  // ── Branded maroon Loader: shown briefly on button clicks ────────────────
+  // Login / Sign Up / Apply / Submit Profile → 600 ms flash before modal opens.
+  // Logout → 1.5 s flash.
+  const [showLoader, setShowLoader] = useState(false);
+  const loaderTimerRef = useRef(null);
+
+  const openWithLoader = useCallback((then, ms = 600) => {
+    if (loaderTimerRef.current) clearTimeout(loaderTimerRef.current);
+    setShowLoader(true);
+    loaderTimerRef.current = setTimeout(() => {
+      setShowLoader(false);
+      then?.();
+    }, ms);
+  }, []);
+
+  const reloadWithLoader = useCallback(() => {
+    if (loaderTimerRef.current) clearTimeout(loaderTimerRef.current);
+    setShowLoader(true);
+    loaderTimerRef.current = setTimeout(() => setShowLoader(false), 1500);
+  }, []);
+
+  // Cleanup timer on unmount
+  useEffect(() => () => { if (loaderTimerRef.current) clearTimeout(loaderTimerRef.current); }, []);
 
   useEffect(() => {
     if ("scrollRestoration" in window.history) {
@@ -60,11 +79,13 @@ export default function App() {
 
   const { deferredView } = useViewTransition(view);
 
+  // Opens login/signup modal directly — no loader on navbar button click.
   const openModal = (tab) => {
     setLoginTab(tab);
     setShowLogin(true);
   };
 
+  // Job apply: if not logged in show login modal directly.
   const handleApplyJob = (job) => {
     if (!loggedInUser) {
       openModal("login");
@@ -74,6 +95,7 @@ export default function App() {
     setShowJobApplicationModal(true);
   };
 
+  // General application / Submit Profile — open signup modal directly.
   const handleSignup = () => {
     setApplyAfterSignup(true);
     openModal("signup");
@@ -142,26 +164,31 @@ export default function App() {
     setApplicationDraft,
     setSavedProfileData,
     setDashboardInitialTab,
+    // Allows form submit handlers inside modals to trigger the branded loader
+    setShowLoader,
   };
 
   return (
     <>
-      {!initialLoading && (
-        <CareerPage
-          loggedInUser={loggedInUser}
-          onLogin={() => openModal("login")}
-          onSignup={handleSignup}
-          onOpenDashboard={handleOpenDashboard}
-          onLogout={handleLogout}
-          onApplyJob={handleApplyJob}
-          appliedJobIds={appliedJobIds}
-        />
-      )}
+      {/* Career page always renders immediately underneath both loaders */}
+      <CareerPage
+        loggedInUser={loggedInUser}
+        onLogin={() => openModal("login")}
+        onSignup={handleSignup}
+        onOpenDashboard={handleOpenDashboard}
+        onLogout={handleLogout}
+        onApplyJob={handleApplyJob}
+        appliedJobIds={appliedJobIds}
+      />
 
       <AppModals app={modalApp} />
 
+      {/* Lottie loader — overlays on page refresh only */}
+      {initialLoading && <LottieLoader />}
+
+      {/* Branded maroon Loader — overlays on button click / logout */}
       <AnimatePresence>
-        {initialLoading && <Loader />}
+        {showLoader && <Loader key="btn-loader" />}
       </AnimatePresence>
 
       <Toaster richColors position="top-right" />
