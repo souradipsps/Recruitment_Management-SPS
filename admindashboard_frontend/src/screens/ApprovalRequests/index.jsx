@@ -18,11 +18,13 @@ export default function ApprovalRequests({
   setRequests,
   existingRoles,
   setExistingRoles,
+  jobPostings,
   setJobPostings,
   setRoleRequests,
   setJobRequests,
   onNavigateToApplications,
   onNavigateToExistingRoles,
+  currentUser,
 }) {
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
@@ -91,6 +93,7 @@ export default function ApprovalRequests({
         takeAction={takeAction}
         isMobile={isMobile}
         existingRoles={existingRoles}
+        currentUser={currentUser}
       />
 
       {/* Top Card: Pending Requests */}

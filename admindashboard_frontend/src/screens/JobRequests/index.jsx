@@ -87,6 +87,7 @@ export default function JobRequests(props) {
           handleAccept={s.handleAccept}
           cancelJobRequest={s.cancelJobRequest}
           onClose={s.closeModal}
+          currentUser={props.currentUser}
         />
       )}
     </div>

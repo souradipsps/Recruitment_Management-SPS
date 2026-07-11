@@ -41,6 +41,7 @@ export default function ScreenRouter({ active, s, navigate, onGiveOffer }) {
           setJobPostings={s.setJobPostings}
           existingRoles={s.existingRoles}
           onNavigateToApplications={() => navigate("applications")}
+          currentUser={s.currentUser}
         />
       );
     case "approval-requests":
@@ -56,6 +57,7 @@ export default function ScreenRouter({ active, s, navigate, onGiveOffer }) {
           setJobRequests={s.setJobRequests}
           onNavigateToApplications={() => navigate("applications")}
           onNavigateToExistingRoles={() => navigate("existing-roles")}
+          currentUser={s.currentUser}
         />
       );
     case "job-postings":

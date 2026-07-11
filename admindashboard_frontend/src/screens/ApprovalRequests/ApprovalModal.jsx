@@ -5,6 +5,7 @@ import { Badge, Btn, Select } from "../../components/ui";
 import { QUAL_OPTIONS, TYPE_OPTIONS, VACANCY_OPTIONS, CATEGORY_OPTIONS, ALL_SKILLS } from "../../data";
 import SkillsMultiSelect from "../../components/SkillsMultiSelect";
 import { labelCss } from "./constants";
+import ActivityChatHistory from "../../components/ActivityChatHistory";
 
 // Only Active roles (Existing Roles screen) are eligible to be requested against.
 const isActiveRole = (r) => (r.currentStatus || r.status) === "Active";
@@ -13,7 +14,7 @@ const isActiveRole = (r) => (r.currentStatus || r.status) === "Active";
  * Full-screen portal modal showing request details, editable fields for
  * Pending requests, activity history, comment textarea, and action buttons.
  */
-export default function ApprovalModal({ sel, setSel, closeModal, isPending, comment, setComment, fieldErrors, setFieldErrors, takeAction, isMobile, existingRoles }) {
+export default function ApprovalModal({ sel, setSel, closeModal, isPending, comment, setComment, fieldErrors, setFieldErrors, takeAction, isMobile, existingRoles, currentUser }) {
   if (!sel) return null;
 
   // The backend now returns the complete, correctly-ordered timeline on every
@@ -368,31 +369,13 @@ export default function ApprovalModal({ sel, setSel, closeModal, isPending, comm
             )}
           </div>
 
-          {/* Activity history timeline */}
-          {aggregatedHistory.length > 0 && (
-            <div>
-              <div style={{ ...labelCss, marginBottom: 12 }}>Activity History</div>
-              {aggregatedHistory.map((h, i) => (
-                <div key={i} style={{ display: "flex", gap: 12, marginBottom: 10 }}>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: i === aggregatedHistory.length - 1 ? T.blue : T.border, marginTop: 3, flexShrink: 0 }} />
-                    {i < aggregatedHistory.length - 1 && <div style={{ width: 2, flex: 1, background: T.border, margin: "3px 0" }} />}
-                  </div>
-                  <div style={{ paddingBottom: i < aggregatedHistory.length - 1 ? 4 : 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: T.ink }}>
-                      {h.act} <span style={{ fontWeight: 400, color: T.inkLight }}>by {h.by}</span>
-                    </div>
-                    <div style={{ fontSize: 11, color: T.inkFaint }}>{h.date}</div>
-                    {h.note && (
-                      <div style={{ marginTop: 4, fontSize: 12, color: T.amber, background: T.amberLight, padding: "6px 10px", borderRadius: 7, border: `1px solid #FDE68A` }}>
-                        {h.note}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <ActivityChatHistory
+            history={aggregatedHistory}
+            currentUser={currentUser}
+            justification={sel.just || sel.description}
+            requestedBy={sel.requestedBy}
+            mode="approver"
+          />
 
           {/* Comment / resolved status */}
           {isPending ? (
