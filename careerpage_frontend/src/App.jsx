@@ -27,6 +27,21 @@ export default function App() {
   const [showLoader, setShowLoader] = useState(false);
   const loaderTimerRef = useRef(null);
 
+  // Prevent scrollbar visibility and scrolling when loaders are active
+  useEffect(() => {
+    if (initialLoading || showLoader) {
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+    } else {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    };
+  }, [initialLoading, showLoader]);
+
   const openWithLoader = useCallback((then, ms = 600) => {
     if (loaderTimerRef.current) clearTimeout(loaderTimerRef.current);
     setShowLoader(true);
