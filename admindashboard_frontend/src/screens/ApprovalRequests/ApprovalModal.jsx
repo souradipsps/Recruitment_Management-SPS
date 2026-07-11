@@ -13,35 +13,19 @@ const isActiveRole = (r) => (r.currentStatus || r.status) === "Active";
  * Full-screen portal modal showing request details, editable fields for
  * Pending requests, activity history, comment textarea, and action buttons.
  */
-export default function ApprovalModal({ sel, setSel, closeModal, isPending, comment, setComment, fieldErrors, setFieldErrors, takeAction, isMobile, existingRoles, requests }) {
+export default function ApprovalModal({ sel, setSel, closeModal, isPending, comment, setComment, fieldErrors, setFieldErrors, takeAction, isMobile, existingRoles }) {
   if (!sel) return null;
 
-  // Aggregate the full approval timeline across ALL ApprovalRequest objects
-  // linked to the same underlying request in frontend state.
-  const siblingApprovals = (requests || []).filter(
-    (r) => r.sourceId === sel.sourceId || r.id === sel.id
-  );
-  const sortedSiblings = [...siblingApprovals].sort((a, b) => (a.backendId || 0) - (b.backendId || 0));
-
-  const aggregatedHistory = [];
-  if (sortedSiblings.length > 0) {
-    const oldest = sortedSiblings[0];
-    aggregatedHistory.push({
-      act: "Submitted",
-      by: oldest.requestedBy || "User",
-      date: oldest.date,
-      note: ""
-    });
-  }
-  for (const sibling of sortedSiblings) {
-    if (sibling.history) {
-      for (const h of sibling.history) {
-        if (h.act !== "Submitted") {
-          aggregatedHistory.push(h);
-        }
-      }
-    }
-  }
+  // The backend now returns the complete, correctly-ordered timeline on every
+  // ApprovalRequest row (each sibling created across resubmit cycles carries
+  // the full aggregated history). So use this row's own history directly -
+  // combining across siblings by sourceId here would just repeat every entry
+  // once per sibling. Only synthesize a leading "Submitted" if the backend
+  // history doesn't already include one (role requests may omit it).
+  const rawHistory = sel.history || [];
+  const aggregatedHistory = rawHistory.some((h) => h.act === "Submitted")
+    ? rawHistory
+    : [{ act: "Submitted", by: sel.requestedBy || "User", date: sel.date, note: "" }, ...rawHistory];
 
   // Department list sourced from existing (sanctioned) roles that have at least one Active role.
   const deptOptions = [...new Set((existingRoles || []).filter(isActiveRole).map((r) => r.dept).filter(Boolean))]
