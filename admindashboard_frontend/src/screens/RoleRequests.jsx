@@ -5,6 +5,7 @@ import { useBreakpoint } from "../hooks";
 import { Card, SectionTitle, Table, Mono, Btn, Input, Badge, FormField, Modal, ModalHeader, Textarea, Select } from "../components/ui";
 import { createRoleRequest, updateRoleRequest } from "../api/roleRequestsApi";
 import { fetchApprovals } from "../api/approvalsApi";
+import ActivityChatHistory from "../components/ActivityChatHistory";
 import { TYPE_OPTIONS } from "../data";
 
 const getStatusStyle = (status) => {
@@ -243,18 +244,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
       // stand-ins here — a fabricated entry has no backendId, so approving/
       // rejecting it silently no-ops against the API while a duplicate,
       // backend-sourced entry (with a real backendId) does update the database.
-      // Job Request approvals are handled by their own screen, so only the
-      // "Role Request" entries are replaced; anything else is left untouched.
-      try {
-        const freshApprovals = await fetchApprovals();
-        const freshRoleRequestApprovals = freshApprovals.filter((a) => a.type === "Role Request");
-        setApprovalRequests((prev) => [
-          ...prev.filter((a) => a.type !== "Role Request"),
-          ...freshRoleRequestApprovals,
-        ]);
-      } catch (err) {
-        console.error("Failed to refresh approvals after submitting role request:", err);
-      }
+      await refreshRoleRequestApprovals();
 
       setRoleForms([emptyForm()]);
       setShowForm(false);
@@ -266,6 +256,24 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
       setSubmitError(err.message || "Failed to submit role request. Please try again.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Re-fetches the authoritative approvals list and replaces all Role Request
+  // entries with it. Needed because a single role request can have multiple
+  // ApprovalRequest rows sharing the same sourceId (one per resubmit cycle) -
+  // patching by sourceId in place would touch every one of those rows instead
+  // of just the currently active one.
+  const refreshRoleRequestApprovals = async () => {
+    try {
+      const freshApprovals = await fetchApprovals();
+      const freshRoleRequestApprovals = freshApprovals.filter((a) => a.type === "Role Request");
+      setApprovalRequests((prev) => [
+        ...prev.filter((a) => a.type !== "Role Request"),
+        ...freshRoleRequestApprovals,
+      ]);
+    } catch (err) {
+      console.error("Failed to refresh approvals:", err);
     }
   };
 
@@ -300,6 +308,13 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
 
       setRoleRequests((prev) => prev.map((r) => r.id === selectedRequest.id ? updated : r));
 
+      // Resubmitting can spawn a brand-new ApprovalRequest row on the backend
+      // (see jobs/signals.py) while the prior Sent-Back/Rejected row for the
+      // same request_id still exists. Patching in place by sourceId would flip
+      // every historical row to the new status too, producing duplicate
+      // "Pending" cards until the next hard refresh. Re-fetch instead so local
+      // state always mirrors exactly which approval row is actually active.
+      await refreshRoleRequestApprovals();
       setApprovalRequests((prev) =>
         prev.map((apr) =>
           String(apr.sourceId) === String(selectedRequest.id)
@@ -364,13 +379,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
       const updated = await updateRoleRequest(selectedRequest.backendId, { status: "Approved" });
 
       setRoleRequests((prev) => prev.map((r) => r.id === selectedRequest.id ? updated : r));
-      setApprovalRequests((prev) =>
-        prev.map((apr) =>
-          String(apr.sourceId) === String(selectedRequest.id)
-            ? { ...apr, status: "Approved" }
-            : apr
-        )
-      );
+      await refreshRoleRequestApprovals();
 
       if (setExistingRoles) {
         setExistingRoles((prev) => {
@@ -422,11 +431,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
     try {
       const updated = await updateRoleRequest(target.backendId, { status: "Cancelled" });
       setRoleRequests((prev) => prev.map((r) => (r.id === reqId ? updated : r)));
-      setApprovalRequests((prev) =>
-        prev.map((apr) =>
-          String(apr.sourceId) === String(reqId) ? { ...apr, status: "Cancelled" } : apr
-        )
-      );
+      await refreshRoleRequestApprovals();
       setShowViewModal(false);
       setSelectedRequest(null);
       setOriginalRequest(null);
@@ -1023,30 +1028,12 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                 </div>
               </div>
 
-              {selectedRequest.history?.length > 0 && (
-                <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>Activity History</div>
-                  {selectedRequest.history.map((h, i) => (
-                    <div key={i} style={{ display: "flex", gap: 12, marginBottom: 10 }}>
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: i === selectedRequest.history.length - 1 ? T.blue : T.border, marginTop: 3, flexShrink: 0 }} />
-                        {i < selectedRequest.history.length - 1 && <div style={{ width: 2, flex: 1, background: T.border, margin: "3px 0" }} />}
-                      </div>
-                      <div style={{ paddingBottom: i < selectedRequest.history.length - 1 ? 4 : 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: T.ink }}>
-                          {h.act} <span style={{ fontWeight: 400, color: T.inkLight }}>by {h.by}</span>
-                        </div>
-                        <div style={{ fontSize: 11, color: T.inkFaint }}>{h.date}</div>
-                        {h.note && (
-                          <div style={{ marginTop: 4, fontSize: 12, color: T.amber, background: T.amberLight, padding: "6px 10px", borderRadius: 7, border: `1px solid #FDE68A` }}>
-                            {h.note}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <ActivityChatHistory
+                history={selectedRequest.history}
+                currentUser={currentUser}
+                justification={selectedRequest.just}
+                requestedBy={selectedRequest.submittedBy}
+              />
             </div>
 
             {(selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back") && (

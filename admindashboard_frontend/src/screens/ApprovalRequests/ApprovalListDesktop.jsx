@@ -12,7 +12,11 @@ export default function ApprovalListDesktop({ filtered, openModal, performAction
     <div>
       {filtered.map((r) => (
         <div
-          key={r.id}
+          /* Key on the unique backend pk, not r.id (= request_id): a request can
+             be sent back multiple times, leaving several Sent Back approvals that
+             share one request_id. Using r.id there caused duplicate React keys,
+             which broke the Sent Back filter's rendering. */
+          key={r.backendId ?? r.id}
           onClick={() => openModal(r)}
           style={{
             padding: "16px 20px",

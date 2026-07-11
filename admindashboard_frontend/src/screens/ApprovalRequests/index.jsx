@@ -18,18 +18,21 @@ export default function ApprovalRequests({
   setRequests,
   existingRoles,
   setExistingRoles,
+  jobPostings,
   setJobPostings,
   setRoleRequests,
   setJobRequests,
   onNavigateToApplications,
   onNavigateToExistingRoles,
+  currentUser,
 }) {
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
 
   const [sel, setSel]               = useState(null);
   const [comment, setComment]       = useState("");
-  const [statusFilter, setStatusFilter] = useState("Pending");
+  const [statusFilter, setStatusFilter] = useState("Approved");
+  const [typeFilter, setTypeFilter] = useState("All");
   const [search, setSearch]         = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
 
@@ -50,19 +53,27 @@ export default function ApprovalRequests({
   });
 
   const filtered = requests
-    .filter((r) => statusFilter === "All" || r.status === statusFilter)
+    .filter((r) => r.status === statusFilter)
     .filter((r) => {
-      const q = search.toLowerCase();
-      return (
-        (r.role        || "").toLowerCase().includes(q) ||
-        (r.dept        || "").toLowerCase().includes(q) ||
-        (String(r.sourceId) || "").toLowerCase().includes(q) ||
-        (r.requestedBy || "").toLowerCase().includes(q) ||
-        (r.date        || "").toLowerCase().includes(q)
+      if (typeFilter === "All") {
+        return true;
+      }
+      return r.type === typeFilter;
+    })
+    .filter((r) => {
+      const query = search.trim().toLowerCase();
+      if (!query) return true;
+      const terms = query.split(/\s+/);
+      return terms.every((term) =>
+        (r.role        || "").toLowerCase().includes(term) ||
+        (r.dept        || "").toLowerCase().includes(term) ||
+        (r.requestedBy || "").toLowerCase().includes(term)
       );
     });
 
-  const pendingCount = requests.filter((r) => r.status === "Pending").length;
+  const pendingRequests = requests.filter((r) => r.status === "Pending");
+  const pendingCount = pendingRequests.length;
+
   const isPending    = sel?.status === "Pending";
 
   return (
@@ -82,23 +93,83 @@ export default function ApprovalRequests({
         takeAction={takeAction}
         isMobile={isMobile}
         existingRoles={existingRoles}
+        currentUser={currentUser}
       />
 
-      <Card>
+      {/* Top Card: Pending Requests */}
+      <Card style={{ marginBottom: 24 }} hover={false}>
+        <div style={{
+          padding: "16px 20px",
+          borderBottom: `1px solid ${T.border}`,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          background: T.primaryPale,
+        }}>
+          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: T.primary }}>
+            Pending Requests
+          </h3>
+          {pendingCount > 0 ? (
+            <span style={{
+              background: T.amberLight, border: `1px solid #FDE68A`,
+              borderRadius: 99, padding: "4px 12px",
+              fontSize: 11, fontWeight: 700, color: T.amber, whiteSpace: "nowrap",
+            }}>
+              {pendingCount} pending
+            </span>
+          ) : (
+            <span style={{
+              background: T.greenLight, border: `1px solid #A7F3D0`,
+              borderRadius: 99, padding: "4px 12px",
+              fontSize: 11, fontWeight: 700, color: T.green, whiteSpace: "nowrap",
+            }}>
+              All caught up
+            </span>
+          )}
+        </div>
+
+        {pendingCount === 0 ? (
+          <div style={{ padding: "32px 24px", textAlign: "center" }}>
+            <div style={{ fontSize: 24, marginBottom: 8 }}>🎉</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, marginBottom: 2 }}>All caught up!</div>
+            <div style={{ fontSize: 12, color: T.inkLight }}>No pending requests requiring your review.</div>
+          </div>
+        ) : isMobile ? (
+          <ApprovalListMobile filtered={pendingRequests} openModal={openModal} performAction={performAction} />
+        ) : (
+          <ApprovalListDesktop filtered={pendingRequests} openModal={openModal} performAction={performAction} />
+        )}
+      </Card>
+
+      {/* Bottom Card: Request History / Filtered List */}
+      <Card hover={false}>
+        <div style={{
+          padding: "16px 20px 0",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}>
+          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: T.ink }}>
+            Request History & Filters
+          </h3>
+        </div>
+
         <ApprovalFilterBar
           search={search}
           setSearch={setSearch}
           statusFilter={statusFilter}
           setStatusFilter={setStatusFilter}
-          pendingCount={pendingCount}
+          typeFilter={typeFilter}
+          setTypeFilter={setTypeFilter}
+          pendingCount={0}
           isMobile={isMobile}
         />
 
         {filtered.length === 0 ? (
           <div style={{ padding: "48px 24px", textAlign: "center" }}>
             <div style={{ fontSize: 32, marginBottom: 10 }}>📋</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 4 }}>No requests yet</div>
-            <div style={{ fontSize: 13, color: T.inkLight }}>Submit a Role or Job Request to see it here for approval.</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 4 }}>No requests found</div>
+            <div style={{ fontSize: 13, color: T.inkLight }}>No requests match the selected filters.</div>
           </div>
         ) : isMobile ? (
           <ApprovalListMobile filtered={filtered} openModal={openModal} performAction={performAction} />

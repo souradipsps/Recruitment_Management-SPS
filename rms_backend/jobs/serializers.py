@@ -117,7 +117,7 @@ class ApprovalHistorySerializer(serializers.ModelSerializer):
 
 
 class ApprovalRequestSerializer(serializers.ModelSerializer):
-    history = ApprovalHistorySerializer(many=True, read_only=True)
+    history = serializers.SerializerMethodField(read_only=True)
     department = serializers.SerializerMethodField(read_only=True)
     justification = serializers.SerializerMethodField(read_only=True)
     vacancies = serializers.SerializerMethodField(read_only=True)
@@ -136,6 +136,55 @@ class ApprovalRequestSerializer(serializers.ModelSerializer):
         model  = ApprovalRequest
         fields = "__all__"
         read_only_fields = ["date"]
+
+    def get_history(self, obj):
+        """
+        Aggregate the full approval timeline across ALL ApprovalRequest objects
+        linked to the same underlying RoleRequest or JobRequest.  This ensures
+        the history persists across Sent-Back → Resubmit cycles (which create
+        new ApprovalRequest rows via the post_save signal).
+        """
+        # Collect all sibling approval objects for the same underlying request.
+        sibling_approvals = ApprovalRequest.objects.none()
+        if obj.role_request:
+            sibling_approvals = ApprovalRequest.objects.filter(role_request=obj.role_request)
+        elif obj.job_request:
+            sibling_approvals = ApprovalRequest.objects.filter(job_request=obj.job_request)
+
+        # Gather all ApprovalHistory entries across every sibling approval.
+        history_qs = ApprovalHistory.objects.filter(
+            approval__in=sibling_approvals
+        ).order_by("date", "id")
+
+        # Build the timeline, starting with the original "Submitted" entry.
+        timeline = []
+        if obj.role_request:
+            rr = obj.role_request
+            timeline.append({
+                "action": "Submitted",
+                "acted_by": rr.created_by.get_full_name() if rr.created_by else rr.submitted_by or "",
+                "date": rr.date.isoformat() if rr.date else "",
+                "note": "",
+            })
+        elif obj.job_request:
+            jr = obj.job_request
+            timeline.append({
+                "action": "Submitted",
+                "acted_by": jr.created_by.get_full_name() if jr.created_by else jr.submitted_by or "",
+                "date": jr.created_at.date().isoformat() if jr.created_at else "",
+                "note": "",
+            })
+
+        for h in history_qs:
+            timeline.append({
+                "action": h.action,
+                "acted_by": h.acted_by,
+                "date": h.date.isoformat() if h.date else "",
+                "note": h.note or "",
+            })
+
+        return timeline
+
 
     def get_department(self, obj):
         if obj.department:

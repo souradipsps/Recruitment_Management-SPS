@@ -56,7 +56,11 @@ export default function ApprovalListMobile({ filtered, openModal, performAction 
       >
         {filtered.map((r, idx) => (
           <div
-            key={r.id}
+            /* Key on the unique backend pk, not r.id (= request_id): a request can
+               be sent back multiple times, leaving several Sent Back approvals that
+               share one request_id. Using r.id there caused duplicate React keys,
+               which broke the Sent Back filter's rendering. */
+            key={r.backendId ?? r.id}
             onClick={() => openModal(r)}
             style={{
               flexShrink: 0,
@@ -156,17 +160,29 @@ export default function ApprovalListMobile({ filtered, openModal, performAction 
                       style={{ background: "rgba(239,68,68,0.25)", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.4)", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
                     >Reject</button>
                   </div>
-                ) : (
-                  <span style={{
-                    display: "inline-flex", alignItems: "center", justifyContent: "center",
-                    background: r.status === "Approved" ? "rgba(16,185,129,0.25)" : r.status === "Rejected" ? "rgba(239,68,68,0.25)" : "rgba(245,158,11,0.25)",
-                    color:      r.status === "Approved" ? "#34D399"               : r.status === "Rejected" ? "#FCA5A5"               : "#FBBF24",
-                    padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 700,
-                    border: `1px solid ${r.status === "Approved" ? "rgba(16,185,129,0.4)" : r.status === "Rejected" ? "rgba(239,68,68,0.4)" : "rgba(245,158,11,0.4)"}`,
-                  }}>
-                    {r.status === "Approved" ? "✓ Approved" : r.status === "Rejected" ? "✕ Rejected" : "↺ Sent Back"}
-                  </span>
-                )}
+                ) : (() => {
+                  // Per-status badge styling. Each terminal status gets its own
+                  // label/colour so "Sent Back" and "Cancelled" are distinguishable
+                  // (previously everything non-Approved/Rejected showed as "Sent Back").
+                  const STATUS_STYLES = {
+                    Approved:    { label: "✓ Approved",  bg: "rgba(16,185,129,0.25)", color: "#34D399", border: "rgba(16,185,129,0.4)" },
+                    Rejected:    { label: "✕ Rejected",  bg: "rgba(239,68,68,0.25)",  color: "#FCA5A5", border: "rgba(239,68,68,0.4)" },
+                    "Sent Back": { label: "↺ Sent Back", bg: "rgba(245,158,11,0.25)", color: "#FBBF24", border: "rgba(245,158,11,0.4)" },
+                    Cancelled:   { label: "⊘ Cancelled", bg: "rgba(148,163,184,0.25)", color: "#CBD5E1", border: "rgba(148,163,184,0.4)" },
+                  };
+                  const s = STATUS_STYLES[r.status] || { label: r.status, bg: "rgba(148,163,184,0.25)", color: "#CBD5E1", border: "rgba(148,163,184,0.4)" };
+                  return (
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      background: s.bg,
+                      color: s.color,
+                      padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 700,
+                      border: `1px solid ${s.border}`,
+                    }}>
+                      {s.label}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
           </div>

@@ -81,7 +81,10 @@ export function useApprovalActions({
     const entry = { act: action, by: "HR Admin", date: now, note: customComment || "" };
     const updated = { ...r, status: action, comment: customComment || "", history: [...(r.history || []), entry] };
 
-    setRequests((prev) => prev.map((item) => (item.id === r.id ? updated : item)));
+    // Match on backendId (unique per ApprovalRequest row), not id — a request's
+    // id is the request_id, shared by every sibling row created across resubmit
+    // cycles, so matching on it would flip all siblings to this action's status.
+    setRequests((prev) => prev.map((item) => (item.backendId === r.backendId ? updated : item)));
 
     if (r.type === "Role Request") {
       setRoleRequests((prev) =>

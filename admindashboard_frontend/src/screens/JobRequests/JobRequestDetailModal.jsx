@@ -42,6 +42,7 @@ export default function JobRequestDetailModal({
   handleAccept,
   cancelJobRequest,
   onClose,
+  currentUser,
 }) {
   const isEditable = selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back";
   const patch = (key, value) => setSelectedRequest({ ...selectedRequest, [key]: value });
@@ -190,7 +191,12 @@ export default function JobRequestDetailModal({
             ))}
           </div>
 
-          <JobRequestActivityTimeline history={selectedRequest.history} />
+          <JobRequestActivityTimeline
+            history={selectedRequest.history}
+            currentUser={currentUser}
+            justification={selectedRequest.justification}
+            requestedBy={selectedRequest.submittedBy}
+          />
         </div>
 
         {isEditable && (
