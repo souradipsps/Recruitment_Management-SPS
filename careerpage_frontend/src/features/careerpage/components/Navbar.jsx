@@ -7,9 +7,22 @@ import "./css/Navbar.css";
 // full-screen overlay on mobile.
 export function Navbar({ loggedInUser, onLogin, onSignup, onOpenDashboard, onLogout }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [scrolledDown, setScrolledDown] = useState(false);
 
   const toggleMobileMenu = () => setIsOpen((prev) => !prev);
   const closeMobileMenu = () => setIsOpen(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 200) {
+        setScrolledDown(true);
+      } else {
+        setScrolledDown(false);
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -44,29 +57,45 @@ export function Navbar({ loggedInUser, onLogin, onSignup, onOpenDashboard, onLog
           <div className="flex items-center justify-between">
 
             {/* ── Brand ───────────────────────────────────────────────────── */}
-            <div
+            <a
+              href="https://www.spsghy.co.in"
               className="navbar-brand flex items-center gap-3.5"
-              onClick={() => {
-                window.scrollTo({ top: 0, behavior: "smooth" });
-                closeMobileMenu();
-              }}
+              style={{ textDecoration: "none" }}
+              onClick={closeMobileMenu}
             >
               <img src={logoImg} alt="South Point School Logo" className="h-11 w-auto object-contain" />
               <div>
                 <div className="navbar-school-name">South Point School</div>
                 <div className="navbar-school-sub">Guwahati, Assam</div>
               </div>
+            </a>
+
+            {/* ── Scroll to Top (Middle Desktop Only) ────────────────────── */}
+            <div
+              className={`hidden sm:flex flex-1 justify-center items-center cursor-pointer navbar-scroll-area mx-8 ${scrolledDown ? "is-visible" : ""}`}
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              title="Scroll to Top"
+            >
+              <div className="modern-arrow-wrapper">
+                <svg
+                  width="36"
+                  height="36"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="modern-arrow-svg"
+                >
+                  <polyline points="3 16 12 7 21 16" />
+                </svg>
+              </div>
             </div>
+
 
             {/* ── Desktop buttons ──────────────────────────────────────────── */}
             <div className="hidden sm:flex items-center gap-2">
-              <a
-                href="https://www.spsghy.co.in"
-                className="nb-btn nb-btn-outline px-3 py-1.5"
-                style={{ textDecoration: "none" }}
-              >
-                Home
-              </a>
               {loggedInUser ? (
                 <>
                   <button onClick={onOpenDashboard} className="nb-btn nb-btn-outline px-3 py-1.5">
@@ -108,14 +137,6 @@ export function Navbar({ loggedInUser, onLogin, onSignup, onOpenDashboard, onLog
       <div className={`nb-mobile-panel-wrapper ${isOpen ? "is-open" : ""}`}>
         <div className="nb-mobile-panel" onClick={(e) => e.stopPropagation()}>
           <div className="nb-mobile-actions">
-            <a
-              href="https://www.spsghy.co.in"
-              className="nb-btn nb-btn-outline"
-              style={{ textDecoration: "none" }}
-              onClick={closeMobileMenu}
-            >
-              Home
-            </a>
             {loggedInUser ? (
               <>
                 <button

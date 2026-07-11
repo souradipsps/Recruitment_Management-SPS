@@ -188,3 +188,55 @@
     display: none !important;
   }
 }
+
+/* ── Scroll to Top (Middle Desktop Area) ──────────────────────── */
+.navbar-scroll-area {
+  opacity: 0;
+  pointer-events: none;
+  align-self: stretch; /* Stretches vertically to fill the height of the navbar */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: opacity 0.4s ease;
+}
+
+.navbar-scroll-area.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* No background highlight at all when hovering the empty middle section */
+.navbar-scroll-area:hover {
+  background-color: transparent;
+}
+
+/* Modern arrow wrapper */
+.modern-arrow-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  width: 52px;
+  color: var(--nb-gold);
+  transition: color 0.25s ease, transform 0.25s ease;
+}
+
+.navbar-scroll-area:hover .modern-arrow-wrapper {
+  color: #ffffff;
+  transform: translateY(-3px);
+}
+
+/* Single big chevron with a smooth bobbing/floating animation */
+.modern-arrow-svg {
+  animation: modernArrowFloat 2.6s infinite ease-in-out;
+}
+
+@keyframes modernArrowFloat {
+  0%, 100% {
+    transform: translateY(3px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
