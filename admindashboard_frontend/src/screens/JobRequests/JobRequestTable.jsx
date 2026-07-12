@@ -6,11 +6,12 @@ export default function JobRequestTable({ filteredRequests, onRowClick }) {
     <Card>
       <Table
         onRowClick={onRowClick}
-        cols={["Request ID", "Role", "Location", "Vacancies", "Experience", "Qualification", "Type", "Salary", "Status"]}
+        cols={["Request ID", "Department", "Role", "Location", "Vacancies", "Experience", "Qualification", "Type", "Salary", "Status"]}
         rows={filteredRequests.map((r) => {
           const ss = getStatusStyle(r.status);
           return [
             <Mono v={typeof r.id === "string" ? r.id.substring(0, 18) : String(r.id)} />,
+            r.department || "—",
             <strong>{r.role}</strong>,
             r.location || "—",
             r.vacancies || "—",

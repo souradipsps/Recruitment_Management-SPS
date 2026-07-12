@@ -71,7 +71,7 @@ export default function JobRequestMobileCards({ filteredRequests, onView, scroll
                   <div style={{ paddingRight: 64 }}>
                     <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#fff" }}>{r.role}</h3>
                     <div style={{ fontSize: 13, color: "rgba(255,255,255,0.8)", marginTop: 2 }}>
-                      {r.location || "—"}
+                      {r.department ? `${r.department} · ` : ""}{r.location || "—"}
                     </div>
                   </div>
                 </div>

@@ -16,11 +16,13 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
   const [editingId, setEditingId] = useState(null);
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
+  const [deptFilter, setDeptFilter] = useState("All");
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const scrollRef = useRef(null);
 
   const filteredRequests = jobRequests
     .filter((r) => statusFilter === "All" || r.status === statusFilter)
+    .filter((r) => deptFilter === "All" || r.department === deptFilter)
     .filter((r) => {
       const query = search.toLowerCase();
       return (
@@ -31,9 +33,10 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     });
 
   const counts = STATUSES.reduce((acc, status) => {
+    const baseRequests = deptFilter === "All" ? jobRequests : jobRequests.filter((r) => r.department === deptFilter);
     acc[status] = status === "All"
-      ? jobRequests.length
-      : jobRequests.filter((r) => r.status === status).length;
+      ? baseRequests.length
+      : baseRequests.filter((r) => r.status === status).length;
     return acc;
   }, {});
 
@@ -358,6 +361,16 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     }
   };
 
+  const filterDeptOptions = [
+    { value: "All", label: "All Departments" },
+    ...[
+      ...new Set([
+        ...jobRequests.map((r) => r.department).filter(Boolean),
+        ...(existingRoles || []).filter(isActiveRole).map((r) => r.dept).filter(Boolean),
+      ])
+    ].sort().map((d) => ({ value: d, label: d }))
+  ];
+
   return {
     // filter / search state
     statuses: STATUSES,
@@ -367,6 +380,9 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     setSearch,
     counts,
     filteredRequests,
+    deptFilter,
+    setDeptFilter,
+    filterDeptOptions,
     // form state
     showForm,
     jobForms,
