@@ -83,13 +83,6 @@ export function LoginModal({ onClose, initialTab = "login", onLoginSuccess, onSi
               <ForgotPasswordForm onBackToLogin={() => setTab("login")} />
             )}
           </div>
-
-          {/* Footer info strip */}
-          <div className="lm-footer-strip">
-            {["Rukmini Gaon, Guwahati", "0381-2345678", "info@southpointguwahati.in"].map((item) => (
-              <span key={item} className="lm-footer-item">{item}</span>
-            ))}
-          </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
