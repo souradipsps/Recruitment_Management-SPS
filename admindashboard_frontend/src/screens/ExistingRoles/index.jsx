@@ -2,6 +2,7 @@ import { useState } from "react";
 import { T } from "../../theme";
 import { useBreakpoint } from "../../hooks";
 import { Card, SectionTitle, Input, Select } from "../../components/ui";
+import { patchRole } from "../../api/rolesApi";
 import RoleCardGrid from "./RoleCardGrid";
 import RolesTable from "./RolesTable";
 import DeleteConfirmModal from "./DeleteConfirmModal";
@@ -14,11 +15,23 @@ export default function ExistingRoles({ roles, setRoles }) {
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [statusError, setStatusError] = useState("");
 
   const depts = ["All", ...new Set(roles.map((r) => r.dept))];
   const statuses = ["All", "Active", "Inactive"];
 
-  const handleStatusChange = (roleId, newStatus) => {
+  const handleStatusChange = async (roleId, newStatus) => {
+    const target = roles.find((r) => r.id === roleId);
+    if (target?.backendId != null) {
+      try {
+        await patchRole(target.backendId, { status: newStatus });
+      } catch (err) {
+        console.error("Failed to update role status:", err);
+        setStatusError(err.message || "Failed to update status. Please try again.");
+        return; // do NOT update local state if the API call failed
+      }
+    }
+    setStatusError("");
     setRoles((prev) =>
       prev.map((role) =>
         role.id === roleId ? { ...role, currentStatus: newStatus } : role
@@ -46,6 +59,27 @@ export default function ExistingRoles({ roles, setRoles }) {
 
   return (
     <div>
+      {statusError && (
+        <div style={{
+          marginBottom: 14, padding: "10px 16px",
+          borderRadius: 8, background: "#FEE2E2",
+          color: "#DC2626", fontSize: 13, fontWeight: 600,
+          border: "1px solid #FCA5A5",
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+        }}>
+          {statusError}
+          <button
+            onClick={() => setStatusError("")}
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              color: "#DC2626", fontWeight: 800, fontSize: 16, lineHeight: 1,
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <SectionTitle title="Existing Roles" sub="All sanctioned positions across departments" />
 
       {/* Card summary grid */}

@@ -1,9 +1,9 @@
 import { motion } from "motion/react";
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
-import { LOADER_URL } from "../../lib/constants";
+import loaderLogo from "../../assets/loader_logo.png";
+import "./Loader.css";
 
-// Full-screen loading overlay shown during page/view transitions. The dots
-// animation is a Lottie animation loaded locally.
+// Full-screen loading overlay shown during page/view transitions. 
+// Uses the premium loader_logo with a diagonal white/golden glint sweep.
 export function Loader() {
   return (
     <motion.div
@@ -18,25 +18,52 @@ export function Loader() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#ffffff",
+        background: "#5c0c21", /* Solid deep brand maroon */
       }}
     >
       <motion.div
-        initial={{ scale: 0.85, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.85, opacity: 0 }}
-        transition={{ delay: 0.05, duration: 0.2 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="loader-logo-wrapper"
         style={{
-          width: 250,
-          height: 250,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
-        <DotLottieReact
-          src={LOADER_URL}
-          loop
-          autoplay
-          style={{ width: '100%', height: '100%' }}
-        />
+        <div 
+          className="loader-logo-container"
+          style={{
+            height: 350, // Increased size
+            width: "auto"
+          }}
+        >
+          {/* Base logo image, completely unchanged in shape, colors, proportions, and transparency */}
+          <img 
+            src={loaderLogo} 
+            className="loader-logo-base" 
+            alt="South Point School Logo" 
+          />
+          {/* Overlay with diagonal sweep glint animation clipped to the logo's alpha channel */}
+          <div 
+            className="loader-logo-shimmer-overlay"
+            style={{
+              maskImage: `url(${loaderLogo})`,
+              WebkitMaskImage: `url(${loaderLogo})`
+            }}
+          />
+        </div>
+
+        {/* Premium big font loading text with animated moving dots */}
+        <div className="loader-text">
+          Loading
+          <span className="loader-dot">.</span>
+          <span className="loader-dot">.</span>
+          <span className="loader-dot">.</span>
+        </div>
       </motion.div>
     </motion.div>
   );

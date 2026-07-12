@@ -35,6 +35,8 @@ export default function InterviewPanel({
   panelists = [],
   setPanelists,
   onGiveOffer,
+  offers = [],
+  setOffers,
 }) {
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
@@ -355,6 +357,14 @@ export default function InterviewPanel({
     }
   };
 
+  const handleDeclineOfferInPanel = (candidateName, candidateRole) => {
+    if (setOffers) {
+      setOffers((prev) =>
+        prev.filter((o) => !(o.candidate === candidateName && o.role === candidateRole))
+      );
+    }
+  };
+
   const handleOpenSchedule = (candidate) => {
     setSchedulingCandidate(candidate);
     const inv = candidate.interview;
@@ -399,6 +409,7 @@ export default function InterviewPanel({
               mode: scheduleForm.mode,
               meetingLink: scheduleForm.mode === "Online" ? scheduleForm.meetingLink : "",
               panel: existingPanel,
+              rescheduled: true,
             }
             : i
         );
@@ -582,7 +593,9 @@ export default function InterviewPanel({
             ? T.accentLight
             : variant === "reschedule"
               ? "#FFF3E0"
-              : T.skyLight,
+              : variant === "danger"
+                ? "rgba(239, 68, 68, 0.15)"
+                : T.skyLight,
     color: disabled
       ? T.inkFaint
       : variant === "primary"
@@ -593,7 +606,9 @@ export default function InterviewPanel({
             ? T.accentDark
             : variant === "reschedule"
               ? "#E65100"
-              : T.sky,
+              : variant === "danger"
+                ? "#EF4444"
+                : T.sky,
     borderRadius: 8,
     padding: "5px 8px",
     cursor: disabled ? "not-allowed" : "pointer",
@@ -602,6 +617,44 @@ export default function InterviewPanel({
     whiteSpace: "nowrap",
     opacity: disabled ? 0.6 : 1,
   });
+
+  const formatDateAndTime = (dateStr, timeStr) => {
+    if (!dateStr) return "—";
+    try {
+      const dateObj = new Date(dateStr);
+      let formattedDate = "";
+      let yearDigits = "";
+
+      if (isNaN(dateObj.getTime())) {
+        const parts = dateStr.split("-");
+        if (parts.length === 3) {
+          const year = parseInt(parts[0], 10);
+          const month = parseInt(parts[1], 10) - 1;
+          const day = parseInt(parts[2], 10);
+          const d = new Date(year, month, day);
+          if (!isNaN(d.getTime())) {
+            formattedDate = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+            yearDigits = String(year).slice(-2);
+          }
+        }
+      } else {
+        formattedDate = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        yearDigits = String(dateObj.getFullYear()).slice(-2);
+      }
+
+      if (!formattedDate) {
+        return `${dateStr}${timeStr ? ` · ${timeStr}` : ""}`;
+      }
+
+      const formattedTime = timeStr
+        ? timeStr.replace(/^0/, "").replace(/:00\s*/, " ").trim()
+        : "";
+
+      return `${formattedDate}, ’${yearDigits}${formattedTime ? ` · ${formattedTime}` : ""}`;
+    } catch (e) {
+      return `${dateStr}${timeStr ? ` · ${timeStr}` : ""}`;
+    }
+  };
 
   const modeCell = (mode) => {
     const isOnline = mode === "Online";
@@ -618,6 +671,7 @@ export default function InterviewPanel({
           borderRadius: 99,
           padding: "3px 10px",
           border: `1px solid ${isOnline ? "#BAE6FD" : "#E8D0D8"}`,
+          whiteSpace: "nowrap",
         }}
       >
         {isOnline ? "💻" : "🏢"} {mode}
@@ -1077,6 +1131,7 @@ export default function InterviewPanel({
                   const rnd = c.displayRound;
                   const isScheduled = !!i.date;
                   const isPreviousRound = c.displayRound < c.activeRound;
+                  const existingOffer = (offers || []).find((o) => o.candidate === c.name && o.role === c.role);
                   const cardBackground = "linear-gradient(135deg, #72102a 0%, #3a0010 100%)";
                   return (
                     <div
@@ -1204,7 +1259,7 @@ export default function InterviewPanel({
                           <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Date &amp; Time</span>
                           {isScheduled ? (
                             <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>
-                              {i.date} · {i.time}
+                              {formatDateAndTime(i.date, i.time)}
                             </span>
                           ) : (
                             <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontStyle: "italic" }}>Not scheduled</span>
@@ -1297,17 +1352,17 @@ export default function InterviewPanel({
                         )}
                         <button
                           onClick={(e) => { e.stopPropagation(); setAssigningCandidate(c); }}
-                          disabled={isPreviousRound}
+                          disabled={isPreviousRound || !isScheduled}
                           style={{
                             flex: 1, padding: "10px 0", borderRadius: 10,
-                            background: isPreviousRound ? "rgba(255,255,255,0.05)" : "rgba(255, 215, 0, 0.15)",
-                            color: isPreviousRound ? "rgba(255,255,255,0.3)" : "#FBBF24",
-                            border: isPreviousRound ? "none" : "1px solid rgba(255, 215, 0, 0.25)",
-                            fontSize: 13, fontWeight: 700, cursor: isPreviousRound ? "not-allowed" : "pointer",
-                            opacity: isPreviousRound ? 0.6 : 1,
+                            background: (isPreviousRound || !isScheduled) ? "rgba(255,255,255,0.05)" : "rgba(255, 215, 0, 0.15)",
+                            color: (isPreviousRound || !isScheduled) ? "rgba(255,255,255,0.3)" : "#FBBF24",
+                            border: (isPreviousRound || !isScheduled) ? "none" : "1px solid rgba(255, 215, 0, 0.25)",
+                            fontSize: 13, fontWeight: 700, cursor: (isPreviousRound || !isScheduled) ? "not-allowed" : "pointer",
+                            opacity: (isPreviousRound || !isScheduled) ? 0.6 : 1,
                           }}
-                        >👥 Panelist</button>
-                        {isScheduled && (
+                        >{i.panel && i.panel.length > 0 ? "👥 Edit Panelist" : "👥 Panelist"}</button>
+                        {isScheduled && i.panel && i.panel.length > 0 && (
                           <button
                             onClick={(e) => { e.stopPropagation(); setReminderCandidate(c); }}
                             disabled={isPreviousRound}
@@ -1321,18 +1376,33 @@ export default function InterviewPanel({
                             }}
                           >🔔 Reminder</button>
                         )}
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleGiveOffer(c); }}
-                          disabled={isPreviousRound}
-                          style={{
-                            width: "100%", padding: "10px 0", borderRadius: 10,
-                            background: isPreviousRound ? "rgba(255,255,255,0.05)" : "rgba(52, 211, 153, 0.2)",
-                            color: isPreviousRound ? "rgba(255,255,255,0.3)" : "#34D399",
-                            border: isPreviousRound ? "none" : "1px solid rgba(52, 211, 153, 0.3)",
-                            fontSize: 13, fontWeight: 700, cursor: isPreviousRound ? "not-allowed" : "pointer",
-                            opacity: isPreviousRound ? 0.6 : 1,
-                          }}
-                        >📜 Give Offer</button>
+                        {existingOffer ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeclineOfferInPanel(c.name, c.role); }}
+                            disabled={isPreviousRound}
+                            style={{
+                              width: "100%", padding: "10px 0", borderRadius: 10,
+                              background: isPreviousRound ? "rgba(255,255,255,0.05)" : "rgba(239, 68, 68, 0.2)",
+                              color: isPreviousRound ? "rgba(255,255,255,0.3)" : "#FCA5A5",
+                              border: isPreviousRound ? "none" : "1px solid rgba(239, 68, 68, 0.3)",
+                              fontSize: 13, fontWeight: 700, cursor: isPreviousRound ? "not-allowed" : "pointer",
+                              opacity: isPreviousRound ? 0.6 : 1,
+                            }}
+                          >Decline</button>
+                        ) : (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleGiveOffer(c); }}
+                            disabled={isPreviousRound}
+                            style={{
+                              width: "100%", padding: "10px 0", borderRadius: 10,
+                              background: isPreviousRound ? "rgba(255,255,255,0.05)" : "rgba(52, 211, 153, 0.2)",
+                              color: isPreviousRound ? "rgba(255,255,255,0.3)" : "#34D399",
+                              border: isPreviousRound ? "none" : "1px solid rgba(52, 211, 153, 0.3)",
+                              fontSize: 13, fontWeight: 700, cursor: isPreviousRound ? "not-allowed" : "pointer",
+                              opacity: isPreviousRound ? 0.6 : 1,
+                            }}
+                          >📜 Give Offer</button>
+                        )}
                       </div>
                     </div>
                   );
@@ -1445,6 +1515,7 @@ export default function InterviewPanel({
                   const rnd = c.displayRound;
                   const isPreviousRound = c.displayRound < c.activeRound;
                   const isChecked = selectedCandidateKeys.includes(candidateKey(c));
+                  const existingOffer = (offers || []).find((o) => o.candidate === c.name && o.role === c.role);
 
                   return (
                     <React.Fragment key={candidateKey(c)}>
@@ -1574,7 +1645,7 @@ export default function InterviewPanel({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              <span>{i.date} at {i.time}</span>
+                              <span>{formatDateAndTime(i.date, i.time)}</span>
                             </div>
                           ) : (
                             <span style={{ fontSize: 11, color: T.inkFaint }}>—</span>
@@ -1612,7 +1683,7 @@ export default function InterviewPanel({
 
                         {/* Actions */}
                         <td style={{ padding: "12px 10px", textAlign: "center", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
-                          <div style={{ display: "grid", gridTemplateColumns: "105px 75px 90px 80px 65px", gap: 6, justifyContent: "center", alignItems: "center" }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "105px 85px 90px 65px", gap: 6, justifyContent: "center", alignItems: "center" }}>
                             {!i.date ? (
                               <button
                                 onClick={() => handleOpenSchedule(c)}
@@ -1628,20 +1699,20 @@ export default function InterviewPanel({
                                 disabled={isPreviousRound}
                                 style={{ ...actionBtnStyle("reschedule", isPreviousRound), width: "100%", textAlign: "center" }}
                                 className={isPreviousRound ? "" : "btn-action-hover"}
-                                title={`Currently: ${i.date} at ${i.time}`}
+                                title={`Currently: ${formatDateAndTime(i.date, i.time)}`}
                               >
                                 🔄 Reschedule
                               </button>
                             )}
                             <button
                               onClick={() => setAssigningCandidate(c)}
-                              disabled={isPreviousRound}
-                              style={{ ...actionBtnStyle("amber", isPreviousRound), width: "100%", textAlign: "center" }}
-                              className={isPreviousRound ? "" : "btn-action-hover"}
+                              disabled={isPreviousRound || !i.date}
+                              style={{ ...actionBtnStyle("amber", isPreviousRound || !i.date), width: "100%", textAlign: "center" }}
+                              className={isPreviousRound || !i.date ? "" : "btn-action-hover"}
                             >
-                              Panelist
+                              {i.panel && i.panel.length > 0 ? "Edit Panelist" : "Panelist"}
                             </button>
-                            {i.date ? (
+                            {i.date && i.panel && i.panel.length > 0 ? (
                               <button
                                 onClick={() => setReminderCandidate(c)}
                                 disabled={isPreviousRound}
@@ -1653,44 +1724,25 @@ export default function InterviewPanel({
                             ) : (
                               <div style={{ width: 90 }} />
                             )}
-                            <button
-                              onClick={() => {
-                                const key = candidateKey(c);
-                                if (inlineEvalKey === key) {
-                                  setInlineEvalKey(null);
-                                  setScores({});
-                                  setRecommendation("");
-                                  setRemarks("");
-                                } else {
-                                  setInlineEvalKey(key);
-                                  setScores({});
-                                  setRecommendation("");
-                                  setRemarks("");
-                                }
-                              }}
-                              disabled={isPreviousRound}
-                              style={{
-                                ...actionBtnStyle(
-                                  inlineEvalKey === candidateKey(c) ? "primary" : "secondary",
-                                  isPreviousRound
-                                ),
-                                width: "100%",
-                                textAlign: "center",
-                                background: inlineEvalKey === candidateKey(c) ? T.primary : actionBtnStyle("secondary", isPreviousRound).background,
-                                color: inlineEvalKey === candidateKey(c) ? "#fff" : actionBtnStyle("secondary", isPreviousRound).color,
-                              }}
-                              className={isPreviousRound ? "" : "btn-action-hover"}
-                            >
-                              {inlineEvalKey === candidateKey(c) ? "✕ Close" : "📝 Evaluate"}
-                            </button>
-                            <button
-                              onClick={() => handleGiveOffer(c)}
-                              disabled={isPreviousRound}
-                              style={{ ...actionBtnStyle("success", isPreviousRound), width: "100%", textAlign: "center" }}
-                              className={isPreviousRound ? "" : "btn-action-hover"}
-                            >
-                              📜 Offer
-                            </button>
+                            {existingOffer ? (
+                              <button
+                                onClick={() => handleDeclineOfferInPanel(c.name, c.role)}
+                                disabled={isPreviousRound}
+                                style={{ ...actionBtnStyle("danger", isPreviousRound), width: "100%", textAlign: "center" }}
+                                className={isPreviousRound ? "" : "btn-action-hover"}
+                              >
+                                Decline
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleGiveOffer(c)}
+                                disabled={isPreviousRound}
+                                style={{ ...actionBtnStyle("success", isPreviousRound), width: "100%", textAlign: "center" }}
+                                className={isPreviousRound ? "" : "btn-action-hover"}
+                              >
+                                📜 Offer
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1712,7 +1764,7 @@ export default function InterviewPanel({
                                   <span style={{ fontSize: 16, fontWeight: 800, color: T.primary }}>📝 Evaluate — {c.name}</span>
                                   <span style={{ fontSize: 12, color: T.inkMid, fontWeight: 600 }}>
                                     {c.role} · {getRoundOrdinal(rnd)}
-                                    {i.date ? ` · ${i.date} at ${i.time}` : ""}
+                                    {i.date ? ` · ${formatDateAndTime(i.date, i.time)}` : ""}
                                   </span>
                                 </div>
                                 <button
@@ -1925,7 +1977,7 @@ export default function InterviewPanel({
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: "#E65100", marginBottom: 2 }}>Currently Scheduled</div>
                   <div style={{ fontSize: 12, color: "#BF360C" }}>
-                    {schedulingCandidate.interview.date} at {schedulingCandidate.interview.time}
+                    {formatDateAndTime(schedulingCandidate.interview.date, schedulingCandidate.interview.time)}
                     {schedulingCandidate.interview.mode ? ` · ${schedulingCandidate.interview.mode}` : ""}
                   </div>
                   <div style={{ fontSize: 11, color: "#E65100", marginTop: 3, opacity: 0.8 }}>
@@ -2060,7 +2112,7 @@ export default function InterviewPanel({
             </FormField>
 
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-              <Btn label="Send Invite" onClick={() => setAssigningCandidate(null)} />
+              <Btn label="Save" onClick={() => setAssigningCandidate(null)} />
             </div>
           </div>
         )}
@@ -2160,7 +2212,7 @@ export default function InterviewPanel({
                         <Badge label={roundInv.status} variant={statusVariant(roundInv.status)} />
                       </div>
                       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 8, fontSize: 11, color: T.inkMid }}>
-                        <div><strong>Date &amp; Time:</strong> {roundInv.date ? `${roundInv.date} at ${roundInv.time}` : "Not Scheduled"}</div>
+                        <div><strong>Date &amp; Time:</strong> {roundInv.date ? formatDateAndTime(roundInv.date, roundInv.time) : "Not Scheduled"}</div>
                         <div><strong>Mode:</strong> {roundInv.mode || "In-Person"}</div>
                         <div><strong>Panel:</strong> {roundInv.panel?.join(", ") || "None"}</div>
                         <div><strong>Score / Rec:</strong> {roundInv.score !== null ? `${roundInv.score}/100 (${roundInv.rec})` : "Not Evaluated"}</div>
@@ -2213,7 +2265,7 @@ export default function InterviewPanel({
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
                 <div>
                   <div style={{ fontSize: 13, color: T.inkMid }}>
-                    <strong>{evalInterview.role}</strong> · {getRoundOrdinal(evalInterview.round)} · {evalInterview.date} at {evalInterview.time}
+                    <strong>{evalInterview.role}</strong> · {getRoundOrdinal(evalInterview.round)} · {formatDateAndTime(evalInterview.date, evalInterview.time)}
                   </div>
                   <div style={{ fontSize: 12, color: T.inkFaint, marginTop: 2 }}>Panel: {evalInterview.panel?.join(", ") || "None"}</div>
                 </div>

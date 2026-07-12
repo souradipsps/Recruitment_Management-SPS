@@ -40,6 +40,22 @@ export async function fetchRoles() {
   return list.map(normalizeRole);
 }
 
+// PATCH /api/roles/{backendId}/ — partial update (e.g. status toggle).
+export async function patchRole(backendId, payload) {
+  const res = await fetch(`${API_URL}${backendId}/`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Failed to update role (${res.status}): ${errText}`);
+  }
+
+  return normalizeRole(await res.json());
+}
+
 // DELETE /api/roles/{backendId}/
 export async function deleteRole(backendId) {
   const res = await fetch(`${API_URL}${backendId}/`, {

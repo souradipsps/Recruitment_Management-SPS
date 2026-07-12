@@ -116,6 +116,26 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     });
   };
 
+  // Re-fetches the authoritative approvals list and replaces all Job Request
+  // entries with it. A single job request accumulates multiple ApprovalRequest
+  // rows across resubmit cycles (one per cycle, created by jobs/signals.py),
+  // all sharing the same sourceId. Patching approvals by sourceId in place
+  // touches every one of those rows at once, so a resubmit/approve/cancel
+  // wrongly flips historical rows too and produces duplicate/stale cards until
+  // a hard refresh. Refetching mirrors exactly which rows the backend reports.
+  const refreshJobRequestApprovals = async () => {
+    try {
+      const freshApprovals = await fetchApprovals();
+      const freshJobRequestApprovals = freshApprovals.filter((a) => a.type === "Job Request");
+      setApprovalRequests((prev) => [
+        ...prev.filter((a) => a.type !== "Job Request"),
+        ...freshJobRequestApprovals,
+      ]);
+    } catch (err) {
+      console.error("Failed to refresh approvals:", err);
+    }
+  };
+
   // Updates the existing Sent-Back request in place (same id/backendId) with
   // the edited fields and resubmits it as Pending, instead of creating a
   // separate new request. Note: the request's linked Approval record was
@@ -152,16 +172,7 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
 
     // Re-fetch real approvals instead of fabricating a local stand-in (same
     // reasoning as submitRequests: a fabricated entry has no backendId).
-    try {
-      const freshApprovals = await fetchApprovals();
-      const freshJobRequestApprovals = freshApprovals.filter((a) => a.type === "Job Request");
-      setApprovalRequests((prev) => [
-        ...prev.filter((a) => a.type !== "Job Request"),
-        ...freshJobRequestApprovals,
-      ]);
-    } catch (err) {
-      console.error("Failed to refresh approvals after updating job request:", err);
-    }
+    await refreshJobRequestApprovals();
 
     closeModal();
   };
@@ -184,8 +195,21 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     );
   };
 
-  const approveDirectly = () => {
+  const approveDirectly = async () => {
     if (!selectedRequest) return;
+    if (selectedRequest.backendId == null) {
+      alert("This request has no backend record yet — reload the page and try again.");
+      return;
+    }
+
+    try {
+      await updateJobRequestStatus(selectedRequest.backendId, "Approved");
+    } catch (err) {
+      console.error("Failed to approve job request:", err);
+      alert(`Could not approve request: ${err.message}`);
+      return;
+    }
+
     const now = new Date().toLocaleDateString();
     const entry = { act: "Approved", by: "HR Admin", date: now, note: "" };
     const updated = {
@@ -194,13 +218,7 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
       history: [...(selectedRequest.history || []), entry],
     };
     setJobRequests((prev) => prev.map((r) => r.id === selectedRequest.id ? updated : r));
-    setApprovalRequests((prev) =>
-      prev.map((apr) =>
-        String(apr.sourceId) === String(selectedRequest.id)
-          ? { ...apr, status: "Approved", history: updated.history }
-          : apr
-      )
-    );
+    await refreshJobRequestApprovals();
     setJobPostings((prev) => {
       const alreadyExists = prev.some((p) => p.role === selectedRequest.role);
       if (alreadyExists) return prev;
@@ -253,11 +271,7 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     setJobRequests((prev) =>
       prev.map((r) => (r.id === reqId ? { ...r, status: "Cancelled" } : r))
     );
-    setApprovalRequests((prev) =>
-      prev.map((apr) =>
-        String(apr.sourceId) === String(reqId) ? { ...apr, status: "Cancelled" } : apr
-      )
-    );
+    await refreshJobRequestApprovals();
     closeModal();
   };
 
@@ -331,18 +345,7 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
       // stand-ins here — a fabricated entry has no backendId, so approving/
       // rejecting it silently no-ops against the API while a duplicate,
       // backend-sourced entry (with a real backendId) does update the database.
-      // Role Request approvals aren't backend-synced yet, so only the
-      // "Job Request" entries are replaced; anything else is left untouched.
-      try {
-        const freshApprovals = await fetchApprovals();
-        const freshJobRequestApprovals = freshApprovals.filter((a) => a.type === "Job Request");
-        setApprovalRequests((prev) => [
-          ...prev.filter((a) => a.type !== "Job Request"),
-          ...freshJobRequestApprovals,
-        ]);
-      } catch (err) {
-        console.error("Failed to refresh approvals after submitting job request:", err);
-      }
+      await refreshJobRequestApprovals();
 
       setJobForms([emptyForm()]);
       setShowForm(false);

@@ -5,6 +5,7 @@ import { Badge, Btn, Select } from "../../components/ui";
 import { QUAL_OPTIONS, TYPE_OPTIONS, VACANCY_OPTIONS, CATEGORY_OPTIONS, ALL_SKILLS } from "../../data";
 import SkillsMultiSelect from "../../components/SkillsMultiSelect";
 import { labelCss } from "./constants";
+import ActivityChatHistory from "../../components/ActivityChatHistory";
 
 // Only Active roles (Existing Roles screen) are eligible to be requested against.
 const isActiveRole = (r) => (r.currentStatus || r.status) === "Active";
@@ -13,8 +14,19 @@ const isActiveRole = (r) => (r.currentStatus || r.status) === "Active";
  * Full-screen portal modal showing request details, editable fields for
  * Pending requests, activity history, comment textarea, and action buttons.
  */
-export default function ApprovalModal({ sel, setSel, closeModal, isPending, comment, setComment, fieldErrors, setFieldErrors, takeAction, isMobile, existingRoles }) {
+export default function ApprovalModal({ sel, setSel, closeModal, isPending, comment, setComment, fieldErrors, setFieldErrors, takeAction, isMobile, existingRoles, currentUser }) {
   if (!sel) return null;
+
+  // The backend now returns the complete, correctly-ordered timeline on every
+  // ApprovalRequest row (each sibling created across resubmit cycles carries
+  // the full aggregated history). So use this row's own history directly -
+  // combining across siblings by sourceId here would just repeat every entry
+  // once per sibling. Only synthesize a leading "Submitted" if the backend
+  // history doesn't already include one (role requests may omit it).
+  const rawHistory = sel.history || [];
+  const aggregatedHistory = rawHistory.some((h) => h.act === "Submitted")
+    ? rawHistory
+    : [{ act: "Submitted", by: sel.requestedBy || "User", date: sel.date, note: "" }, ...rawHistory];
 
   // Department list sourced from existing (sanctioned) roles that have at least one Active role.
   const deptOptions = [...new Set((existingRoles || []).filter(isActiveRole).map((r) => r.dept).filter(Boolean))]
@@ -368,31 +380,13 @@ export default function ApprovalModal({ sel, setSel, closeModal, isPending, comm
             )}
           </div>
 
-          {/* Activity history timeline */}
-          {sel.history?.length > 0 && (
-            <div>
-              <div style={{ ...labelCss, marginBottom: 12 }}>Activity History</div>
-              {sel.history.map((h, i) => (
-                <div key={i} style={{ display: "flex", gap: 12, marginBottom: 10 }}>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: i === sel.history.length - 1 ? T.blue : T.border, marginTop: 3, flexShrink: 0 }} />
-                    {i < sel.history.length - 1 && <div style={{ width: 2, flex: 1, background: T.border, margin: "3px 0" }} />}
-                  </div>
-                  <div style={{ paddingBottom: i < sel.history.length - 1 ? 4 : 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: T.ink }}>
-                      {h.act} <span style={{ fontWeight: 400, color: T.inkLight }}>by {h.by}</span>
-                    </div>
-                    <div style={{ fontSize: 11, color: T.inkFaint }}>{h.date}</div>
-                    {h.note && (
-                      <div style={{ marginTop: 4, fontSize: 12, color: T.amber, background: T.amberLight, padding: "6px 10px", borderRadius: 7, border: `1px solid #FDE68A` }}>
-                        {h.note}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <ActivityChatHistory
+            history={aggregatedHistory}
+            currentUser={currentUser}
+            justification={sel.just || sel.description}
+            requestedBy={sel.requestedBy}
+            mode="approver"
+          />
 
           {/* Comment / resolved status */}
           {isPending ? (

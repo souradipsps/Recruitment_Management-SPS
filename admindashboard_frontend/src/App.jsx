@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { T, font } from "./theme";
 import { useBreakpoint, usePersistentState, useSessionState } from "./hooks";
-import { NAV, EXISTING_ROLES, POSTINGS, JOB_APPLICATIONS, GENERAL_APPLICATIONS, INTERVIEWS, OFFERS } from "./data";
+import { NAV, INTERVIEWS, OFFERS } from "./data";
 import { fetchJobRequests } from "./api/jobRequestsApi";
 import { fetchApprovals } from "./api/approvalsApi";
 import { fetchRoles } from "./api/rolesApi";
@@ -26,18 +26,17 @@ export default function App() {
   const [active, setActive] = useState("applications");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Live-API-backed data (no mock seed, no localStorage persistence — each is
+  // populated purely by its fetch effect below and mutated via its API client).
+  const [roleRequests, setRoleRequests] = useState([]);
+  const [jobRequests, setJobRequests] = useState([]);
+  const [approvalRequests, setApprovalRequests] = useState([]);
+  const [existingRoles, setExistingRoles] = useState([]);
+  const [jobPostings, setJobPostings] = useState([]);
+  const [jobApplications, setJobApplications] = useState([]);
+  const [generalApplications, setGeneralApplications] = useState([]);
+
   // Persisted app data (each mirrors itself to localStorage).
-  const [roleRequests, setRoleRequests] = usePersistentState("roleRequests", []);
-  const [jobRequests, setJobRequests] = usePersistentState("jobRequests", []);
-  const [approvalRequests, setApprovalRequests] = usePersistentState("approvalRequests", []);
-  const [existingRoles, setExistingRoles] = usePersistentState("existingRoles", () =>
-    EXISTING_ROLES.map((r) => ({ ...r, currentStatus: r.status, currentFilled: r.filled })),
-  );
-  const [jobPostings, setJobPostings] = usePersistentState("jobPostings", () =>
-    POSTINGS.map((p) => ({ ...p, status: p.status || "Published" })),
-  );
-  const [jobApplications, setJobApplications] = usePersistentState("jobApplications", JOB_APPLICATIONS);
-  const [generalApplications, setGeneralApplications] = usePersistentState("generalApplications", GENERAL_APPLICATIONS);
   const [offers, setOffers] = usePersistentState("offers", OFFERS);
   const [interviews, setInterviews] = usePersistentState("interviews", INTERVIEWS);
   const [panelists, setPanelists] = usePersistentState("panelists", defaultPanelists);
