@@ -1,26 +1,21 @@
 import { useState, useEffect } from "react";
 import { T, font } from "./theme";
 import { useBreakpoint, usePersistentState, useSessionState } from "./hooks";
-import { NAV, INTERVIEWS, OFFERS } from "./data";
+import { NAV, OFFERS } from "./data";
 import { fetchJobRequests } from "./api/jobRequestsApi";
 import { fetchApprovals } from "./api/approvalsApi";
 import { fetchRoles } from "./api/rolesApi";
 import { fetchJobPostings } from "./api/jobPostingsApi";
 import { fetchRoleRequests } from "./api/roleRequestsApi";
 import { fetchApplications, fetchGeneralApplications } from "./api/applicationsApi";
+import { fetchPanelists } from "./api/panelistsApi";
+import { fetchInterviews } from "./api/interviewsApi";
 
 import Auth from "./screens/Auth";
 import ModuleSelector from "./screens/ModuleSelector";
 import Sidebar from "./components/Sidebar";
 import TopBar from "./components/TopBar";
 import ScreenRouter from "./components/ScreenRouter";
-
-const defaultPanelists = () =>
-  ["Dr. Roy", "Mr. Patel", "Ms. Nisha", "Mr. Kumar", "Mr. Rajan", "Dr. Ananya"].map((name) => ({
-    name,
-    email: `${name.toLowerCase().replace(". ", "_").replace(" ", "_")}@school.edu`,
-    phone: "9876543210",
-  }));
 
 export default function App() {
   const [active, setActive] = useState("applications");
@@ -35,11 +30,11 @@ export default function App() {
   const [jobPostings, setJobPostings] = useState([]);
   const [jobApplications, setJobApplications] = useState([]);
   const [generalApplications, setGeneralApplications] = useState([]);
+  const [interviews, setInterviews] = useState([]);
+  const [panelists, setPanelists] = useState([]);
 
   // Persisted app data (each mirrors itself to localStorage).
   const [offers, setOffers] = usePersistentState("offers", OFFERS);
-  const [interviews, setInterviews] = usePersistentState("interviews", INTERVIEWS);
-  const [panelists, setPanelists] = usePersistentState("panelists", defaultPanelists);
   const [selectedPanelists] = usePersistentState("selectedPanelists", ["Dr. Roy", "Mr. Patel", "Ms. Nisha"]);
 
   // Session-scoped auth/module selection.
@@ -107,6 +102,25 @@ export default function App() {
       .catch((err) => console.error("Failed to load general applications:", err));
     return () => { active = false; };
   }, [setGeneralApplications]);
+
+  // Load panelists from the API on mount (real backend ids are needed so the
+  // Interview Panel can assign panelists to interviews).
+  useEffect(() => {
+    let active = true;
+    fetchPanelists()
+      .then((data) => { if (active) setPanelists(data); })
+      .catch((err) => console.error("Failed to load panelists:", err));
+    return () => { active = false; };
+  }, [setPanelists]);
+
+  // Load interviews from the API on mount (source of truth for scheduling).
+  useEffect(() => {
+    let active = true;
+    fetchInterviews()
+      .then((data) => { if (active) setInterviews(data); })
+      .catch((err) => console.error("Failed to load interviews:", err));
+    return () => { active = false; };
+  }, [setInterviews]);
 
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";

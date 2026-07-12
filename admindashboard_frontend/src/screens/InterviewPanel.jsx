@@ -3,6 +3,8 @@ import { T, font } from "../theme";
 import { statusVariant } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
 import { Card, SectionTitle, Badge, Btn, Modal, ModalHeader, FormField, Select, Input } from "../components/ui";
+import { createPanelist } from "../api/panelistsApi";
+import { createInterview, updateInterview, deleteInterview, buildInterviewPayload } from "../api/interviewsApi";
 
 const TIME_OPTIONS = [
   { value: "9:00 AM", label: "9:00 AM" },
@@ -60,6 +62,7 @@ export default function InterviewPanel({
 
   // Form validations for Add Panelist
   const [panelistErrors, setPanelistErrors] = useState({ name: "", email: "", phone: "" });
+  const [isSubmittingPanelist, setIsSubmittingPanelist] = useState(false);
 
   const validateName = (name) => {
     if (!name.trim()) return "Full Name is required.";
@@ -294,41 +297,115 @@ export default function InterviewPanel({
     }
   };
 
-  const handleAdvanceSelectedRounds = () => {
+  // Resolve panelist display names -> backend ids (interviews API stores panel as ids).
+  const resolvePanelIds = (names = []) =>
+    names
+      .map((n) => panelists.find((p) => p.name === n)?.backendId)
+      .filter((id) => id != null);
+
+  // Insert or replace a normalized interview record in the shared list. Matches on
+  // backend id first, then on candidate/role/round (to replace an unsaved placeholder).
+  const upsertInterview = (norm) => {
+    if (!setInterviews) return;
+    setInterviews((prev) => {
+      const idx = prev.findIndex(
+        (i) =>
+          (norm.backendId != null && i.backendId === norm.backendId) ||
+          (i.candidate === norm.candidate && i.role === norm.role && i.round === norm.round)
+      );
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = norm;
+        return next;
+      }
+      return [...prev, norm];
+    });
+  };
+
+  const findInterviewForRound = (name, role, round) =>
+    interviews.find((i) => i.candidate === name && i.role === role && i.round === round);
+
+  const handleAdvanceSelectedRounds = async () => {
     if (selectedCandidateKeys.length === 0) {
       alert("Select at least one candidate to advance their round.");
       return;
     }
+    const toAdvance = selectableCandidates.filter((c) => selectedCandidateKeys.includes(candidateKey(c)));
     setActiveRoundOverrides((prev) => {
       const next = { ...prev };
-      selectableCandidates.forEach((c) => {
-        const key = candidateKey(c);
-        if (selectedCandidateKeys.includes(key)) {
-          next[key] = Math.min(10, c.activeRound + 1);
-        }
+      toAdvance.forEach((c) => {
+        next[candidateKey(c)] = Math.min(10, c.activeRound + 1);
       });
       return next;
     });
     setSelectedCandidateKeys([]);
+
+    // Create a fresh interview row in the DB for each advanced candidate's next
+    // round — only candidate/role/round are sent; schedule + panel come later.
+    for (const c of toAdvance) {
+      const newRound = Math.min(10, c.activeRound + 1);
+      if (newRound === c.activeRound) continue;
+      if (findInterviewForRound(c.name, c.role, newRound)?.backendId != null) continue;
+      try {
+        const norm = await createInterview(
+          buildInterviewPayload({ candidate: c.name, role: c.role, round: newRound })
+        );
+        upsertInterview(norm);
+      } catch (err) {
+        console.error("Failed to create next-round interview:", err);
+      }
+    }
   };
 
-  const handleIncrementCandidateRound = (c, currentRound) => {
+  const handleIncrementCandidateRound = async (c, currentRound) => {
     const newRound = Math.min(10, currentRound + 1);
+    if (newRound === currentRound) return;
     setActiveRoundOverrides((prev) => ({
       ...prev,
       [`${c.name}-${c.role}`]: newRound,
     }));
+
+    // Re-shortlist the candidate into the next round: create a fresh interview row
+    // carrying only candidate + role + round (no schedule/panel copied over).
+    if (findInterviewForRound(c.name, c.role, newRound)?.backendId != null) return;
+    try {
+      const norm = await createInterview(
+        buildInterviewPayload({ candidate: c.name, role: c.role, round: newRound })
+      );
+      upsertInterview(norm);
+    } catch (err) {
+      console.error("Failed to create next-round interview:", err);
+      alert("Could not create the next round interview. Please try again.");
+    }
   };
 
-  const handleDecrementCandidateRound = (c, currentRound) => {
+  const handleDecrementCandidateRound = async (c, currentRound) => {
     const newRound = Math.max(1, currentRound - 1);
+
+    // Delete the interview row for the round we're leaving so it can be redone
+    // (re-scheduled and re-paneled after advancing again).
+    const leaving = findInterviewForRound(c.name, c.role, currentRound);
+    if (leaving?.backendId != null) {
+      try {
+        await deleteInterview(leaving.backendId);
+      } catch (err) {
+        console.error("Failed to delete interview:", err);
+        alert("Could not delete the interview for this round. Please try again.");
+        return;
+      }
+    }
+    if (setInterviews) {
+      setInterviews((prev) =>
+        prev.filter((i) => !(i.candidate === c.name && i.role === c.role && i.round === currentRound))
+      );
+    }
     setActiveRoundOverrides((prev) => ({
       ...prev,
       [`${c.name}-${c.role}`]: newRound,
     }));
   };
 
-  const handleAddPanelist = (e) => {
+  const handleAddPanelist = async (e) => {
     e.preventDefault();
     const nameErr = validateName(newPanelistName);
     const emailErr = validateEmail(newPanelistEmail);
@@ -340,15 +417,32 @@ export default function InterviewPanel({
     }
 
     if (!setPanelists) return;
-    setPanelists((prev) => [
-      ...prev,
-      { name: newPanelistName.trim(), email: newPanelistEmail.trim(), phone: newPanelistPhone.trim() },
-    ]);
-    setNewPanelistName("");
-    setNewPanelistEmail("");
-    setNewPanelistPhone("");
-    setPanelistErrors({ name: "", email: "", phone: "" });
-    setShowAddPanelistModal(false);
+
+    setIsSubmittingPanelist(true);
+    try {
+      // Register the panelist on the backend (POST /api/panelists/).
+      // Department is intentionally not sent per requirements.
+      const created = await createPanelist({
+        name: newPanelistName,
+        email: newPanelistEmail,
+        phone: newPanelistPhone,
+      });
+
+      setPanelists((prev) => [...prev, created]);
+      setNewPanelistName("");
+      setNewPanelistEmail("");
+      setNewPanelistPhone("");
+      setPanelistErrors({ name: "", email: "", phone: "" });
+      setShowAddPanelistModal(false);
+    } catch (err) {
+      console.error("Failed to register panelist:", err);
+      setPanelistErrors((prev) => ({
+        ...prev,
+        email: "Could not register panelist. Please try again.",
+      }));
+    } finally {
+      setIsSubmittingPanelist(false);
+    }
   };
 
   const handleGiveOffer = (c) => {
@@ -377,7 +471,9 @@ export default function InterviewPanel({
     setShowScheduleModal(true);
   };
 
-  const handleSaveSchedule = () => {
+  const [isSavingSchedule, setIsSavingSchedule] = useState(false);
+
+  const handleSaveSchedule = async () => {
     if (!scheduleForm.date || !scheduleForm.time) {
       alert("Please select date and time.");
       return;
@@ -388,115 +484,99 @@ export default function InterviewPanel({
     }
     if (!setInterviews || !schedulingCandidate) return;
 
-    setInterviews((prev) => {
-      const existingPanel = schedulingCandidate?.interview?.panel || [];
-
-      const exists = prev.some(
-        (i) =>
-          i.candidate === schedulingCandidate.name &&
-          i.role === schedulingCandidate.role &&
-          i.round === schedulingCandidate.activeRound
-      );
-      if (exists) {
-        return prev.map((i) =>
-          i.candidate === schedulingCandidate.name &&
-            i.role === schedulingCandidate.role &&
-            i.round === schedulingCandidate.activeRound
-            ? {
-              ...i,
-              date: scheduleForm.date,
-              time: scheduleForm.time,
-              mode: scheduleForm.mode,
-              meetingLink: scheduleForm.mode === "Online" ? scheduleForm.meetingLink : "",
-              panel: existingPanel,
-              rescheduled: true,
-            }
-            : i
-        );
-      } else {
-        return [
-          ...prev,
-          {
-            id: `INT-${schedulingCandidate.id}-${schedulingCandidate.activeRound}`,
-            candidate: schedulingCandidate.name,
-            role: schedulingCandidate.role,
-            date: scheduleForm.date,
-            time: scheduleForm.time,
-            panel: [],
-            score: null,
-            rec: "—",
-            status: "Pending",
-            mode: scheduleForm.mode,
-            meetingLink: scheduleForm.mode === "Online" ? scheduleForm.meetingLink : "",
-            round: schedulingCandidate.activeRound,
-          },
-        ];
-      }
+    const existing = schedulingCandidate.interview;
+    const payload = buildInterviewPayload({
+      candidate: schedulingCandidate.name,
+      role: schedulingCandidate.role,
+      date: scheduleForm.date,
+      time: scheduleForm.time,
+      mode: scheduleForm.mode,
+      meetingLink: scheduleForm.mode === "Online" ? scheduleForm.meetingLink : "",
+      round: schedulingCandidate.activeRound,
+      status: "Scheduled",
+      panelIds: resolvePanelIds(existing?.panel || []),
     });
 
-    setShowScheduleModal(false);
-    setSchedulingCandidate(null);
+    setIsSavingSchedule(true);
+    try {
+      const norm = existing?.backendId != null
+        ? await updateInterview(existing.backendId, payload)
+        : await createInterview(payload);
+      upsertInterview(norm);
+      setShowScheduleModal(false);
+      setSchedulingCandidate(null);
+    } catch (err) {
+      console.error("Failed to save interview schedule:", err);
+      alert("Could not save the interview schedule. Please try again.");
+    } finally {
+      setIsSavingSchedule(false);
+    }
   };
 
-  const handleTogglePanelistForCandidate = (panelistName) => {
+  const handleTogglePanelistForCandidate = async (panelistName) => {
     if (!assigningCandidate || !setInterviews) return;
-    setInterviews((prev) => {
-      const exists = prev.some(
-        (i) =>
-          i.candidate === assigningCandidate.name &&
-          i.role === assigningCandidate.role &&
-          i.round === assigningCandidate.activeRound
-      );
-      let updatedList = [];
-      if (exists) {
-        updatedList = prev.map((i) => {
-          if (
-            i.candidate === assigningCandidate.name &&
-            i.role === assigningCandidate.role &&
-            i.round === assigningCandidate.activeRound
-          ) {
-            const panel = i.panel || [];
-            const newPanel = panel.includes(panelistName)
-              ? panel.filter((p) => p !== panelistName)
-              : [...panel, panelistName];
-            return { ...i, panel: newPanel };
-          }
-          return i;
-        });
-      } else {
-        updatedList = [
-          ...prev,
-          {
-            id: `INT-${assigningCandidate.id}-${assigningCandidate.activeRound}`,
-            candidate: assigningCandidate.name,
-            role: assigningCandidate.role,
-            date: "",
-            time: "",
-            panel: [panelistName],
-            score: null,
-            rec: "—",
-            status: "Pending",
-            mode: "In-Person",
-            meetingLink: "",
-            round: assigningCandidate.activeRound,
-          },
-        ];
-      }
-      const updatedCand = updatedList.find(
-        (i) =>
-          i.candidate === assigningCandidate.name &&
-          i.role === assigningCandidate.role &&
-          i.round === assigningCandidate.activeRound
-      );
-      setAssigningCandidate((prevCand) => ({
-        ...prevCand,
-        interview: { ...prevCand.interview, panel: updatedCand?.panel || [] },
-      }));
-      return updatedList;
-    });
+
+    const current = assigningCandidate.interview?.panel || [];
+    const newPanel = current.includes(panelistName)
+      ? current.filter((p) => p !== panelistName)
+      : [...current, panelistName];
+
+    const backendId = assigningCandidate.interview?.backendId;
+    const payload = buildInterviewPayload(
+      backendId != null
+        ? { panelIds: resolvePanelIds(newPanel) }
+        : {
+          candidate: assigningCandidate.name,
+          role: assigningCandidate.role,
+          round: assigningCandidate.activeRound,
+          panelIds: resolvePanelIds(newPanel),
+        }
+    );
+
+    try {
+      const norm = backendId != null
+        ? await updateInterview(backendId, payload)
+        : await createInterview(payload);
+      upsertInterview(norm);
+      setAssigningCandidate((prevCand) => ({ ...prevCand, interview: norm }));
+    } catch (err) {
+      console.error("Failed to update interview panel:", err);
+      alert("Could not update the panel assignment. Please try again.");
+    }
   };
 
-  const submitEvaluation = () => {
+  // Shared save path for both the evaluation modal and the inline mobile-card
+  // evaluation form. POSTs a fresh row if the round hasn't been persisted yet,
+  // otherwise PATCHes the existing one.
+  const saveEvaluation = async (interviewLike, { avgScore, recommendationValue, remarksValue }) => {
+    const payload = buildInterviewPayload(
+      interviewLike.backendId != null
+        ? { score: avgScore, rec: recommendationValue, remarks: remarksValue, status: "Completed" }
+        : {
+          candidate: interviewLike.candidate,
+          role: interviewLike.role,
+          round: interviewLike.round,
+          date: interviewLike.date || undefined,
+          time: interviewLike.time || undefined,
+          mode: interviewLike.mode || "In-Person",
+          meetingLink: interviewLike.meetingLink || "",
+          panelIds: resolvePanelIds(interviewLike.panel || []),
+          score: avgScore,
+          rec: recommendationValue,
+          remarks: remarksValue,
+          status: "Completed",
+        }
+    );
+    const norm = interviewLike.backendId != null
+      ? await updateInterview(interviewLike.backendId, payload)
+      : await createInterview(payload);
+    upsertInterview(norm);
+    return norm;
+  };
+
+  const [isSubmittingEval, setIsSubmittingEval] = useState(false);
+
+  const submitEvaluation = async () => {
     if (!recommendation) {
       alert("Please select a recommendation.");
       return;
@@ -506,47 +586,19 @@ export default function InterviewPanel({
     const scoreValues = Object.values(scores);
     const avgScore = scoreValues.length > 0 ? Math.round((scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length) * 20) : null;
 
-    setInterviews((prev) => {
-      const exists = prev.some(
-        (i) =>
-          i.candidate === evalInterview.candidate &&
-          i.role === evalInterview.role &&
-          i.round === evalInterview.round
-      );
-      if (exists) {
-        return prev.map((i) =>
-          i.candidate === evalInterview.candidate &&
-            i.role === evalInterview.role &&
-            i.round === evalInterview.round
-            ? { ...i, score: avgScore, rec: recommendation, status: "Completed", remarks }
-            : i
-        );
-      } else {
-        return [
-          ...prev,
-          {
-            id: evalInterview.id || `INT-${Date.now()}`,
-            candidate: evalInterview.candidate,
-            role: evalInterview.role,
-            date: evalInterview.date || "",
-            time: evalInterview.time || "",
-            panel: evalInterview.panel || [],
-            score: avgScore,
-            rec: recommendation,
-            status: "Completed",
-            mode: evalInterview.mode || "In-Person",
-            meetingLink: evalInterview.meetingLink || "",
-            round: evalInterview.round,
-            remarks,
-          },
-        ];
-      }
-    });
-
-    setEvalInterview(null);
-    setScores({});
-    setRecommendation("");
-    setRemarks("");
+    setIsSubmittingEval(true);
+    try {
+      await saveEvaluation(evalInterview, { avgScore, recommendationValue: recommendation, remarksValue: remarks });
+      setEvalInterview(null);
+      setScores({});
+      setRecommendation("");
+      setRemarks("");
+    } catch (err) {
+      console.error("Failed to submit interview evaluation:", err);
+      alert("Could not submit the evaluation. Please try again.");
+    } finally {
+      setIsSubmittingEval(false);
+    }
   };
 
   const scrollCarousel = (dir) => {
@@ -1855,7 +1907,8 @@ export default function InterviewPanel({
                               {/* Submit actions */}
                               <div style={{ display: "flex", gap: 10 }}>
                                 <button
-                                  onClick={() => {
+                                  disabled={isSubmittingEval}
+                                  onClick={async () => {
                                     if (!recommendation) {
                                       alert("Please select a recommendation.");
                                       return;
@@ -1863,50 +1916,33 @@ export default function InterviewPanel({
                                     if (!setInterviews) return;
                                     const scoreValues = Object.values(scores);
                                     const avgScore = scoreValues.length > 0 ? Math.round((scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length) * 20) : null;
-                                    setInterviews((prev) => {
-                                      const exists = prev.some(
-                                        (iv) => iv.candidate === c.name && iv.role === c.role && iv.round === rnd
+                                    setIsSubmittingEval(true);
+                                    try {
+                                      await saveEvaluation(
+                                        { ...i, candidate: c.name, role: c.role, round: rnd },
+                                        { avgScore, recommendationValue: recommendation, remarksValue: remarks }
                                       );
-                                      if (exists) {
-                                        return prev.map((iv) =>
-                                          iv.candidate === c.name && iv.role === c.role && iv.round === rnd
-                                            ? { ...iv, score: avgScore, rec: recommendation, status: "Completed", remarks }
-                                            : iv
-                                        );
-                                      } else {
-                                        return [
-                                          ...prev,
-                                          {
-                                            id: i.id || `INT-${Date.now()}`,
-                                            candidate: c.name,
-                                            role: c.role,
-                                            date: i.date || "",
-                                            time: i.time || "",
-                                            panel: i.panel || [],
-                                            score: avgScore,
-                                            rec: recommendation,
-                                            status: "Completed",
-                                            mode: i.mode || "In-Person",
-                                            meetingLink: i.meetingLink || "",
-                                            round: rnd,
-                                            remarks,
-                                          },
-                                        ];
-                                      }
-                                    });
-                                    setInlineEvalKey(null);
-                                    setScores({});
-                                    setRecommendation("");
-                                    setRemarks("");
+                                      setInlineEvalKey(null);
+                                      setScores({});
+                                      setRecommendation("");
+                                      setRemarks("");
+                                    } catch (err) {
+                                      console.error("Failed to submit interview evaluation:", err);
+                                      alert("Could not submit the evaluation. Please try again.");
+                                    } finally {
+                                      setIsSubmittingEval(false);
+                                    }
                                   }}
                                   style={{
                                     background: T.primary, color: "#fff", border: "none", borderRadius: 10,
-                                    padding: "9px 22px", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                                    padding: "9px 22px", fontSize: 13, fontWeight: 700,
+                                    cursor: isSubmittingEval ? "not-allowed" : "pointer",
+                                    opacity: isSubmittingEval ? 0.7 : 1,
                                     boxShadow: `0 4px 12px ${T.primary}33`,
                                   }}
                                   className="btn-action-hover"
                                 >
-                                  ✓ Submit Evaluation
+                                  {isSubmittingEval ? "Submitting…" : "✓ Submit Evaluation"}
                                 </button>
                                 <button
                                   onClick={() => {
@@ -2045,8 +2081,8 @@ export default function InterviewPanel({
             )}
 
             <div style={{ display: "flex", gap: 10, marginTop: 12, justifyContent: "flex-end" }}>
-              <Btn label="Cancel" variant="ghost" onClick={() => { setShowScheduleModal(false); setSchedulingCandidate(null); }} />
-              <Btn label="Save Schedule" onClick={handleSaveSchedule} />
+              <Btn label="Cancel" variant="ghost" disabled={isSavingSchedule} onClick={() => { setShowScheduleModal(false); setSchedulingCandidate(null); }} />
+              <Btn label={isSavingSchedule ? "Saving…" : "Save Schedule"} disabled={isSavingSchedule} onClick={handleSaveSchedule} />
             </div>
           </div>
         )}
@@ -2348,8 +2384,8 @@ export default function InterviewPanel({
             </FormField>
 
             <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-              <Btn label="Submit Evaluation" onClick={submitEvaluation} />
-              <Btn label="Cancel" variant="ghost" onClick={() => setEvalInterview(null)} />
+              <Btn label={isSubmittingEval ? "Submitting…" : "Submit Evaluation"} disabled={isSubmittingEval} onClick={submitEvaluation} />
+              <Btn label="Cancel" variant="ghost" disabled={isSubmittingEval} onClick={() => setEvalInterview(null)} />
             </div>
           </>
         )}
@@ -2494,22 +2530,28 @@ export default function InterviewPanel({
                 <button
                   type="button"
                   onClick={closeAddPanelistModal}
+                  disabled={isSubmittingPanelist}
                   style={{
                     flex: 1, padding: "12px", borderRadius: 10, border: `1.5px solid ${T.border}`,
-                    background: T.canvas, color: T.inkMid, fontSize: 14, fontWeight: 700, cursor: "pointer",
+                    background: T.canvas, color: T.inkMid, fontSize: 14, fontWeight: 700,
+                    cursor: isSubmittingPanelist ? "not-allowed" : "pointer",
+                    opacity: isSubmittingPanelist ? 0.6 : 1,
                   }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
+                  disabled={isSubmittingPanelist}
                   style={{
                     flex: 2, padding: "12px", borderRadius: 10, border: "none",
-                    background: T.primary, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer",
+                    background: T.primary, color: "#fff", fontSize: 14, fontWeight: 700,
+                    cursor: isSubmittingPanelist ? "not-allowed" : "pointer",
+                    opacity: isSubmittingPanelist ? 0.7 : 1,
                     boxShadow: `0 4px 14px ${T.primary}44`,
                   }}
                 >
-                  ＋ Add Panelist
+                  {isSubmittingPanelist ? "Registering…" : "＋ Add Panelist"}
                 </button>
               </div>
             </form>
@@ -2622,10 +2664,18 @@ export default function InterviewPanel({
           )}
 
           <button
-            onClick={() => {
-              // Write reminderSentAt into the matching interview record
-              if (setInterviews && reminderCandidate) {
-                const sentAt = new Date().toISOString();
+            onClick={async () => {
+              // Persist reminder_sent_at on the interview record (API + local state).
+              const inv = reminderCandidate?.interview;
+              const sentAt = new Date().toISOString();
+              if (inv?.backendId != null) {
+                try {
+                  const norm = await updateInterview(inv.backendId, buildInterviewPayload({ reminderSentAt: sentAt }));
+                  upsertInterview(norm);
+                } catch (err) {
+                  console.error("Failed to record reminder:", err);
+                }
+              } else if (setInterviews && reminderCandidate) {
                 setInterviews((prev) =>
                   prev.map((i) =>
                     i.candidate === reminderCandidate.name && i.role === reminderCandidate.role
