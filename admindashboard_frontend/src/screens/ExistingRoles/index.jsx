@@ -105,7 +105,6 @@ export default function ExistingRoles({ roles, setRoles }) {
                 value={deptFilter}
                 onChange={(e) => setDeptFilter(e.target.value)}
                 options={depts.map((d) => ({ value: d, label: d }))}
-                placeholder="All departments"
               />
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
