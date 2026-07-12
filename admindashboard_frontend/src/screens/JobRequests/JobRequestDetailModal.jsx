@@ -47,11 +47,18 @@ export default function JobRequestDetailModal({
   const isEditable = selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back";
   const patch = (key, value) => setSelectedRequest({ ...selectedRequest, [key]: value });
 
-  // Lock body scroll when modal is open
+  // Lock body scroll and page content scroll when modal is open
   useEffect(() => {
     document.body.style.overflow = "hidden";
+    const scrollContainer = document.querySelector(".animate-fade-in-up");
+    if (scrollContainer) {
+      scrollContainer.style.overflowY = "hidden";
+    }
     return () => {
       document.body.style.overflow = "";
+      if (scrollContainer) {
+        scrollContainer.style.overflowY = "auto";
+      }
     };
   }, []);
 

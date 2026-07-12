@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { T } from "../theme";
 import { statusVariant } from "../theme";
 import { useBreakpoint } from "../hooks";
@@ -54,6 +55,26 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
   const [modalError, setModalError] = useState("");
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const scrollRef = useRef(null);
+  useEffect(() => {
+    const scrollContainer = document.querySelector(".animate-fade-in-up");
+    if (showViewModal) {
+      document.body.style.overflow = "hidden";
+      if (scrollContainer) {
+        scrollContainer.style.overflowY = "hidden";
+      }
+    } else {
+      document.body.style.overflow = "";
+      if (scrollContainer) {
+        scrollContainer.style.overflowY = "auto";
+      }
+    }
+    return () => {
+      document.body.style.overflow = "";
+      if (scrollContainer) {
+        scrollContainer.style.overflowY = "auto";
+      }
+    };
+  }, [showViewModal]);
 
   const statuses = ["All", "Pending", "Approved", "Rejected", "Cancelled", "Sent Back"];
 
@@ -861,7 +882,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
         </Card>
       )}
 
-      {showViewModal && selectedRequest && (
+      {showViewModal && selectedRequest && createPortal(
         <div
           onClick={() => { setShowViewModal(false); setSelectedRequest(null); setOriginalRequest(null); setModalError(""); }}
           style={{
@@ -1069,7 +1090,8 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
