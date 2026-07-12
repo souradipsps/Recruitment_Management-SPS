@@ -7,7 +7,7 @@ import {
   buildApplicationFormProfile,
   applyProfessionalData,
 } from "../../lib/profileData";
-import { mapUserResponseToSavedProfile } from "./services/applicationsService";
+import { fetchUserProfile, mapUserResponseToSavedProfile } from "./services/applicationsService";
 
 // Renders the four overlay views (login, dashboard, job application, apply)
 // driven by `deferredView`. All shell state and setters arrive via the `app`
@@ -28,12 +28,14 @@ export default function AppModals({ app }) {
     mergedProfileData,
     reloadWithLoader,
     handleLogout,
+    showLogin,
     setShowLogin,
+    showApply,
+    setShowApply,
     setApplyAfterSignup,
     setLoggedInUser,
     setShowDashboard,
     setSignupData,
-    setShowApply,
     setShowJobApplicationModal,
     setCameFromApply,
     setCameFromSection,
@@ -55,28 +57,43 @@ export default function AppModals({ app }) {
             }}
             initialTab={loginTab}
             onFormSubmit={() => setShowLoader(true)}
+            onFormError={() => setShowLoader(false)}
             onLoginSuccess={(name, userData) => {
               setLoggedInUser(name);
-              if (userData) {
-                setSignupData({
-                  name: userData.first_name,
-                  lastName: userData.last_name,
-                  email: userData.email,
-                  phone: userData.phone,
-                });
-                const saved = mapUserResponseToSavedProfile(userData);
-                if (saved) setSavedProfileData(saved);
-              }
               setShowLogin(false);
               setShowDashboard(false);
-              reloadWithLoader();
+              
+              // Delay turning off loader to prevent login modal flicker during transition
+              setTimeout(() => {
+                setShowLoader(false);
+              }, 300);
+
+              // Background fetch of profile details so user isn't waiting on it to log in
+              fetchUserProfile()
+                .then((fetchedData) => {
+                  if (fetchedData) {
+                    setSignupData({
+                      name: fetchedData.first_name,
+                      lastName: fetchedData.last_name,
+                      email: fetchedData.email,
+                      phone: fetchedData.phone,
+                    });
+                    const saved = mapUserResponseToSavedProfile(fetchedData);
+                    if (saved) setSavedProfileData(saved);
+                  }
+                })
+                .catch(() => {});
             }}
             onSignupSuccess={(data) => {
               setLoggedInUser(data.name);
               setSignupData(data);
               setApplyAfterSignup(false);
               if (applyAfterSignup) setShowApply(true);
-              reloadWithLoader();
+              
+              // Delay turning off loader to prevent signup modal flicker during transition
+              setTimeout(() => {
+                setShowLoader(false);
+              }, 300);
             }}
           />
         )}
@@ -131,6 +148,7 @@ export default function AppModals({ app }) {
               setCameFromSection(undefined);
             }}
             onFormSubmit={() => setShowLoader(true)}
+            onFormError={() => setShowLoader(false)}
             onSubmit={(jobId, _formData, professionalData) => {
               setAppliedJobIds((prev) => [...prev, jobId]);
               setApplicationDraft(null);
@@ -165,6 +183,7 @@ export default function AppModals({ app }) {
             onClose={() => setShowApply(false)}
             signupData={signupData}
             onFormSubmit={() => setShowLoader(true)}
+            onFormError={() => setShowLoader(false)}
             onSubmitData={(data) => {
               setSavedProfileData(data);
               setShowApply(false);
