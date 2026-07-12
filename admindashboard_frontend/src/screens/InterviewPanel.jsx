@@ -348,7 +348,7 @@ export default function InterviewPanel({
       if (findInterviewForRound(c.name, c.role, newRound)?.backendId != null) continue;
       try {
         const norm = await createInterview(
-          buildInterviewPayload({ candidate: c.name, role: c.role, round: newRound })
+          buildInterviewPayload({ candidate: c.name, role: c.role, round: newRound, status: "Pending" })
         );
         upsertInterview(norm);
       } catch (err) {
@@ -370,7 +370,7 @@ export default function InterviewPanel({
     if (findInterviewForRound(c.name, c.role, newRound)?.backendId != null) return;
     try {
       const norm = await createInterview(
-        buildInterviewPayload({ candidate: c.name, role: c.role, round: newRound })
+        buildInterviewPayload({ candidate: c.name, role: c.role, round: newRound, status: "Pending" })
       );
       upsertInterview(norm);
     } catch (err) {
@@ -529,6 +529,7 @@ export default function InterviewPanel({
           candidate: assigningCandidate.name,
           role: assigningCandidate.role,
           round: assigningCandidate.activeRound,
+          status: "Pending",
           panelIds: resolvePanelIds(newPanel),
         }
     );
@@ -1558,6 +1559,7 @@ export default function InterviewPanel({
                   <th style={{ padding: "12px 10px", textAlign: "left", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle" }}>Schedule</th>
                   <th style={{ padding: "12px 10px", textAlign: "left", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle", width: 100 }}>Mode</th>
                   <th style={{ padding: "12px 10px", textAlign: "left", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle", width: 80 }}>Link</th>
+                  <th style={{ padding: "12px 10px", textAlign: "center", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle", width: 110 }}>Status</th>
                   <th style={{ padding: "12px 10px", textAlign: "center", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle" }}>Actions</th>
                 </tr>
               </thead>
@@ -1733,6 +1735,11 @@ export default function InterviewPanel({
                           )}
                         </td>
 
+                        {/* Status */}
+                        <td style={{ padding: "12px 10px", textAlign: "center", verticalAlign: "middle" }}>
+                          <Badge label={i.status || "Pending"} variant={statusVariant(i.status || "Pending")} />
+                        </td>
+
                         {/* Actions */}
                         <td style={{ padding: "12px 10px", textAlign: "center", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
                           <div style={{ display: "grid", gridTemplateColumns: "105px 85px 90px 65px", gap: 6, justifyContent: "center", alignItems: "center" }}>
@@ -1802,7 +1809,7 @@ export default function InterviewPanel({
                       {/* Inline Evaluation Form Row */}
                       {inlineEvalKey === candidateKey(c) && (
                         <tr>
-                          <td colSpan={8} style={{ padding: 0, background: T.canvas, borderBottom: `2px solid ${T.primary}22` }}>
+                          <td colSpan={9} style={{ padding: 0, background: T.canvas, borderBottom: `2px solid ${T.primary}22` }}>
                             <div
                               style={{
                                 padding: "20px 24px",

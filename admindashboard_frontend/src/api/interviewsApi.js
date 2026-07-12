@@ -54,7 +54,8 @@ const toApiMode = (m) => (m === "Online" ? "Online" : "Offline");
 const toDisplayMode = (m) => (m === "Online" ? "Online" : "In-Person");
 
 // Map one API record -> the shape the Interview Panel screen expects.
-// A row with no date is treated as "not yet scheduled" (Pending) by the UI.
+// The backend now has a real "Pending" status; fall back to date presence only
+// if status is somehow missing.
 export const normalizeInterview = (r) => ({
   backendId: r.id,
   id: r.interview_id || `INT-${r.id}`,
@@ -65,7 +66,7 @@ export const normalizeInterview = (r) => ({
   panel: Array.isArray(r.panel_details) ? r.panel_details.map((p) => p.name) : [],
   score: r.score ?? null,
   rec: r.recommendation || "—",
-  status: r.date ? (r.status || "Scheduled") : "Pending",
+  status: r.status || (r.date ? "Scheduled" : "Pending"),
   mode: toDisplayMode(r.mode),
   meetingLink: r.meeting_link || "",
   round: r.round ?? 1,
