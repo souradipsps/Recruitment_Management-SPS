@@ -8,6 +8,7 @@ import { Loader } from "./components/common/Loader";
 import { LottieLoader } from "./components/common/LottieLoader";
 import { CareerPage } from "./features/careerpage/CareerPage";
 import AppModals from "./features/careerpage/AppModals";
+import { fetchUserProfile, mapUserResponseToSavedProfile } from "./features/careerpage/services/applicationsService";
 
 // App shell: owns the cross-cutting auth / apply / dashboard state and wires
 // the public CareerPage together with the modals and candidate dashboard.
@@ -67,6 +68,7 @@ export default function App() {
   }, []);
 
   const [showLogin, setShowLogin] = useState(false);
+
   const [showApply, setShowApply] = useState(false);
   const [applyAfterSignup, setApplyAfterSignup] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
@@ -81,6 +83,30 @@ export default function App() {
   const [applicationDraft, setApplicationDraft] = useState(null);
   const [selectedJob, setSelectedJob] = useState(null);
   const [loginTab, setLoginTab] = useState("login");
+
+  // Restore the session from the stored JWT on page load/refresh — without
+  // this, `loggedInUser` always starts blank and the user appears logged out.
+  useEffect(() => {
+    if (!localStorage.getItem("accessToken")) return;
+    fetchUserProfile()
+      .then((fetchedData) => {
+        if (!fetchedData) return;
+        setLoggedInUser(fetchedData.first_name || fetchedData.full_name || fetchedData.email);
+        setSignupData({
+          name: fetchedData.first_name,
+          lastName: fetchedData.last_name,
+          email: fetchedData.email,
+          phone: fetchedData.phone,
+        });
+        const saved = mapUserResponseToSavedProfile(fetchedData);
+        if (saved) setSavedProfileData(saved);
+      })
+      .catch(() => {
+        // Token invalid/expired — clear it so the UI doesn't keep retrying.
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+      });
+  }, []);
 
   const view = showDashboard
     ? "dashboard"
@@ -123,6 +149,8 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
     setLoggedInUser("");
     setShowDashboard(false);
     setCameFromApply(false);
