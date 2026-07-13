@@ -15,22 +15,39 @@ import { fetchUserProfile, mapUserResponseToSavedProfile } from "./features/care
 export default function App() {
   useKeepAwake();
 
-  // ── Lottie loader: shown on every page refresh for 1.5 s ────────────────
   const [initialLoading, setInitialLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [showApply, setShowApply] = useState(false);
+  const [applyAfterSignup, setApplyAfterSignup] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(
+    () => !!(localStorage.getItem("accessToken") && sessionStorage.getItem("dashboardOpen") === "true")
+  );
+  const [dashboardInitialTab, setDashboardInitialTab] = useState(
+    () => (localStorage.getItem("accessToken") && sessionStorage.getItem("dashboardTab")) || "dashboard"
+  );
+  const [loggedInUser, setLoggedInUser] = useState("");
+  const [appliedJobIds, setAppliedJobIds] = useState([]);
+  const [signupData, setSignupData] = useState(null);
+  const [showJobApplicationModal, setShowJobApplicationModal] = useState(false);
+  const [savedProfileData, setSavedProfileData] = useState(null);
+  const [cameFromApply, setCameFromApply] = useState(false);
+  const [cameFromSection, setCameFromSection] = useState(undefined);
+  const [applicationDraft, setApplicationDraft] = useState(null);
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [loginTab, setLoginTab] = useState("login");
+
+  const loaderTimerRef = useRef(null);
+
+  // ── Lottie loader: shown on every page refresh for 1.5 s ────────────────
   useEffect(() => {
     const t = setTimeout(() => setInitialLoading(false), 1500);
     return () => clearTimeout(t);
   }, []);
 
-  // ── Branded maroon Loader: shown briefly on button clicks ────────────────
-  // Login / Sign Up / Apply / Submit Profile → 600 ms flash before modal opens.
-  // Logout → 1.5 s flash.
-  const [showLoader, setShowLoader] = useState(false);
-  const loaderTimerRef = useRef(null);
-
   // Prevent scrollbar visibility and scrolling when loaders are active
   useEffect(() => {
-    if (initialLoading || showLoader) {
+    if ((initialLoading && !showDashboard) || showLoader) {
       document.documentElement.style.overflow = "hidden";
       document.body.style.overflow = "hidden";
     } else {
@@ -41,7 +58,7 @@ export default function App() {
       document.documentElement.style.overflow = "";
       document.body.style.overflow = "";
     };
-  }, [initialLoading, showLoader]);
+  }, [initialLoading, showLoader, showDashboard]);
 
   const openWithLoader = useCallback((then, ms = 600) => {
     if (loaderTimerRef.current) clearTimeout(loaderTimerRef.current);
@@ -67,23 +84,6 @@ export default function App() {
     }
   }, []);
 
-  const [showLogin, setShowLogin] = useState(false);
-
-  const [showApply, setShowApply] = useState(false);
-  const [applyAfterSignup, setApplyAfterSignup] = useState(false);
-  const [showDashboard, setShowDashboard] = useState(false);
-  const [dashboardInitialTab, setDashboardInitialTab] = useState("dashboard");
-  const [loggedInUser, setLoggedInUser] = useState("");
-  const [appliedJobIds, setAppliedJobIds] = useState([]);
-  const [signupData, setSignupData] = useState(null);
-  const [showJobApplicationModal, setShowJobApplicationModal] = useState(false);
-  const [savedProfileData, setSavedProfileData] = useState(null);
-  const [cameFromApply, setCameFromApply] = useState(false);
-  const [cameFromSection, setCameFromSection] = useState(undefined);
-  const [applicationDraft, setApplicationDraft] = useState(null);
-  const [selectedJob, setSelectedJob] = useState(null);
-  const [loginTab, setLoginTab] = useState("login");
-
   // Restore the session from the stored JWT on page load/refresh — without
   // this, `loggedInUser` always starts blank and the user appears logged out.
   useEffect(() => {
@@ -100,6 +100,10 @@ export default function App() {
         });
         const saved = mapUserResponseToSavedProfile(fetchedData);
         if (saved) setSavedProfileData(saved);
+        // Restore dashboard if it was open before the refresh
+        if (sessionStorage.getItem("dashboardOpen") === "true") {
+          setShowDashboard(true);
+        }
       })
       .catch(() => {
         // Token invalid/expired — clear it so the UI doesn't keep retrying.
@@ -145,12 +149,16 @@ export default function App() {
   const handleOpenDashboard = () => {
     setDashboardInitialTab("dashboard");
     setCameFromApply(false);
+    sessionStorage.setItem("dashboardOpen", "true");
+    sessionStorage.setItem("dashboardTab", "dashboard");
     setShowDashboard(true);
   };
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
+    sessionStorage.removeItem("dashboardOpen");
+    sessionStorage.removeItem("dashboardTab");
     setLoggedInUser("");
     setShowDashboard(false);
     setCameFromApply(false);
@@ -227,7 +235,7 @@ export default function App() {
       <AppModals app={modalApp} />
 
       {/* Lottie loader — overlays on page refresh only */}
-      {initialLoading && <LottieLoader />}
+      {initialLoading && !showDashboard && <LottieLoader />}
 
       {/* Branded maroon Loader — overlays on button click / logout */}
       <AnimatePresence>

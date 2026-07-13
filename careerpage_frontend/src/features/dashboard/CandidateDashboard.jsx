@@ -57,7 +57,11 @@ export function CandidateDashboard({
   cameFromApply = false,
 }) {
   // Navigation & UI state
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const [activeTab, setActiveTab] = useState(() => {
+    // Restore saved tab from sessionStorage so refresh keeps the user in the same section
+    const saved = sessionStorage.getItem("dashboardTab");
+    return saved || initialTab;
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedJobDesc, setSelectedJobDesc] = useState(null);
   const [pendingNavigation, setPendingNavigation] = useState(null);
@@ -72,6 +76,13 @@ export function CandidateDashboard({
     }, 800);
     return () => clearTimeout(timer);
   }, []);
+
+  // Keep sessionStorage tab in sync whenever the user navigates sections
+  useEffect(() => {
+    if (sessionStorage.getItem("dashboardOpen") === "true") {
+      sessionStorage.setItem("dashboardTab", activeTab);
+    }
+  }, [activeTab]);
 
   // Profile data states
   const [profile, setProfile] = useState({
@@ -1136,6 +1147,50 @@ export function CandidateDashboard({
                         </div>
                       ))}
                     </div>
+                  </div>
+                </div>
+              </div>
+            ) : activeTab === "notifications" ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div className="skeleton animate-pulse" style={{ width: 180, height: 26, marginBottom: 8 }} />
+                {Array.from({ length: 4 }).map((_, idx) => (
+                  <div key={idx} style={{ background: "#fff", padding: "16px 20px", borderRadius: 10, border: "1px solid #e5e7eb", display: "flex", alignItems: "flex-start", gap: 14 }}>
+                    <div className="skeleton animate-pulse" style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div className="skeleton animate-pulse" style={{ width: "70%", height: 14, marginBottom: 8 }} />
+                      <div className="skeleton animate-pulse" style={{ width: "45%", height: 12 }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : activeTab === "interviews" ? (
+              <div>
+                <div className="skeleton animate-pulse" style={{ width: 200, height: 26, marginBottom: 8 }} />
+                <div className="skeleton animate-pulse" style={{ width: 260, height: 14, marginBottom: 24 }} />
+                {Array.from({ length: 2 }).map((_, idx) => (
+                  <div key={idx} style={{ background: "#fff", padding: 20, borderRadius: 12, border: "1px solid #e5e7eb", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div className="skeleton animate-pulse" style={{ width: 160, height: 16, marginBottom: 8 }} />
+                      <div className="skeleton animate-pulse" style={{ width: 120, height: 13, marginBottom: 6 }} />
+                      <div className="skeleton animate-pulse" style={{ width: 100, height: 13 }} />
+                    </div>
+                    <div className="skeleton animate-pulse" style={{ width: 80, height: 28, borderRadius: 8 }} />
+                  </div>
+                ))}
+              </div>
+            ) : activeTab === "onboarding" ? (
+              <div>
+                <div className="skeleton animate-pulse" style={{ width: 170, height: 26, marginBottom: 8 }} />
+                <div className="skeleton animate-pulse" style={{ width: 300, height: 14, marginBottom: 24 }} />
+                <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #e5e7eb", marginBottom: 16 }}>
+                  <div className="skeleton animate-pulse" style={{ width: 130, height: 18, marginBottom: 16 }} />
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    {Array.from({ length: 4 }).map((_, idx) => (
+                      <div key={idx} style={{ background: "#f9fafb", padding: 16, borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                        <div className="skeleton animate-pulse" style={{ width: "80%", height: 13, marginBottom: 8 }} />
+                        <div className="skeleton animate-pulse" style={{ width: "100%", height: 36, borderRadius: 6 }} />
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>

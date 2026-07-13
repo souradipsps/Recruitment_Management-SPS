@@ -103,6 +103,8 @@ export default function AppModals({ app }) {
         {deferredView === "dashboard" && (
           <CandidateDashboard
             onClose={(bypassApplyModal) => {
+              sessionStorage.removeItem("dashboardOpen");
+              sessionStorage.removeItem("dashboardTab");
               setShowDashboard(false);
               if (cameFromApply && !bypassApplyModal) {
                 setShowJobApplicationModal(true);
@@ -165,6 +167,8 @@ export default function AppModals({ app }) {
               setCameFromSection(section);
               setShowJobApplicationModal(false);
               setDashboardInitialTab("resume");
+              sessionStorage.setItem("dashboardOpen", "true");
+              sessionStorage.setItem("dashboardTab", "resume");
               setShowDashboard(true);
             }}
             profileData={buildApplicationFormProfile({ savedProfileData, signupData, loggedInUser })}
