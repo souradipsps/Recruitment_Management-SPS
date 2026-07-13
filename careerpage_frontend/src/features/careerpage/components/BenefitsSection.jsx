@@ -32,7 +32,8 @@ const BENEFIT_DETAILS = {
 };
 
 // "Why Build Your Career at South Point School?" — grid of benefit cards.
-export function BenefitsSection() {
+export function BenefitsSection({ scrollDirection }) {
+  const isDown = scrollDirection === "down";
   const [activeBenefit, setActiveBenefit] = useState(null);
 
   // Lock body scroll when benefit modal is active
@@ -71,7 +72,7 @@ export function BenefitsSection() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, amount: 0.2 }}
-          transition={{ duration: 0.6 }}
+          transition={isDown ? { duration: 0.6 } : { duration: 0 }}
         >
           <p className="benefits-eyebrow">What We Offer</p>
 
@@ -93,7 +94,7 @@ export function BenefitsSection() {
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: false, amount: 0.15 }}
-                transition={{ type: "spring", stiffness: 70, damping: 15, delay: i * 0.05 }}
+                transition={isDown ? { type: "spring", stiffness: 70, damping: 15, delay: i * 0.05 } : { duration: 0 }}
                 whileHover={{ y: -6, scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleOpenPopup(benefit)}

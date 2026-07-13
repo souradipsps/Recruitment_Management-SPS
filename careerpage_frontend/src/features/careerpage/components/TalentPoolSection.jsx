@@ -9,7 +9,8 @@ const HIGHLIGHTS = [
 
 // "Talent Pool" call-to-action shown only to logged-out visitors, inviting
 // them to submit a general profile.
-export function TalentPoolSection({ onSubmitProfile }) {
+export function TalentPoolSection({ onSubmitProfile, scrollDirection }) {
+  const isDown = scrollDirection === "down";
   return (
     <section id="apply-anyway" className="tp-section py-20 px-6">
       <div className="max-w-4xl mx-auto">
@@ -18,7 +19,7 @@ export function TalentPoolSection({ onSubmitProfile }) {
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, amount: 0.2 }}
-          transition={{ type: "spring", stiffness: 80, damping: 15 }}
+          transition={isDown ? { type: "spring", stiffness: 80, damping: 15 } : { duration: 0 }}
           className="tp-card p-10 md:p-14"
         >
           {/* ── Header ────────────────────────────────────────────────── */}

@@ -7,7 +7,8 @@ import "./css/OpportunitiesSection.css";
 
 // "Current Opportunities" — search box, category filters and the job grid
 // with progressive "See More" paging.
-export function OpportunitiesSection({ onApplyJob, appliedJobIds }) {
+export function OpportunitiesSection({ onApplyJob, appliedJobIds, scrollDirection }) {
+  const isDown = scrollDirection === "down";
   const {
     loading,
     error,
@@ -31,7 +32,7 @@ export function OpportunitiesSection({ onApplyJob, appliedJobIds }) {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, amount: 0.2 }}
-          transition={{ duration: 0.6 }}
+          transition={isDown ? { duration: 0.6 } : { duration: 0 }}
         >
           <p className="os-eyebrow">Open Positions</p>
 
@@ -53,7 +54,7 @@ export function OpportunitiesSection({ onApplyJob, appliedJobIds }) {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, amount: 0.15 }}
-          transition={{ type: "spring", stiffness: 70, damping: 15, delay: 0.1 }}
+          transition={isDown ? { type: "spring", stiffness: 70, damping: 15, delay: 0.1 } : { duration: 0 }}
           className="flex flex-col md:flex-row gap-4 mb-8"
         >
           <div className="relative flex-1">
@@ -109,7 +110,7 @@ export function OpportunitiesSection({ onApplyJob, appliedJobIds }) {
                   whileInView={{ opacity: 1, y: 0, scale: 1 }}
                   viewport={{ once: false, amount: 0.05 }}
                   exit={{ opacity: 0, y: -20, scale: 0.96 }}
-                  transition={{ type: "spring", stiffness: 80, damping: 15, delay: (i % 2) * 0.06 }}
+                  transition={isDown ? { type: "spring", stiffness: 80, damping: 15, delay: (i % 2) * 0.06 } : { duration: 0 }}
                 >
                   <JobCard
                     job={job}
