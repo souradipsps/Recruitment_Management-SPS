@@ -70,7 +70,7 @@ export function BenefitsSection() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={{ once: false, amount: 0.2 }}
           transition={{ duration: 0.6 }}
         >
           <p className="benefits-eyebrow">What We Offer</p>
@@ -90,11 +90,12 @@ export function BenefitsSection() {
               <motion.div
                 key={title}
                 className="benefit-card flex flex-col justify-between"
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.06 }}
-                whileHover={{ y: -5 }}
+                viewport={{ once: false, amount: 0.15 }}
+                transition={{ type: "spring", stiffness: 70, damping: 15, delay: i * 0.05 }}
+                whileHover={{ y: -6, scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => handleOpenPopup(benefit)}
               >
                 <div>

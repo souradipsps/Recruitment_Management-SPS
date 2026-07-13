@@ -40,6 +40,15 @@ export default function App() {
 
   const loaderTimerRef = useRef(null);
   const dashboardLoadedOnceRef = useRef(false);
+  const [dashboardCloseCount, setDashboardCloseCount] = useState(0);
+  const prevShowDashboardRef = useRef(false);
+
+  useEffect(() => {
+    if (prevShowDashboardRef.current && !showDashboard) {
+      setDashboardCloseCount((prev) => prev + 1);
+    }
+    prevShowDashboardRef.current = showDashboard;
+  }, [showDashboard]);
 
   // ── Lottie loader: shown on every page refresh for 1.5 s ────────────────
   useEffect(() => {
@@ -239,7 +248,7 @@ export default function App() {
       {/* Career page renders immediately if dashboard is active, or waits for Lottie loader / logout loader to finish so its entry animations trigger visible to the user */}
       {((!initialLoading && !logoutLoading) || showDashboard) && (
         <CareerPage
-          key={loggedInUser ? "logged-in" : "guest"}
+          key={`${loggedInUser ? "logged-in" : "guest"}-${dashboardCloseCount}`}
           loggedInUser={loggedInUser}
           onLogin={() => openModal("login")}
           onSignup={handleSignup}

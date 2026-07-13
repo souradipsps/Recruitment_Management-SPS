@@ -368,21 +368,26 @@
   display: none;
 }
 
-@media (max-width: 480px), (min-width: 640px) and (max-width: 870px) {
+@media (max-width: 480px),
+(min-width: 640px) and (max-width: 870px) {
   .jc-salary-full {
     display: none;
   }
+
   .jc-salary-short {
     display: inline;
   }
+
   .jc-meta-card {
     padding: 6px 4px;
     gap: 2px;
   }
+
   .jc-meta-val {
     font-size: 0.72rem;
     gap: 3px;
   }
+
   .jc-meta-label {
     font-size: 0.58rem;
   }

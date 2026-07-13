@@ -15,10 +15,10 @@ export function TalentPoolSection({ onSubmitProfile }) {
       <div className="max-w-4xl mx-auto">
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          viewport={{ once: false, amount: 0.2 }}
+          transition={{ type: "spring", stiffness: 80, damping: 15 }}
           className="tp-card p-10 md:p-14"
         >
           {/* ── Header ────────────────────────────────────────────────── */}

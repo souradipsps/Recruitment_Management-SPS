@@ -29,9 +29,9 @@ export function FeedbackForm() {
 
         {/* ── Section header ─────────────────────────────────────────────── */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 25 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={{ once: false, amount: 0.2 }}
           transition={{ duration: 0.6 }}
           className="text-center mb-10"
         >
@@ -67,10 +67,10 @@ export function FeedbackForm() {
 
           /* ── Form card ───────────────────────────────────────────────── */
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 35 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
+            viewport={{ once: false, amount: 0.15 }}
+            transition={{ type: "spring", stiffness: 75, damping: 15 }}
             className="ff-form-card"
           >
             {/* Name + Email row */}

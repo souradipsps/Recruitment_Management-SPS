@@ -30,7 +30,7 @@ export function OpportunitiesSection({ onApplyJob, appliedJobIds }) {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={{ once: false, amount: 0.2 }}
           transition={{ duration: 0.6 }}
         >
           <p className="os-eyebrow">Open Positions</p>
@@ -49,8 +49,13 @@ export function OpportunitiesSection({ onApplyJob, appliedJobIds }) {
           <div className="os-divider" />
         </motion.div>
 
-        {/* ── Search & Filters ────────────────────────────────────────────── */}
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false, amount: 0.15 }}
+          transition={{ type: "spring", stiffness: 70, damping: 15, delay: 0.1 }}
+          className="flex flex-col md:flex-row gap-4 mb-8"
+        >
           <div className="relative flex-1">
             <Search size={16} className="os-search-icon" />
             <input
@@ -75,7 +80,7 @@ export function OpportunitiesSection({ onApplyJob, appliedJobIds }) {
               </button>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* ── Loading / error states ──────────────────────────────────────── */}
         {loading && (
@@ -100,10 +105,11 @@ export function OpportunitiesSection({ onApplyJob, appliedJobIds }) {
               visibleJobs.map((job, i) => (
                 <motion.div
                   key={job.id}
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.3, delay: i * 0.05 }}
+                  initial={{ opacity: 0, y: 40, scale: 0.96 }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  viewport={{ once: false, amount: 0.05 }}
+                  exit={{ opacity: 0, y: -20, scale: 0.96 }}
+                  transition={{ type: "spring", stiffness: 80, damping: 15, delay: (i % 2) * 0.06 }}
                 >
                   <JobCard
                     job={job}
