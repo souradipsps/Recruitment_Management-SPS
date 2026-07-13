@@ -28,10 +28,6 @@ import { ProfilePicturePopup } from "./components/popup/ProfilePicturePopup";
 import { JobDescriptionDrawer } from "./components/popup/JobDescriptionDrawer";
 import { UnsavedChangesModal } from "./components/popup/UnsavedChangesModal";
 
-// Tracks whether the dashboard has been loaded at least once since the last
-// page load / browser refresh. Module-level so it survives component re-mounts
-// (navigating away and back) but resets when the JS bundle is re-evaluated.
-let dashboardLoadedOnce = false;
 
 // `profile.experience` holds the backend's raw choice code (e.g. "3-5") since
 // that's what the select's `value` now is — this maps it back to a friendly
@@ -55,6 +51,9 @@ export function CandidateDashboard({
   initialSection,
   onProfileUpdate,
   cameFromApply = false,
+  initialLoading = false,
+  dashboardLoadedOnce = false,
+  setDashboardLoadedOnce = () => {},
 }) {
   // Navigation & UI state
   const [activeTab, setActiveTab] = useState(() => {
@@ -65,17 +64,24 @@ export function CandidateDashboard({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedJobDesc, setSelectedJobDesc] = useState(null);
   const [pendingNavigation, setPendingNavigation] = useState(null);
-  const [loading, setLoading] = useState(!dashboardLoadedOnce);
+  
+  // If the dashboard hasn't loaded once, or if the main Lottie loader is still active, show skeleton loading
+  const [loading, setLoading] = useState(() => !dashboardLoadedOnce || initialLoading);
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   useEffect(() => {
     if (dashboardLoadedOnce) return;
+    if (initialLoading) {
+      setLoading(true);
+      return;
+    }
+    // Once initial page Lottie loader finishes, trigger the 800ms dashboard skeleton loading
     const timer = setTimeout(() => {
       setLoading(false);
-      dashboardLoadedOnce = true;
+      setDashboardLoadedOnce(true);
     }, 800);
     return () => clearTimeout(timer);
-  }, []);
+  }, [initialLoading, dashboardLoadedOnce]);
 
   // Keep sessionStorage tab in sync whenever the user navigates sections
   useEffect(() => {
@@ -1127,28 +1133,75 @@ export function CandidateDashboard({
                 </div>
               </div>
             ) : activeTab === "resume" ? (
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "280px 1fr", gap: 24 }}>
-                {/* Left card */}
-                <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #e5e7eb", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                  <div className="skeleton animate-pulse" style={{ width: 96, height: 96, borderRadius: "50%", marginBottom: 16 }} />
-                  <div className="skeleton animate-pulse" style={{ width: 140, height: 20, marginBottom: 8 }} />
-                  <div className="skeleton animate-pulse" style={{ width: 100, height: 14, marginBottom: 20 }} />
-                  <div className="skeleton animate-pulse" style={{ width: "100%", height: 36, borderRadius: 6 }} />
-                </div>
-                {/* Right details */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-                  <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #e5e7eb" }}>
-                    <div className="skeleton animate-pulse" style={{ width: 150, height: 22, marginBottom: 20 }} />
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                      {Array.from({ length: 4 }).map((_, idx) => (
-                        <div key={idx}>
-                          <div className="skeleton animate-pulse" style={{ width: 80, height: 12, marginBottom: 8 }} />
-                          <div className="skeleton animate-pulse" style={{ width: "100%", height: 38, borderRadius: 6 }} />
-                        </div>
-                      ))}
+              <div>
+                <div className="skeleton animate-pulse" style={{ width: 220, height: 28, marginBottom: 8 }} />
+                <div className="skeleton animate-pulse" style={{ width: 340, height: 16, marginBottom: 24 }} />
+
+                {/* Personal Information Card Skeleton */}
+                <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #e5e7eb", marginBottom: 20 }}>
+                  <div className="skeleton animate-pulse" style={{ width: 180, height: 22, marginBottom: 20 }} />
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
+                    <div>
+                      <div className="skeleton animate-pulse" style={{ width: 80, height: 12, marginBottom: 8 }} />
+                      <div className="skeleton animate-pulse" style={{ width: "100%", height: 38, borderRadius: 6 }} />
+                    </div>
+                    <div>
+                      <div className="skeleton animate-pulse" style={{ width: 80, height: 12, marginBottom: 8 }} />
+                      <div className="skeleton animate-pulse" style={{ width: "100%", height: 38, borderRadius: 6 }} />
+                    </div>
+                    <div style={{ gridColumn: isMobile ? "span 1" : "span 2" }}>
+                      <div className="skeleton animate-pulse" style={{ width: 100, height: 12, marginBottom: 8 }} />
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <div className="skeleton animate-pulse" style={{ flex: 1, height: 38, borderRadius: 6 }} />
+                        <div className="skeleton animate-pulse" style={{ width: 120, height: 38, borderRadius: 6 }} />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="skeleton animate-pulse" style={{ width: 100, height: 12, marginBottom: 8 }} />
+                      <div className="skeleton animate-pulse" style={{ width: "100%", height: 38, borderRadius: 6 }} />
+                    </div>
+                    <div>
+                      <div className="skeleton animate-pulse" style={{ width: 110, height: 12, marginBottom: 8 }} />
+                      <div className="skeleton animate-pulse" style={{ width: "100%", height: 38, borderRadius: 6 }} />
                     </div>
                   </div>
                 </div>
+
+                {/* Professional Information Card Skeleton */}
+                <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #e5e7eb", marginBottom: 20 }}>
+                  <div className="skeleton animate-pulse" style={{ width: 200, height: 22, marginBottom: 20 }} />
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
+                    {Array.from({ length: 6 }).map((_, idx) => (
+                      <div key={idx}>
+                        <div className="skeleton animate-pulse" style={{ width: idx % 2 === 0 ? 150 : 90, height: 12, marginBottom: 8 }} />
+                        <div className="skeleton animate-pulse" style={{ width: "100%", height: 38, borderRadius: 6 }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* CV / Resume Card Skeleton */}
+                <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #e5e7eb", marginBottom: 20 }}>
+                  <div className="skeleton animate-pulse" style={{ width: 120, height: 22, marginBottom: 20 }} />
+                  {/* Current resume box */}
+                  <div style={{ border: "1px solid #e5e7eb", padding: 16, borderRadius: 8, marginBottom: 16 }}>
+                    <div className="skeleton animate-pulse" style={{ width: 110, height: 14, marginBottom: 12 }} />
+                    <div className="skeleton animate-pulse" style={{ width: 180, height: 16, marginBottom: 12 }} />
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <div className="skeleton animate-pulse" style={{ width: 110, height: 28, borderRadius: 6 }} />
+                      <div className="skeleton animate-pulse" style={{ width: 90, height: 28, borderRadius: 6 }} />
+                    </div>
+                  </div>
+                  {/* Upload zone */}
+                  <div style={{ border: "2px dashed #e5e7eb", padding: 24, borderRadius: 8, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                    <div className="skeleton animate-pulse" style={{ width: 28, height: 28, borderRadius: "50%", marginBottom: 12 }} />
+                    <div className="skeleton animate-pulse" style={{ width: 120, height: 16, marginBottom: 6 }} />
+                    <div className="skeleton animate-pulse" style={{ width: 180, height: 12 }} />
+                  </div>
+                </div>
+
+                {/* Save Button Skeleton */}
+                <div className="skeleton animate-pulse" style={{ width: 140, height: 42, borderRadius: 6 }} />
               </div>
             ) : activeTab === "notifications" ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

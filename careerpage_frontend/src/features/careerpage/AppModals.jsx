@@ -44,6 +44,9 @@ export default function AppModals({ app }) {
     setSavedProfileData,
     setDashboardInitialTab,
     setShowLoader,
+    initialLoading,
+    dashboardLoadedOnce,
+    setDashboardLoadedOnce,
   } = app;
 
   return (
@@ -126,6 +129,9 @@ export default function AppModals({ app }) {
               setApplicationDraft(null);
             }}
             cameFromApply={cameFromApply}
+            initialLoading={initialLoading}
+            dashboardLoadedOnce={dashboardLoadedOnce}
+            setDashboardLoadedOnce={setDashboardLoadedOnce}
           />
         )}
       </AnimatePresence>

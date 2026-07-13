@@ -16,6 +16,7 @@ export default function App() {
   useKeepAwake();
 
   const [initialLoading, setInitialLoading] = useState(true);
+  const [logoutLoading, setLogoutLoading] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showApply, setShowApply] = useState(false);
@@ -38,6 +39,7 @@ export default function App() {
   const [loginTab, setLoginTab] = useState("login");
 
   const loaderTimerRef = useRef(null);
+  const dashboardLoadedOnceRef = useRef(false);
 
   // ── Lottie loader: shown on every page refresh for 1.5 s ────────────────
   useEffect(() => {
@@ -47,7 +49,7 @@ export default function App() {
 
   // Prevent scrollbar visibility and scrolling when loaders are active
   useEffect(() => {
-    if ((initialLoading && !showDashboard) || showLoader) {
+    if (initialLoading || showLoader) {
       document.documentElement.style.overflow = "hidden";
       document.body.style.overflow = "hidden";
     } else {
@@ -58,7 +60,7 @@ export default function App() {
       document.documentElement.style.overflow = "";
       document.body.style.overflow = "";
     };
-  }, [initialLoading, showLoader, showDashboard]);
+  }, [initialLoading, showLoader]);
 
   const openWithLoader = useCallback((then, ms = 600) => {
     if (loaderTimerRef.current) clearTimeout(loaderTimerRef.current);
@@ -159,11 +161,21 @@ export default function App() {
     localStorage.removeItem("refreshToken");
     sessionStorage.removeItem("dashboardOpen");
     sessionStorage.removeItem("dashboardTab");
+    
+    setLogoutLoading(true);
+    setShowLoader(true);
+    
     setLoggedInUser("");
     setShowDashboard(false);
     setCameFromApply(false);
     setCameFromSection(undefined);
-    reloadWithLoader();
+    dashboardLoadedOnceRef.current = false;
+    
+    if (loaderTimerRef.current) clearTimeout(loaderTimerRef.current);
+    loaderTimerRef.current = setTimeout(() => {
+      setShowLoader(false);
+      setLogoutLoading(false);
+    }, 1500);
   };
 
   const mergedProfileData = useMemo(
@@ -217,25 +229,31 @@ export default function App() {
     setDashboardInitialTab,
     // Allows form submit handlers inside modals to trigger the branded loader
     setShowLoader,
+    initialLoading,
+    dashboardLoadedOnce: dashboardLoadedOnceRef.current,
+    setDashboardLoadedOnce: (val) => { dashboardLoadedOnceRef.current = val; },
   };
 
   return (
     <>
-      {/* Career page always renders immediately underneath both loaders */}
-      <CareerPage
-        loggedInUser={loggedInUser}
-        onLogin={() => openModal("login")}
-        onSignup={handleSignup}
-        onOpenDashboard={handleOpenDashboard}
-        onLogout={handleLogout}
-        onApplyJob={handleApplyJob}
-        appliedJobIds={appliedJobIds}
-      />
+      {/* Career page renders immediately if dashboard is active, or waits for Lottie loader / logout loader to finish so its entry animations trigger visible to the user */}
+      {((!initialLoading && !logoutLoading) || showDashboard) && (
+        <CareerPage
+          key={loggedInUser ? "logged-in" : "guest"}
+          loggedInUser={loggedInUser}
+          onLogin={() => openModal("login")}
+          onSignup={handleSignup}
+          onOpenDashboard={handleOpenDashboard}
+          onLogout={handleLogout}
+          onApplyJob={handleApplyJob}
+          appliedJobIds={appliedJobIds}
+        />
+      )}
 
       <AppModals app={modalApp} />
 
       {/* Lottie loader — overlays on page refresh only */}
-      {initialLoading && !showDashboard && <LottieLoader />}
+      {initialLoading && <LottieLoader />}
 
       {/* Branded maroon Loader — overlays on button click / logout */}
       <AnimatePresence>
