@@ -258,4 +258,9 @@
     transform: translateY(-6px);
   }
 }
-
+body.modal-open .navbar-scroll-area,
+body.modal-open .nb-mobile-scroll-wrapper {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

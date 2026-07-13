@@ -133,7 +133,7 @@ export function Navbar({ loggedInUser, onLogin, onSignup, onOpenDashboard, onLog
 
       {/* ── Mobile Scroll to Top Button (Floating just below Navbar) ── */}
       <div
-        className={`sm:hidden fixed left-1/2 -translate-x-1/2 z-40 transition-all duration-300 ${
+        className={`nb-mobile-scroll-wrapper sm:hidden fixed left-1/2 -translate-x-1/2 z-40 transition-all duration-300 ${
           scrolledDown ? "top-[82px] opacity-100 scale-100" : "-top-10 opacity-0 scale-75 pointer-events-none"
         }`}
       >
