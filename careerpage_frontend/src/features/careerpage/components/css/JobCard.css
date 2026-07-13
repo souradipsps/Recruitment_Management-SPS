@@ -1,10 +1,10 @@
 /* ─── JobCard.css ──────────────────────────────────────────────────────────── */
 :root {
-  --jc-maroon : #72102a;
-  --jc-gold   : #c9a84c;
-  --jc-ink    : #1a0a0a;
-  --jc-muted  : #6b5c5c;
-  --jc-body   : #4a4a4a;
+  --jc-maroon: #72102a;
+  --jc-gold: #c9a84c;
+  --jc-ink: #1a0a0a;
+  --jc-muted: #6b5c5c;
+  --jc-body: #4a4a4a;
 }
 
 /* ── Card wrapper ────────────────────────────────────────────────────────── */
@@ -118,6 +118,11 @@
   display: flex;
   align-items: center;
   gap: 5px;
+  white-space: nowrap !important;
+}
+
+.jc-meta-val span {
+  white-space: nowrap !important;
 }
 
 .jc-meta-icon-mini {
@@ -346,4 +351,32 @@
   font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.02em;
+}
+
+.jc-salary-full {
+  display: inline;
+}
+
+.jc-salary-short {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .jc-salary-full {
+    display: none;
+  }
+  .jc-salary-short {
+    display: inline;
+  }
+  .jc-meta-card {
+    padding: 6px 4px;
+    gap: 2px;
+  }
+  .jc-meta-val {
+    font-size: 0.72rem;
+    gap: 3px;
+  }
+  .jc-meta-label {
+    font-size: 0.58rem;
+  }
 }

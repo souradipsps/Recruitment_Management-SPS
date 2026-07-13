@@ -53,7 +53,7 @@ export function CandidateDashboard({
   cameFromApply = false,
   initialLoading = false,
   dashboardLoadedOnce = false,
-  setDashboardLoadedOnce = () => {},
+  setDashboardLoadedOnce = () => { },
 }) {
   // Navigation & UI state
   const [activeTab, setActiveTab] = useState(() => {
@@ -64,7 +64,7 @@ export function CandidateDashboard({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedJobDesc, setSelectedJobDesc] = useState(null);
   const [pendingNavigation, setPendingNavigation] = useState(null);
-  
+
   // If the dashboard hasn't loaded once, or if the main Lottie loader is still active, show skeleton loading
   const [loading, setLoading] = useState(() => !dashboardLoadedOnce || initialLoading);
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;

@@ -21,7 +21,7 @@ export function JobCard({ job, applied, onApply, showOverlay, onSeeMore }) {
       const fontSizeVal = parseFloat(computedStyle.fontSize);
       const lineHeight = isNaN(lineHeightVal) ? fontSizeVal * 1.65 : lineHeightVal;
       const isOver = element.scrollHeight > lineHeight * 2.2;
-      
+
       setIsOverflowing(isOver);
       if (isOver) {
         setHeights({
@@ -62,6 +62,18 @@ export function JobCard({ job, applied, onApply, showOverlay, onSeeMore }) {
     );
   };
 
+  const formatSalary = (salary) => {
+    if (!salary) return "30k\u201150k";
+    return salary
+      .toString()
+      .replace(/(\d+)000/g, "$1k")
+      .replace(/(\d+),000/g, "$1k")
+      .replace(/\s*-\s*/g, "\u2011")
+      .replace(/\s*–\s*/g, "\u2011")
+      .replace(/\s*—\s*/g, "\u2011")
+      .replace(/\s*to\s*/gi, "\u2011");
+  };
+
   return (
     <div id={`job-card-${job.id}`} className="job-card flex flex-col h-full">
 
@@ -98,7 +110,8 @@ export function JobCard({ job, applied, onApply, showOverlay, onSeeMore }) {
           <span className="jc-meta-label">Salary</span>
           <span className="jc-meta-val">
             <IndianRupee size={12} className="jc-meta-icon-mini" />
-            <span>{job.salaryRange ?? "30k – 50k"}</span>
+            <span className="jc-salary-full">{job.salaryRange ?? "30k – 50k"}</span>
+            <span className="jc-salary-short">{formatSalary(job.salaryRange)}</span>
           </span>
         </div>
       </div>
@@ -111,7 +124,7 @@ export function JobCard({ job, applied, onApply, showOverlay, onSeeMore }) {
           className={`jc-description-container ${isOverflowing ? "interactive" : ""} ${isExpanded ? "expanded" : "collapsed"}`}
           onClick={() => isOverflowing && setIsExpanded(!isExpanded)}
           style={{
-            height: isOverflowing 
+            height: isOverflowing
               ? (isExpanded ? heights.expandedHeight : heights.collapsedHeight)
               : "auto"
           }}

@@ -52,9 +52,8 @@ export function Navbar({ loggedInUser, onLogin, onSignup, onOpenDashboard, onLog
 
   return (
     <>
-      <nav className="navbar sticky top-0 z-50 shadow-lg">
-        <div className="max-w-7xl mx-auto px-8 py-4">
-          <div className="flex items-center justify-between">
+      <nav className="navbar sticky top-0 z-50 shadow-lg flex items-center" style={{ height: "76px" }}>
+        <div className="max-w-7xl mx-auto px-8 w-full flex items-center justify-between">
 
             {/* ── Brand ───────────────────────────────────────────────────── */}
             <a
@@ -129,7 +128,6 @@ export function Navbar({ loggedInUser, onLogin, onSignup, onOpenDashboard, onLog
               <span className="nb-hamburger-bar" />
             </button>
 
-          </div>
         </div>
       </nav>
 
