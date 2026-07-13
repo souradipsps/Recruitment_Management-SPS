@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { useNavigate, useMatch } from "react-router-dom";
 import { Menu, Bell, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import logoImg from "../../assets/logo.png";
 
 import { MAROON, GOLD } from "../../lib/constants";
+import { routes } from "../../routes";
 import { updateUserProfile, fetchMyJobApplications } from "../careerpage/services/applicationsService";
 import { fetchPublicJobs } from "../careerpage/services/jobsService";
 
@@ -47,7 +49,6 @@ export function CandidateDashboard({
   signupData,
   onLogout,
   initialProfileData,
-  initialTab = "dashboard",
   initialSection,
   onProfileUpdate,
   cameFromApply = false,
@@ -55,12 +56,16 @@ export function CandidateDashboard({
   dashboardLoadedOnce = false,
   setDashboardLoadedOnce = () => { },
 }) {
-  // Navigation & UI state
-  const [activeTab, setActiveTab] = useState(() => {
-    // Restore saved tab from sessionStorage so refresh keeps the user in the same section
-    const saved = sessionStorage.getItem("dashboardTab");
-    return saved || initialTab;
-  });
+  // Navigation & UI state — the active tab is the URL (/dashboard/:tab), so
+  // switching tabs is a real navigation: deep-linkable, refresh-safe, and the
+  // browser back button steps through tab history for free.
+  const navigate = useNavigate();
+  // No <Routes>/<Route> tree exists in this app (see routes.js) — useParams()
+  // only reads from a matched Route's context, so it'd always be empty here.
+  // useMatch() matches the current URL against an arbitrary pattern instead.
+  const dashboardTabMatch = useMatch(routes.dashboardTabPattern);
+  const activeTab = dashboardTabMatch?.params.tab || "dashboard";
+  const setActiveTab = (tab) => navigate(routes.dashboardTab(tab));
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedJobDesc, setSelectedJobDesc] = useState(null);
   const [pendingNavigation, setPendingNavigation] = useState(null);
@@ -82,13 +87,6 @@ export function CandidateDashboard({
     }, 800);
     return () => clearTimeout(timer);
   }, [initialLoading, dashboardLoadedOnce]);
-
-  // Keep sessionStorage tab in sync whenever the user navigates sections
-  useEffect(() => {
-    if (sessionStorage.getItem("dashboardOpen") === "true") {
-      sessionStorage.setItem("dashboardTab", activeTab);
-    }
-  }, [activeTab]);
 
   // Profile data states
   const [profile, setProfile] = useState({
@@ -307,12 +305,6 @@ export function CandidateDashboard({
   const swipeTouchStartX = useRef(null);
   const swipeTouchStartY = useRef(null);
   const swipeTouchStartTime = useRef(null);
-  // Guards against the browser firing popstate for the same edge-swipe that
-  // already triggered handleSwipeTouchEnd (double-back race condition).
-  // NOT cleared on touchstart — iOS fires extra touchstart events during its own
-  // back animation which would prematurely clear the flag.
-  const swipeJustHandledRef = useRef(false);
-  const swipeFlagTimerRef = useRef(null);
 
   const handleSwipeTouchStart = (e) => {
     swipeTouchStartX.current = e.touches[0].clientX;
@@ -386,14 +378,6 @@ export function CandidateDashboard({
         }
       }
     }
-
-    // Suppress the popstate that some browsers fire for the same edge-swipe.
-    // Cleared immediately by handlePopState, or by backup timer if popstate never fires.
-    swipeJustHandledRef.current = true;
-    clearTimeout(swipeFlagTimerRef.current);
-    swipeFlagTimerRef.current = setTimeout(() => {
-      swipeJustHandledRef.current = false;
-    }, 200);
   };
 
   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
@@ -407,69 +391,45 @@ export function CandidateDashboard({
     unsavedChangesRef.current = unsaved;
   }, [unsaved]);
 
-  // Handle browser back button navigation interception
+  // Physical back button / Android back: tab switches are now real routes, so
+  // the browser already steps back through tab history on its own. The only
+  // thing left to intercept here is UI that never gets its own URL — the job
+  // description drawer and the mobile sidebar. Push a throwaway history entry
+  // while either is open so back closes it instead of leaving the dashboard;
+  // pop it again once both are closed (however they closed).
   useEffect(() => {
-    window.history.pushState({ portal: "candidate-dashboard" }, "");
+    if (!selectedJobDesc && !sidebarOpen) return;
 
+    window.history.pushState({ portal: "candidate-dashboard-overlay" }, "");
     const handlePopState = () => {
-      // Swipe gesture already handled this navigation — re-add state and bail
-      if (swipeJustHandledRef.current) {
-        swipeJustHandledRef.current = false;
-        clearTimeout(swipeFlagTimerRef.current);
-        window.history.pushState({ portal: "candidate-dashboard" }, "");
-        return;
-      }
-
-      const currentTab = activeTabRef.current;
-      const currentJobDesc = selectedJobDescRef.current;
-      const currentSidebarOpen = sidebarOpenRef.current;
-
-      if (currentJobDesc) {
-        window.history.pushState({ portal: "candidate-dashboard" }, "");
-        setSelectedJobDesc(null);
-        return;
-      }
-
-      if (currentSidebarOpen) {
-        window.history.pushState({ portal: "candidate-dashboard" }, "");
-        setSidebarOpen(false);
-        return;
-      }
-
-      if (cameFromApplyRef.current) {
-        if (currentTab !== "resume") {
-          window.history.pushState({ portal: "candidate-dashboard" }, "");
-          setActiveTab("resume");
-        } else {
-          if (unsavedChangesRef.current) {
-            window.history.pushState({ portal: "candidate-dashboard" }, "");
-            setPendingNavigation({ type: "close", bypassApplyModal: false });
-          } else {
-            onCloseRef.current(false);
-          }
-        }
-      } else {
-        if (currentTab !== "dashboard") {
-          window.history.pushState({ portal: "candidate-dashboard" }, "");
-          if (currentTab === "resume" && unsavedChangesRef.current) {
-            setPendingNavigation({ type: "tab", targetId: "dashboard" });
-          } else {
-            setActiveTab("dashboard");
-          }
-        } else {
-          onCloseRef.current(true);
-        }
-      }
+      if (selectedJobDescRef.current) setSelectedJobDesc(null);
+      else if (sidebarOpenRef.current) setSidebarOpen(false);
     };
 
     window.addEventListener("popstate", handlePopState);
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      if (window.history.state?.portal === "candidate-dashboard") {
+      if (window.history.state?.portal === "candidate-dashboard-overlay") {
         window.history.back();
       }
     };
-  }, []);
+  }, [selectedJobDesc, sidebarOpen]);
+
+  // In-app tab switches (sidebar clicks, the top-bar Back button, swipe
+  // gestures) already check hasUnsavedChanges() before calling setActiveTab,
+  // so they never land here. The only way to leave "resume" with unsaved
+  // changes while this effect sees it is the physical back/forward button —
+  // by the time popstate fires the URL (and activeTab) has already changed,
+  // so instead of blocking the navigation we react to it: send the user back
+  // to resume and ask what to do, the same prompt every other exit uses.
+  const prevTabForBackGuardRef = useRef(activeTab);
+  useEffect(() => {
+    const cameFrom = prevTabForBackGuardRef.current;
+    prevTabForBackGuardRef.current = activeTab;
+    if (cameFrom === "resume" && activeTab !== "resume" && unsavedChangesRef.current) {
+      setPendingNavigation({ type: "restoreResumeTab" });
+    }
+  }, [activeTab]);
 
   // Reset profile and resume state changes on cancellation
   const revertUnsavedChanges = () => {
@@ -1364,7 +1324,14 @@ export function CandidateDashboard({
       {/* Unsaved Changes Tab Navigation Confirm Overlay */}
       <UnsavedChangesModal
         open={!!pendingNavigation}
-        onDismiss={() => setPendingNavigation(null)}
+        onDismiss={() => {
+          // The physical back button already left "resume" by the time we
+          // could ask — staying means sending the URL back there ourselves.
+          if (pendingNavigation?.type === "restoreResumeTab") {
+            navigate(routes.dashboardTab("resume"));
+          }
+          setPendingNavigation(null);
+        }}
         onDiscard={() => {
           const action = pendingNavigation;
           setPendingNavigation(null);

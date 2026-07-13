@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { MapPin, IndianRupee, Briefcase, Share2, Check, ArrowRight } from "lucide-react";
+import { routes } from "../../../routes";
 import "./css/JobCard.css";
 
 // A single opportunity card. `showOverlay` renders the blurred "See More"
@@ -45,10 +46,11 @@ export function JobCard({ job, applied, onApply, showOverlay, onSeeMore }) {
 
   const handleShare = () => {
     const text = `${job.title} at South Point School, Guwahati — ${job.type} | ${job.department}`;
+    const url = `${window.location.origin}${routes.jobApply(job.id)}`;
     if (navigator.share) {
-      navigator.share({ title: job.title, text, url: window.location.href });
+      navigator.share({ title: job.title, text, url });
     } else {
-      navigator.clipboard.writeText(`${text}\n${window.location.href}`);
+      navigator.clipboard.writeText(`${text}\n${url}`);
       toast.success("Job details copied to clipboard!");
     }
   };
