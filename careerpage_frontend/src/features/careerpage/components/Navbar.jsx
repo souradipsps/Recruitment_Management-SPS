@@ -10,14 +10,25 @@ import "./css/Navbar.css";
 function scrollToTopSmooth(rafRef) {
   if (rafRef.current) cancelAnimationFrame(rafRef.current);
 
-  const step = () => {
-    const y = window.scrollY;
-    if (y <= 0) {
+  const startY = window.scrollY;
+  const startTime = performance.now();
+  // Scale duration based on distance: min 350ms, max 750ms
+  const duration = Math.min(Math.max(startY * 0.3, 350), 750);
+
+  const step = (currentTime) => {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+
+    // Cubic ease-out: f(t) = 1 - (1 - t)^3
+    const easeProgress = 1 - Math.pow(1 - progress, 3);
+
+    window.scrollTo(0, startY * (1 - easeProgress));
+
+    if (progress < 1) {
+      rafRef.current = requestAnimationFrame(step);
+    } else {
       rafRef.current = null;
-      return;
     }
-    window.scrollTo(0, Math.max(y - Math.max(y * 0.18, 12), 0));
-    rafRef.current = requestAnimationFrame(step);
   };
   rafRef.current = requestAnimationFrame(step);
 }

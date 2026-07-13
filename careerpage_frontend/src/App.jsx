@@ -52,10 +52,20 @@ export default function App() {
   const prevShowDashboardRef = useRef(false);
 
   useEffect(() => {
+    let t1, t2, t3;
     if (prevShowDashboardRef.current && !showDashboard) {
       setDashboardCloseCount((prev) => prev + 1);
+      window.scrollTo({ top: 0, behavior: "instant" });
+      t1 = setTimeout(() => window.scrollTo({ top: 0, behavior: "instant" }), 0);
+      t2 = setTimeout(() => window.scrollTo({ top: 0, behavior: "instant" }), 50);
+      t3 = setTimeout(() => window.scrollTo({ top: 0, behavior: "instant" }), 150);
     }
     prevShowDashboardRef.current = showDashboard;
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
   }, [showDashboard]);
 
   // ── Lottie loader: shown on every page refresh for 1.5 s ────────────────
@@ -228,19 +238,6 @@ export default function App() {
     [savedProfileData, applicationDraft, signupData, loggedInUser],
   );
 
-  useEffect(() => {
-    if (!showDashboard && !showLogin && !showApply && !showJobApplicationModal) {
-      window.scrollTo({ top: 0, behavior: "instant" });
-      const t1 = setTimeout(() => window.scrollTo({ top: 0, behavior: "instant" }), 0);
-      const t2 = setTimeout(() => window.scrollTo({ top: 0, behavior: "instant" }), 50);
-      const t3 = setTimeout(() => window.scrollTo({ top: 0, behavior: "instant" }), 150);
-      return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
-        clearTimeout(t3);
-      };
-    }
-  }, [showDashboard, showLogin, showApply, showJobApplicationModal]);
 
   // Everything the overlay modals need to read and mutate.
   const modalApp = {
