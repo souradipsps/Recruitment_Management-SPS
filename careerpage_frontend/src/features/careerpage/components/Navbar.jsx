@@ -131,6 +131,37 @@ export function Navbar({ loggedInUser, onLogin, onSignup, onOpenDashboard, onLog
         </div>
       </nav>
 
+      {/* ── Mobile Scroll to Top Button (Floating just below Navbar) ── */}
+      <div
+        className={`sm:hidden fixed left-1/2 -translate-x-1/2 z-40 transition-all duration-300 ${
+          scrolledDown ? "top-[82px] opacity-100 scale-100" : "-top-10 opacity-0 scale-75 pointer-events-none"
+        }`}
+      >
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="nb-mobile-scroll-btn flex items-center justify-center bg-white rounded-full border border-gray-100 p-2 cursor-pointer text-[#72102a] hover:bg-gray-50 active:scale-95 transition-all"
+          style={{ 
+            width: "48px", 
+            height: "48px", 
+            boxShadow: "0 8px 24px rgba(114, 16, 42, 0.22)" 
+          }}
+          title="Scroll to Top"
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="18 15 12 9 6 15" />
+          </svg>
+        </button>
+      </div>
+
       {/* ── Mobile menu overlay and panel ───────────────────────────────── */}
       <div className={`nb-mobile-panel-wrapper ${isOpen ? "is-open" : ""}`}>
         <div className="nb-mobile-panel" onClick={(e) => e.stopPropagation()}>

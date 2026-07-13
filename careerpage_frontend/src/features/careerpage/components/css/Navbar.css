@@ -240,3 +240,22 @@
   }
 }
 
+@media (max-width: 639px) {
+  .navbar-scroll-area {
+    display: none !important;
+  }
+}
+
+.nb-mobile-scroll-btn {
+  animation: nbFloatButton 2.4s infinite ease-in-out;
+}
+
+@keyframes nbFloatButton {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
