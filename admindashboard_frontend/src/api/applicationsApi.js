@@ -31,6 +31,7 @@ export const normalizeApplication = (r) => ({
   referredBy: r.has_referral ? (r.referral_emp_id || r.referred_by || "—") : "—",
   phone: r.candidate_phone || "—",
   resume: r.resume || null,
+  candidateId: r.candidate ?? null,  // Candidate model FK, threaded through to offer creation
 });
 
 // GET /api/applications/ -> normalized array (admin: all job-posting applications).
@@ -76,6 +77,7 @@ export const normalizeGeneralApplication = (r) => ({
   qualification: r.qualification || "—",
   phone: r.candidate_phone || "—",
   resume: r.resume || null,
+  candidateId: r.candidate ?? null,  // Candidate model FK, threaded through to offer creation
 });
 
 // GET /api/general-applications/ -> normalized array (admin: all general/profile applications).

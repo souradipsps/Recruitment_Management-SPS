@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { T, font } from "./theme";
 import { useBreakpoint, usePersistentState, useSessionState } from "./hooks";
-import { NAV, OFFERS } from "./data";
+import { NAV } from "./data";
 import { fetchJobRequests } from "./api/jobRequestsApi";
 import { fetchApprovals } from "./api/approvalsApi";
 import { fetchRoles } from "./api/rolesApi";
@@ -10,6 +10,7 @@ import { fetchRoleRequests } from "./api/roleRequestsApi";
 import { fetchApplications, fetchGeneralApplications } from "./api/applicationsApi";
 import { fetchPanelists } from "./api/panelistsApi";
 import { fetchInterviews } from "./api/interviewsApi";
+import { fetchOffers, createOffer } from "./api/offersApi";
 
 import Auth from "./screens/Auth";
 import ModuleSelector from "./screens/ModuleSelector";
@@ -32,9 +33,9 @@ export default function App() {
   const [generalApplications, setGeneralApplications] = useState([]);
   const [interviews, setInterviews] = useState([]);
   const [panelists, setPanelists] = useState([]);
+  const [offers, setOffers] = useState([]);
 
   // Persisted app data (each mirrors itself to localStorage).
-  const [offers, setOffers] = usePersistentState("offers", OFFERS);
   const [selectedPanelists] = usePersistentState("selectedPanelists", ["Dr. Roy", "Mr. Patel", "Ms. Nisha"]);
 
   // Session-scoped auth/module selection.
@@ -122,6 +123,15 @@ export default function App() {
     return () => { active = false; };
   }, [setInterviews]);
 
+  // Load offers from the API on mount.
+  useEffect(() => {
+    let active = true;
+    fetchOffers()
+      .then((data) => { if (active) setOffers(data); })
+      .catch((err) => console.error("Failed to load offers:", err));
+    return () => { active = false; };
+  }, [setOffers]);
+
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
   const isTablet = bp === "tablet";
@@ -140,16 +150,28 @@ export default function App() {
     setSelectedModule(null);
   };
 
-  const handleGiveOffer = (candidate) => {
+  const [givingOffer, setGivingOffer] = useState(false);
+  const handleGiveOffer = async (candidate) => {
+    if (givingOffer) return; // guard against rapid double-clicks creating duplicate drafts
     const exists = offers.some((o) => o.candidate === candidate.name && o.role === candidate.role);
     if (!exists) {
-      setOffers((prev) => [...prev, {
-        id: `OFR-${Date.now()}`,
-        candidate: candidate.name,
-        role: candidate.role,
-        ctc: "", issued: "", expiry: "", joining: "",
-        status: "Draft",
-      }]);
+      setGivingOffer(true);
+      try {
+        const created = await createOffer({
+          candidate: candidate.name,
+          role: candidate.role,
+          candidateId: candidate.candidateId,
+          ctc: "", issued: "", expiry: "", joining: "",
+          status: "Draft",
+        });
+        setOffers((prev) => [...prev, created]);
+      } catch (err) {
+        console.error("Failed to create offer:", err);
+        alert("Failed to create offer. Please try again.");
+        return;
+      } finally {
+        setGivingOffer(false);
+      }
     }
     setActive("offer-management");
   };

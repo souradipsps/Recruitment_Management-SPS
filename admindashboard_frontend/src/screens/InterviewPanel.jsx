@@ -5,6 +5,7 @@ import { useBreakpoint, useHorizontalScroll } from "../hooks";
 import { Card, SectionTitle, Badge, Btn, Modal, ModalHeader, FormField, Select, Input } from "../components/ui";
 import { createPanelist } from "../api/panelistsApi";
 import { createInterview, updateInterview, deleteInterview, buildInterviewPayload } from "../api/interviewsApi";
+import { deleteOffer } from "../api/offersApi";
 
 const TIME_OPTIONS = [
   { value: "9:00 AM", label: "9:00 AM" },
@@ -140,6 +141,7 @@ export default function InterviewPanel({
       .filter((a) => a.status === "Shortlisted")
       .map((a) => ({
         id: a.id,
+        candidateId: a.candidateId ?? null,
         name: a.name,
         email: a.email,
         phone: a.phone || "",
@@ -154,6 +156,7 @@ export default function InterviewPanel({
       .filter((a) => a.status === "Shortlisted")
       .map((a) => ({
         id: a.id,
+        candidateId: a.candidateId ?? null,
         name: a.name,
         email: a.email,
         phone: a.phone || "",
@@ -451,11 +454,21 @@ export default function InterviewPanel({
     }
   };
 
-  const handleDeclineOfferInPanel = (candidateName, candidateRole) => {
-    if (setOffers) {
-      setOffers((prev) =>
-        prev.filter((o) => !(o.candidate === candidateName && o.role === candidateRole))
-      );
+  const handleDeclineOfferInPanel = async (candidateName, candidateRole) => {
+    const existing = (offers || []).find((o) => o.candidate === candidateName && o.role === candidateRole);
+    if (!existing) return;
+    try {
+      if (existing.backendId != null) {
+        await deleteOffer(existing.backendId);
+      }
+      if (setOffers) {
+        setOffers((prev) =>
+          prev.filter((o) => !(o.candidate === candidateName && o.role === candidateRole))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to decline offer:", err);
+      alert("Failed to decline offer. Please try again.");
     }
   };
 

@@ -4,6 +4,7 @@ import { statusVariant } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
 import { Card, SectionTitle, Table, Mono, Badge, Btn, Modal, ModalHeader, FormField, Input } from "../components/ui";
 import { EXISTING_ROLES, INTERVIEWS } from "../data";
+import { createOffer, updateOffer } from "../api/offersApi";
 
 export default function OfferManagement({ offers, setOffers, jobPostings = [] }) {
   const bp = useBreakpoint();
@@ -11,7 +12,9 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [] })
   const [viewOffer, setViewOffer] = useState(null);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [genForm, setGenForm] = useState({ candidate: "", role: "", ctc: "", expiry: "", joining: "" });
+  const [genOfferId, setGenOfferId] = useState(null);
   const [genRange, setGenRange] = useState(null);
+  const [genSubmitting, setGenSubmitting] = useState(false);
   const [selectedPostingId, setSelectedPostingId] = useState(null);
   const [selectedOfferForModal, setSelectedOfferForModal] = useState(null);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -245,7 +248,7 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [] })
                     </div>
                   </div>
                   <div style={{ padding: "12px 0 0", display: "flex", justifyContent: "flex-end", gap: 8 }} onClick={(e) => e.stopPropagation()}>
-                    <button onClick={() => { setGenForm({ candidate: o.candidate, role: o.role, ctc: "", expiry: "", joining: "" }); setGenRange(getRoleRange(o.role)); setShowGenerateModal(true); }} style={{ border: "none", background: "rgba(255,255,255,0.2)", color: "#fff", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>Generate Offer</button>
+                    <button onClick={() => { setGenForm({ candidate: o.candidate, role: o.role, ctc: "", expiry: "", joining: "" }); setGenOfferId(o.backendId ?? null); setGenRange(getRoleRange(o.role)); setShowGenerateModal(true); }} style={{ border: "none", background: "rgba(255,255,255,0.2)", color: "#fff", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>Generate Offer</button>
                     {o.ctc && o.issued && o.expiry ? (
                       <button onClick={() => setViewOffer(o)} style={{ border: "none", background: "#fff", color: T.primary, borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>View Letter</button>
                     ) : (
@@ -285,7 +288,7 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [] })
                 score,
                 <Badge label={o.status} variant={statusVariant(o.status)} />,
                 <div onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => { setGenForm({ candidate: o.candidate, role: o.role, ctc: "", expiry: "", joining: "" }); setGenRange(getRoleRange(o.role)); setShowGenerateModal(true); }} style={{ border: "none", background: T.blueLight, color: T.blue, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>Generate Offer</button>
+                  <button onClick={() => { setGenForm({ candidate: o.candidate, role: o.role, ctc: "", expiry: "", joining: "" }); setGenOfferId(o.backendId ?? null); setGenRange(getRoleRange(o.role)); setShowGenerateModal(true); }} style={{ border: "none", background: T.blueLight, color: T.blue, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>Generate Offer</button>
                 </div>,
                 <div onClick={(e) => e.stopPropagation()}>
                   {o.ctc && o.issued && o.expiry ? (
@@ -337,7 +340,7 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [] })
               {selectedOfferForModal.ctc && selectedOfferForModal.issued && selectedOfferForModal.expiry ? (
                 <Btn label="View Letter" variant="outline" onClick={(e) => { e.stopPropagation(); setViewOffer(selectedOfferForModal); setSelectedOfferForModal(null); }} style={{ flex: isMobile ? 1 : undefined }} />
               ) : (
-                <Btn label="Generate Offer" onClick={(e) => { e.stopPropagation(); setGenForm({ candidate: selectedOfferForModal.candidate, role: selectedOfferForModal.role, ctc: "", expiry: "", joining: "" }); setGenRange(getRoleRange(selectedOfferForModal.role)); setShowGenerateModal(true); setSelectedOfferForModal(null); }} style={{ flex: isMobile ? 1 : undefined }} />
+                <Btn label="Generate Offer" onClick={(e) => { e.stopPropagation(); setGenForm({ candidate: selectedOfferForModal.candidate, role: selectedOfferForModal.role, ctc: "", expiry: "", joining: "" }); setGenOfferId(selectedOfferForModal.backendId ?? null); setGenRange(getRoleRange(selectedOfferForModal.role)); setShowGenerateModal(true); setSelectedOfferForModal(null); }} style={{ flex: isMobile ? 1 : undefined }} />
               )}
             </div>
           </>
@@ -377,8 +380,8 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [] })
         )}
       </Modal>
 
-      <Modal open={showGenerateModal} onClose={() => setShowGenerateModal(false)} maxWidth={520}>
-        <ModalHeader title="Generate Offer Letter" onClose={() => setShowGenerateModal(false)} />
+      <Modal open={showGenerateModal} onClose={() => { setShowGenerateModal(false); setGenOfferId(null); }} maxWidth={520}>
+        <ModalHeader title="Generate Offer Letter" onClose={() => { setShowGenerateModal(false); setGenOfferId(null); }} />
         <div style={{ background: "linear-gradient(135deg, #72102a 0%, #3a0010 100%)", margin: isMobile ? "-4px -16px 20px" : "-4px -24px 20px", padding: isMobile ? "18px 20px" : "24px 28px 20px", display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ width: 54, height: 54, borderRadius: 14, background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0 }}>✉️</div>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -404,34 +407,47 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [] })
 
         <div style={{ display: "flex", gap: 10, justifyContent: isMobile ? "stretch" : "flex-end", borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
           <Btn
-            label="Generate & Send"
-            onClick={() => {
+            label={genSubmitting ? "Generating…" : "Generate & Send"}
+            disabled={genSubmitting}
+            onClick={async () => {
               if (!genForm.ctc || !genForm.expiry || !genForm.joining) { alert("Please fill all required fields."); return; }
               const ctcNumber = Number(genForm.ctc);
               if (!ctcNumber || ctcNumber <= 0) { alert("Enter valid CTC amount."); return; }
               if (genRange && (ctcNumber < genRange.min || ctcNumber > genRange.max)) { alert(`CTC must be between ${genRange.label}.`); return; }
-              const prepared = {
-                id: `OFR-${Date.now()}`,
-                candidate: genForm.candidate,
-                role: genForm.role,
-                ctc: `₹${ctcNumber.toLocaleString()}/mo`,
-                issued: new Date().toISOString().split("T")[0],
-                expiry: genForm.expiry,
-                joining: genForm.joining,
-                status: "Sent",
-              };
-              setOffers((prev) => {
-                const idx = prev.findIndex((p) => p.candidate === prepared.candidate && p.role === prepared.role);
-                if (idx >= 0) { const copy = [...prev]; copy[idx] = { ...copy[idx], ...prepared }; return copy; }
-                return [...prev, prepared];
-              });
-              setShowGenerateModal(false);
-              setGenForm({ candidate: "", role: "", ctc: "", expiry: "", joining: "" });
-              setGenRange(null);
+
+              setGenSubmitting(true);
+              try {
+                const payload = {
+                  candidate: genForm.candidate,
+                  role: genForm.role,
+                  ctc: `₹${ctcNumber.toLocaleString()}/mo`,
+                  issued: new Date().toISOString().split("T")[0],
+                  expiry: genForm.expiry,
+                  joining: genForm.joining,
+                  status: "Sent",
+                };
+                const saved = genOfferId != null
+                  ? await updateOffer(genOfferId, payload)
+                  : await createOffer(payload);
+                setOffers((prev) => {
+                  const idx = prev.findIndex((p) => p.backendId === saved.backendId);
+                  if (idx >= 0) { const copy = [...prev]; copy[idx] = saved; return copy; }
+                  return [...prev, saved];
+                });
+                setShowGenerateModal(false);
+                setGenForm({ candidate: "", role: "", ctc: "", expiry: "", joining: "" });
+                setGenOfferId(null);
+                setGenRange(null);
+              } catch (err) {
+                console.error("Failed to generate offer:", err);
+                alert("Failed to generate offer. Please try again.");
+              } finally {
+                setGenSubmitting(false);
+              }
             }}
             style={{ flex: isMobile ? 1 : undefined }}
           />
-          <Btn label="Cancel" variant="ghost" onClick={() => setShowGenerateModal(false)} style={{ flex: isMobile ? 1 : undefined }} />
+          <Btn label="Cancel" variant="ghost" disabled={genSubmitting} onClick={() => { setShowGenerateModal(false); setGenOfferId(null); }} style={{ flex: isMobile ? 1 : undefined }} />
         </div>
       </Modal>
     </div>
