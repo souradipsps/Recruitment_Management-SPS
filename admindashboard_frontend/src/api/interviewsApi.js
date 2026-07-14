@@ -5,10 +5,14 @@
 //   candidate  <-> candidate_name
 //   time       <-> time        ("2:00 PM"  <-> "14:00:00")
 //   mode       <-> mode        ("In-Person" <-> "Offline", "Online" <-> "Online")
-//   rec        <-> recommendation
-//   remarks    <-> feedback
 //   meetingLink<-> meeting_link
 //   panel      <-> panel (write: list of panelist ids; read: panel_details objects)
+//
+// The interview's top-level `score` / `recommendation` / `feedback` are NOT mapped
+// here — they're legacy, superseded by per-panelist evaluations (`evaluations[]` /
+// `panelist_evaluation`, via normalizeEvaluation / submitPanelistEvaluation below).
+// normalizeInterview always returns fixed defaults for score/rec/remarks regardless
+// of what the API sends, and buildInterviewPayload never sends them back.
 //
 // date/time/panel are all optional on the backend, so a round can be created with
 // just candidate_name + role (no schedule yet) and filled in later via PATCH.
@@ -101,13 +105,15 @@ export const normalizeInterview = (r) => ({
   time: toDisplayTime(r.time),
   panel: Array.isArray(r.panel_details) ? r.panel_details.map((p) => p.name) : [],
   panelDetails: Array.isArray(r.panel_details) ? r.panel_details : [],
-  score: r.score ?? null,
-  rec: r.recommendation || "—",
+  // Legacy top-level fields — intentionally NOT read from the API (see file header).
+  // Fixed defaults keep existing `i.score !== null` / `i.rec !== "—"` checks safe.
+  score: null,
+  rec: "—",
+  remarks: "",
   status: r.status || (r.date ? "Scheduled" : "Pending"),
   mode: toDisplayMode(r.mode),
   meetingLink: r.meeting_link || "",
   round: r.round ?? 1,
-  remarks: r.feedback || "",
   reminderSentAt: r.reminder_sent_at || null,
   evaluations: Array.isArray(r.evaluations) ? r.evaluations.map(normalizeEvaluation) : [],
   evaluationSummary: r.evaluation_summary || null, // { assigned_count, submitted_count, average_score }
@@ -125,9 +131,8 @@ export const buildInterviewPayload = (fi) => {
   if (fi.meetingLink !== undefined) p.meeting_link = fi.meetingLink || "";
   if (fi.round !== undefined) p.round = fi.round;
   if (fi.status !== undefined) p.status = fi.status;
-  if (fi.score !== undefined) p.score = fi.score;
-  if (fi.rec !== undefined) p.recommendation = fi.rec === "—" ? "" : fi.rec;
-  if (fi.remarks !== undefined) p.feedback = fi.remarks || "";
+  // score / rec / remarks intentionally never sent — legacy top-level fields,
+  // ignored in favor of per-panelist evaluations (see file header).
   if (fi.reminderSentAt !== undefined) p.reminder_sent_at = fi.reminderSentAt;
   if (fi.panelIds !== undefined) p.panel = fi.panelIds;
   return p;
