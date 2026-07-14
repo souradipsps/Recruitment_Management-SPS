@@ -1,9 +1,8 @@
 // Approvals API client.
-// Uses the access token from .env (no login flow yet), mirroring jobRequestsApi.js.
+// Auth token comes from the login flow via authApi (read dynamically per request).
+import { authHeaders, API_BASE_URL } from "./authApi";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const API_URL = `${API_BASE_URL}/approvals/`;
-const ACCESS_TOKEN = import.meta.env.VITE_API_ACCESS_TOKEN;
 
 // UI status label -> backend action verb expected by POST /approvals/{id}/action/.
 const ACTION_VERB = {
@@ -52,11 +51,6 @@ export const normalizeApproval = (r) => ({
   comment: "",
   just: r.justification || "",
   history: toHistory(r.history),
-});
-
-const authHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${ACCESS_TOKEN}`,
 });
 
 // GET /api/approvals/ -> normalized array.

@@ -1,14 +1,8 @@
 // Existing Roles API client.
-// Uses the access token from .env (no login flow yet), mirroring jobRequestsApi.js.
+// Auth token comes from the login flow via authApi (read dynamically per request).
+import { authHeaders, API_BASE_URL } from "./authApi";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const API_URL = `${API_BASE_URL}/roles/`;
-const ACCESS_TOKEN = import.meta.env.VITE_API_ACCESS_TOKEN;
-
-const authHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${ACCESS_TOKEN}`,
-});
 
 // Map one API record -> the shape the ExistingRoles screen expects.
 export const normalizeRole = (r) => ({

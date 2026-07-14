@@ -1,17 +1,11 @@
 // Applications API client — job-posting applications (GET /applications/,
 // PATCH /applications/{id}/update_status/) and general applications
 // (GET /general-applications/, PATCH /general-applications/{id}/).
-// Uses the access token from .env (no login flow yet), mirroring jobPostingsApi.js.
+// Auth token comes from the login flow via authApi (read dynamically per request).
+import { authHeaders, API_BASE_URL } from "./authApi";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const API_URL = `${API_BASE_URL}/applications/`;
 const GENERAL_API_URL = `${API_BASE_URL}/general-applications/`;
-const ACCESS_TOKEN = import.meta.env.VITE_API_ACCESS_TOKEN;
-
-const authHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${ACCESS_TOKEN}`,
-});
 
 // Map one API record -> the shape the Applications screen expects.
 // The live API returns richer data than documented — candidate contact info,

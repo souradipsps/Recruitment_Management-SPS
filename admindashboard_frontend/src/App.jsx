@@ -11,6 +11,7 @@ import { fetchApplications, fetchGeneralApplications } from "./api/applicationsA
 import { fetchPanelists } from "./api/panelistsApi";
 import { fetchInterviews } from "./api/interviewsApi";
 import { fetchOffers, createOffer } from "./api/offersApi";
+import { logout } from "./api/authApi";
 
 import Auth from "./screens/Auth";
 import ModuleSelector from "./screens/ModuleSelector";
@@ -42,95 +43,30 @@ export default function App() {
   const [currentUser, setCurrentUser] = useSessionState("currentUser", null);
   const [selectedModule, setSelectedModule] = useSessionState("selectedModule", null);
 
-  // Load job requests from the API on mount (uses the access token in .env; no login flow yet).
+  // Load all API-backed data once the user is authenticated. Gated on currentUser
+  // so the fetches run with a valid token from the login flow (and re-run on login,
+  // not before). The token itself is read dynamically per request via authApi.
   useEffect(() => {
+    if (!currentUser) return;
     let active = true;
-    fetchJobRequests()
-      .then((data) => { if (active) setJobRequests(data); })
-      .catch((err) => console.error("Failed to load job requests:", err));
-    return () => { active = false; };
-  }, [setJobRequests]);
+    const load = (fn, setter, label) =>
+      fn()
+        .then((data) => { if (active) setter(data); })
+        .catch((err) => console.error(`Failed to load ${label}:`, err));
 
-  // Load approval requests from the API on mount (backend auto-creates these on submission).
-  useEffect(() => {
-    let active = true;
-    fetchApprovals()
-      .then((data) => { if (active) setApprovalRequests(data); })
-      .catch((err) => console.error("Failed to load approvals:", err));
-    return () => { active = false; };
-  }, [setApprovalRequests]);
+    load(fetchJobRequests, setJobRequests, "job requests");
+    load(fetchApprovals, setApprovalRequests, "approvals");
+    load(fetchRoles, setExistingRoles, "roles");
+    load(fetchJobPostings, setJobPostings, "job postings");
+    load(fetchRoleRequests, setRoleRequests, "role requests");
+    load(fetchApplications, setJobApplications, "applications");
+    load(fetchGeneralApplications, setGeneralApplications, "general applications");
+    load(fetchPanelists, setPanelists, "panelists");
+    load(fetchInterviews, setInterviews, "interviews");
+    load(fetchOffers, setOffers, "offers");
 
-  // Load existing roles from the API on mount.
-  useEffect(() => {
-    let active = true;
-    fetchRoles()
-      .then((data) => { if (active) setExistingRoles(data); })
-      .catch((err) => console.error("Failed to load roles:", err));
     return () => { active = false; };
-  }, [setExistingRoles]);
-
-  // Load job postings from the API on mount.
-  useEffect(() => {
-    let active = true;
-    fetchJobPostings()
-      .then((data) => { if (active) setJobPostings(data); })
-      .catch((err) => console.error("Failed to load job postings:", err));
-    return () => { active = false; };
-  }, [setJobPostings]);
-  // Load role requests from the API on mount.
-  useEffect(() => {
-    let active = true;
-    fetchRoleRequests()
-      .then((data) => { if (active) setRoleRequests(data); })
-      .catch((err) => console.error("Failed to load role requests:", err));
-    return () => { active = false; };
-  }, [setRoleRequests]);
-
-  // Load job-posting applications from the API on mount.
-  useEffect(() => {
-    let active = true;
-    fetchApplications()
-      .then((data) => { if (active) setJobApplications(data); })
-      .catch((err) => console.error("Failed to load applications:", err));
-    return () => { active = false; };
-  }, [setJobApplications]);
-
-  // Load general (profile) applications from the API on mount.
-  useEffect(() => {
-    let active = true;
-    fetchGeneralApplications()
-      .then((data) => { if (active) setGeneralApplications(data); })
-      .catch((err) => console.error("Failed to load general applications:", err));
-    return () => { active = false; };
-  }, [setGeneralApplications]);
-
-  // Load panelists from the API on mount (real backend ids are needed so the
-  // Interview Panel can assign panelists to interviews).
-  useEffect(() => {
-    let active = true;
-    fetchPanelists()
-      .then((data) => { if (active) setPanelists(data); })
-      .catch((err) => console.error("Failed to load panelists:", err));
-    return () => { active = false; };
-  }, [setPanelists]);
-
-  // Load interviews from the API on mount (source of truth for scheduling).
-  useEffect(() => {
-    let active = true;
-    fetchInterviews()
-      .then((data) => { if (active) setInterviews(data); })
-      .catch((err) => console.error("Failed to load interviews:", err));
-    return () => { active = false; };
-  }, [setInterviews]);
-
-  // Load offers from the API on mount.
-  useEffect(() => {
-    let active = true;
-    fetchOffers()
-      .then((data) => { if (active) setOffers(data); })
-      .catch((err) => console.error("Failed to load offers:", err));
-    return () => { active = false; };
-  }, [setOffers]);
+  }, [currentUser]);
 
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
@@ -146,6 +82,7 @@ export default function App() {
   const pageLabel = NAV.find((n) => n.id === active)?.label || "";
 
   const handleLogout = () => {
+    logout();          // clear stored access/refresh tokens + cached user
     setCurrentUser(null);
     setSelectedModule(null);
   };

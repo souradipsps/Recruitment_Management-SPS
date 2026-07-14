@@ -17,14 +17,9 @@
 // date/time/panel are all optional on the backend, so a round can be created with
 // just candidate_name + role (no schedule yet) and filled in later via PATCH.
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const API_URL = `${API_BASE_URL}/interviews/`;
-const ACCESS_TOKEN = import.meta.env.VITE_API_ACCESS_TOKEN;
+import { authHeaders, getAccessToken, API_BASE_URL } from "./authApi";
 
-const authHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${ACCESS_TOKEN}`,
-});
+const API_URL = `${API_BASE_URL}/interviews/`;
 
 // "2:00 PM" / "9:00 AM" -> "14:00:00" / "09:00:00" (passes through 24h values).
 export const toApiTime = (t) => {
@@ -155,7 +150,7 @@ export async function fetchInterviews() {
 // payload (build it with buildInterviewPayload). Only candidate_name + role are
 // required by the API — a round can be created before it's scheduled.
 export async function createInterview(payload) {
-  if (!ACCESS_TOKEN) throw new Error("Missing VITE_API_ACCESS_TOKEN in .env");
+  if (!getAccessToken()) throw new Error("Not authenticated — please log in.");
 
   const res = await fetch(API_URL, {
     method: "POST",
@@ -196,7 +191,7 @@ export async function submitPanelistEvaluation(backendId, { panelistId, criteria
 
 // PATCH /api/interviews/{backendId}/ -> normalized record.
 export async function updateInterview(backendId, payload) {
-  if (!ACCESS_TOKEN) throw new Error("Missing VITE_API_ACCESS_TOKEN in .env");
+  if (!getAccessToken()) throw new Error("Not authenticated — please log in.");
 
   const res = await fetch(`${API_URL}${backendId}/`, {
     method: "PATCH",

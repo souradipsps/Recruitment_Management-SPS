@@ -1,14 +1,8 @@
 // Panelists API client.
-// Uses the access token from .env (no login flow yet), mirroring jobRequestsApi.js.
+// Auth token comes from the login flow via authApi (read dynamically per request).
+import { authHeaders, getAccessToken, API_BASE_URL } from "./authApi";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const API_URL = `${API_BASE_URL}/panelists/`;
-const ACCESS_TOKEN = import.meta.env.VITE_API_ACCESS_TOKEN;
-
-const authHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${ACCESS_TOKEN}`,
-});
 
 // Map one API record -> the shape the Interview Panel screen expects.
 // Department is intentionally ignored per requirements.
@@ -36,8 +30,8 @@ export async function fetchPanelists() {
 // POST /api/panelists/ — registers a new panelist.
 // Department is intentionally omitted from the payload per requirements.
 export async function createPanelist({ name, email, phone }) {
-  if (!ACCESS_TOKEN) {
-    throw new Error("Missing VITE_API_ACCESS_TOKEN in .env");
+  if (!getAccessToken()) {
+    throw new Error("Not authenticated — please log in.");
   }
 
   const payload = {
