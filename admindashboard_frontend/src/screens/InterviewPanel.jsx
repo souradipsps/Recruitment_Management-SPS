@@ -1554,6 +1554,7 @@ export default function InterviewPanel({
                     </div>
                   </th>
                   <th style={{ padding: "12px 10px", textAlign: "left", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle" }}>Candidate &amp; Role</th>
+                  <th style={{ padding: "12px 10px", textAlign: "center", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle", width: 100 }}>Score</th>
                   <th style={{ padding: "12px 10px", textAlign: "center", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle", width: 120 }}>Round</th>
                   <th style={{ padding: "12px 10px", textAlign: "left", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle" }}>Panelists</th>
                   <th style={{ padding: "12px 10px", textAlign: "left", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle" }}>Schedule</th>
@@ -1610,22 +1611,35 @@ export default function InterviewPanel({
                             <div>
                               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                 <span style={{ fontWeight: 700, color: T.ink, fontSize: 13 }}>{c.name}</span>
-                                {i.score !== null && (
-                                  <span style={{
-                                    fontSize: 9, fontWeight: 800,
-                                    background: i.score >= 80 ? T.greenLight : i.score >= 60 ? T.amberLight : T.redLight,
-                                    color: i.score >= 80 ? T.green : i.score >= 60 ? T.amber : T.red,
-                                    border: `1px solid ${i.score >= 80 ? "#A7F3D0" : i.score >= 60 ? "#FDE68A" : "#FCA5A5"}`,
-                                    padding: "1px 5px", borderRadius: 4
-                                  }}>
-                                    ★ {i.score}
-                                  </span>
-                                )}
                               </div>
                               <div style={{ fontSize: 11, color: T.inkMid, marginTop: 1 }}>{c.role}</div>
                               <div style={{ fontSize: 10, color: T.inkFaint }}>{c.email}</div>
                             </div>
                           </div>
+                        </td>
+
+                        {/* Score */}
+                        <td style={{ padding: "12px 10px", textAlign: "center", verticalAlign: "middle" }}>
+                          {(() => {
+                            const evals = i.evaluations || [];
+                            const summary = i.evaluationSummary;
+                            const avgScore = summary?.average_score ?? (evals.length > 0 ? Math.round(evals.reduce((sum, e) => sum + (e.overallScore || 0), 0) / evals.length) : null);
+                            if (avgScore !== null) {
+                              return (
+                                <span style={{
+                                  fontSize: 11, fontWeight: 800,
+                                  background: avgScore >= 80 ? T.greenLight : avgScore >= 60 ? T.amberLight : T.redLight,
+                                  color: avgScore >= 80 ? T.green : avgScore >= 60 ? T.amber : T.red,
+                                  border: `1px solid ${avgScore >= 80 ? "#A7F3D0" : avgScore >= 60 ? "#FDE68A" : "#FCA5A5"}`,
+                                  padding: "3px 8px", borderRadius: 6,
+                                  display: "inline-flex", alignItems: "center", gap: 3
+                                }}>
+                                  ★ {avgScore}
+                                </span>
+                              );
+                            }
+                            return <span style={{ fontSize: 11, color: T.inkFaint, fontStyle: "italic" }}>—</span>;
+                          })()}
                         </td>
 
                         {/* Round */}
@@ -2207,81 +2221,362 @@ export default function InterviewPanel({
             </div>
 
             {/* Rounds History Log */}
-            <div style={{ marginTop: 20, borderTop: `1.5px solid ${T.border}`, paddingTop: 16 }}>
-              <h3 style={{ fontSize: 13, fontWeight: 800, color: T.ink, marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <div style={{ marginTop: 24, borderTop: `1.5px solid ${T.border}`, paddingTop: 20 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 800, color: T.ink, marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 Interview Rounds History
               </h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {Array.from({ length: selectedAppDetail.activeRound || 1 }, (_, i) => i + 1).map((r) => {
-                  if (r > selectedAppDetail.activeRound) return null;
-
-                  const roundInv = interviews.find(
-                    (i) => i.candidate === selectedAppDetail.name && i.role === selectedAppDetail.role && i.round === r
-                  );
-                  if (!roundInv) {
-                    return (
-                      <div
-                        key={r}
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          padding: "10px 14px",
-                          background: T.canvas,
-                          borderRadius: 8,
-                          border: `1.5px dashed ${T.border}`,
-                        }}
-                      >
-                        <span style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{getRoundOrdinal(r)}</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: T.amber, background: T.amberLight, padding: "3px 10px", borderRadius: 99 }}>Pending Schedule</span>
-                      </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                {(() => {
+                  const activeRnd = selectedAppDetail.activeRound || 1;
+                  const roundsToRender = Array.from({ length: activeRnd }, (_, i) => i + 1).filter((r) => {
+                    const hasInv = interviews.some(
+                      (i) => i.candidate === selectedAppDetail.name && i.role === selectedAppDetail.role && i.round === r
                     );
+                    return r === activeRnd || hasInv;
+                  });
+
+                  return roundsToRender.map((r, idx, arr) => {
+                    const roundInv = interviews.find(
+                      (i) => i.candidate === selectedAppDetail.name && i.role === selectedAppDetail.role && i.round === r
+                    );
+
+                  const isCompleted = roundInv?.status === "Completed";
+                  const isScheduled = roundInv?.status === "Scheduled";
+                  const hasInv = !!roundInv;
+
+                  let nodeBg = "#E2E8F0";
+                  let nodeBorder = "#CBD5E1";
+                  if (hasInv) {
+                    if (isCompleted) {
+                      nodeBg = T.green;
+                      nodeBorder = T.greenLight;
+                    } else if (isScheduled) {
+                      nodeBg = T.primary;
+                      nodeBorder = T.primaryLight;
+                    } else {
+                      nodeBg = T.amber;
+                      nodeBorder = T.amberLight;
+                    }
                   }
+
                   return (
-                    <div
-                      key={r}
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 6,
-                        padding: 12,
-                        background: T.primaryPale,
-                        borderRadius: 8,
-                        border: `1px solid ${T.border}`,
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: 12, fontWeight: 800, color: T.primary }}>{getRoundOrdinal(r)}</span>
-                        <Badge label={roundInv.status} variant={statusVariant(roundInv.status)} />
+                    <div key={r} style={{ display: "flex", gap: 16 }}>
+                      {/* Timeline Indicator Column */}
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 20, flexShrink: 0 }}>
+                        {/* Top line segment */}
+                        <div style={{ width: 2, flex: idx === 0 ? "0 0 12px" : 1, background: idx === 0 ? "transparent" : T.border }} />
+                        {/* Node */}
+                        <div style={{
+                          width: 12,
+                          height: 12,
+                          borderRadius: "50%",
+                          background: nodeBg,
+                          border: `3px solid ${nodeBorder}`,
+                          boxShadow: hasInv && !isCompleted ? `0 0 0 3px ${nodeBg}22` : "none",
+                          flexShrink: 0,
+                          zIndex: 2,
+                          transition: "all 0.2s"
+                        }} />
+                        {/* Bottom line segment */}
+                        <div style={{ width: 2, flex: idx === arr.length - 1 ? "0 0 12px" : 1, background: idx === arr.length - 1 ? "transparent" : T.border }} />
                       </div>
-                      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 8, fontSize: 11, color: T.inkMid }}>
-                        <div><strong>Date &amp; Time:</strong> {roundInv.date ? formatDateAndTime(roundInv.date, roundInv.time) : "Not Scheduled"}</div>
-                        <div><strong>Mode:</strong> {roundInv.mode || "In-Person"}</div>
-                        <div><strong>Panel:</strong> {roundInv.panel?.join(", ") || "None"}</div>
-                        <div><strong>Score / Rec:</strong> {roundInv.score !== null ? `${roundInv.score}/100 (${roundInv.rec})` : "Not Evaluated"}</div>
+
+                      {/* Right Column: Card Content */}
+                      <div style={{ flex: 1, paddingBottom: idx < arr.length - 1 ? 20 : 0 }}>
+                        {!roundInv ? (
+                          <div style={{
+                            padding: "12px 16px",
+                            background: "#F8FAFC",
+                            borderRadius: 12,
+                            border: `1.5px dashed ${T.border}`,
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center"
+                          }}>
+                            <div>
+                              <span style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{getRoundOrdinal(r)}</span>
+                              <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 2 }}>Round has not been scheduled yet</div>
+                            </div>
+                            <span style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              color: T.amber,
+                              background: T.amberLight,
+                              border: `1px solid ${T.amber}33`,
+                              padding: "3px 10px",
+                              borderRadius: 99
+                            }}>
+                              Pending Schedule
+                            </span>
+                          </div>
+                        ) : (
+                          <div style={{
+                            padding: "16px 20px",
+                            background: isCompleted ? "#F0FDF4" : isScheduled ? "#F0F9FF" : "#FFFBEB",
+                            borderRadius: 14,
+                            border: `1.5px solid ${isCompleted ? "#DCFCE7" : isScheduled ? "#E0F2FE" : "#FEF3C7"}`,
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.01)"
+                          }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                              <span style={{ fontSize: 13.5, fontWeight: 850, color: isCompleted ? "#166534" : isScheduled ? "#075985" : "#92400E" }}>
+                                {getRoundOrdinal(r)}
+                              </span>
+                              <Badge label={roundInv.status} variant={statusVariant(roundInv.status)} />
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "10px 16px", fontSize: 11.5, color: T.inkMid }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 14 }}>📅</span>
+                                <div>
+                                  <div style={{ fontSize: 9.5, color: T.inkFaint, textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>Date &amp; Time</div>
+                                  <div style={{ fontWeight: 600, color: T.ink }}>{roundInv.date ? formatDateAndTime(roundInv.date, roundInv.time) : "Not Scheduled"}</div>
+                                </div>
+                              </div>
+
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 14 }}>🏢</span>
+                                <div>
+                                  <div style={{ fontSize: 9.5, color: T.inkFaint, textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>Mode</div>
+                                  <div style={{ fontWeight: 600, color: T.ink }}>{roundInv.mode || "In-Person"}</div>
+                                </div>
+                              </div>
+
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 14 }}>👥</span>
+                                <div>
+                                  <div style={{ fontSize: 9.5, color: T.inkFaint, textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>Panelists</div>
+                                  <div style={{ fontWeight: 600, color: T.ink }}>{roundInv.panel?.join(", ") || "None"}</div>
+                                </div>
+                              </div>
+
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 14 }}>📊</span>
+                                <div>
+                                  <div style={{ fontSize: 9.5, color: T.inkFaint, textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>Evaluation Status</div>
+                                  <div style={{ fontWeight: 600, color: T.ink }}>
+                                    {(() => {
+                                      const evals = roundInv.evaluations || [];
+                                      const summary = roundInv.evaluationSummary;
+                                      if (evals.length > 0) {
+                                        const avgScore = summary?.average_score ?? Math.round(evals.reduce((sum, e) => sum + (e.overallScore || 0), 0) / evals.length);
+                                        return (
+                                          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                            <strong style={{ color: avgScore >= 80 ? T.green : avgScore >= 60 ? T.accentDark : T.red }}>{avgScore}/100</strong>
+                                            <span style={{ fontSize: 10, background: "rgba(0,0,0,0.06)", padding: "1px 6px", borderRadius: 4, fontWeight: 700 }}>
+                                              {summary?.submitted_count ?? evals.length}/{summary?.assigned_count ?? (roundInv.panel?.length || "?")} evaluated
+                                            </span>
+                                          </span>
+                                        );
+                                      }
+                                      return <span style={{ color: T.inkFaint, fontStyle: "italic" }}>Not Evaluated</span>;
+                                    })()}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Per-Panelist Evaluation Scorecards */}
+                            {r === (selectedAppDetail.displayRound || selectedAppDetail.activeRound) && (roundInv.evaluations || []).length > 0 && (
+                              <div style={{ marginTop: 20, borderTop: "1.5px solid rgba(0,0,0,0.06)", paddingTop: 18 }}>
+                                <div style={{ 
+                                  fontSize: 10, 
+                                  fontWeight: 800, 
+                                  color: T.inkLight, 
+                                  textTransform: "uppercase", 
+                                  letterSpacing: "0.08em", 
+                                  marginBottom: 14,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 6
+                                }}>
+                                  <span>📋</span> Panelist Evaluations ({roundInv.evaluations.length})
+                                </div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                                  {roundInv.evaluations.map((ev, evIdx) => {
+                                    const pName = ev.panelistId != null
+                                      ? (panelists.find((p) => p.backendId === ev.panelistId)?.name || `Panelist #${ev.panelistId}`)
+                                      : `Panelist ${evIdx + 1}`;
+                                    const criteriaEntries = Object.entries(ev.criteria || {});
+                                    const evScore = ev.overallScore ?? (criteriaEntries.length > 0 ? Math.round((criteriaEntries.reduce((s, [, v]) => s + v, 0) / criteriaEntries.length) * 20) : null);
+
+                                    const REC_COLORS = {
+                                      "Strong Hire": { bg: "#ECFDF5", color: "#059669" },
+                                      "Hire": { bg: "#F0FDF4", color: "#16A34A" },
+                                      "Hold": { bg: "#FFFBEB", color: "#D97706" },
+                                      "Reject": { bg: "#FEF2F2", color: "#DC2626" },
+                                      "Selected": { bg: "#ECFDF5", color: "#059669" },
+                                      "Rejected": { bg: "#FEF2F2", color: "#DC2626" },
+                                      "On Hold": { bg: "#FFFBEB", color: "#D97706" },
+                                      "Next Round": { bg: "#F0F9FF", color: "#0284C7" },
+                                    };
+                                    const recStyle = REC_COLORS[ev.rec] || { bg: "#F8FAFC", color: T.inkLight };
+
+                                    return (
+                                      <div 
+                                        key={evIdx} 
+                                        style={{ 
+                                          background: "#ffffff", 
+                                          borderRadius: 16, 
+                                          border: "1px solid #ECE7E1", 
+                                          borderLeft: `5px solid ${recStyle.color}`,
+                                          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.02)",
+                                          overflow: "hidden",
+                                          padding: "16px 20px"
+                                        }}
+                                      >
+                                        {/* Panelist Header */}
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+                                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                            <div style={{ 
+                                              width: 36, 
+                                              height: 36, 
+                                              borderRadius: "50%", 
+                                              background: `linear-gradient(135deg, ${T.primary} 0%, ${T.primaryDark} 100%)`, 
+                                              color: "#ffffff", 
+                                              display: "flex", 
+                                              alignItems: "center", 
+                                              justifyContent: "center", 
+                                              fontWeight: 800, 
+                                              fontSize: 12, 
+                                              flexShrink: 0,
+                                              boxShadow: "0 3px 8px rgba(114, 16, 42, 0.15)"
+                                            }}>
+                                              {pName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                                            </div>
+                                            <div>
+                                              <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink, letterSpacing: "-0.01em" }}>{pName}</div>
+                                              {ev.submittedAt && (
+                                                <div style={{ fontSize: 10, color: T.inkFaint, marginTop: 1, display: "flex", alignItems: "center", gap: 4 }}>
+                                                  <span>📅</span>
+                                                  {new Date(ev.submittedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                          
+                                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                            {ev.rec && ev.rec !== "—" && (
+                                              <span style={{ 
+                                                fontSize: 10.5, 
+                                                fontWeight: 700, 
+                                                borderRadius: 100, 
+                                                padding: "4px 12px", 
+                                                background: recStyle.bg, 
+                                                color: recStyle.color, 
+                                                border: `1px solid ${recStyle.color}1A`,
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: 5
+                                              }}>
+                                                <span style={{ width: 6, height: 6, borderRadius: "50%", background: recStyle.color }} />
+                                                {ev.rec}
+                                              </span>
+                                            )}
+                                            {evScore !== null && (
+                                              <div style={{ 
+                                                background: "linear-gradient(135deg, #1A1A1A 0%, #4A4A4A 100%)", 
+                                                color: "#ffffff", 
+                                                borderRadius: 100, 
+                                                padding: "4px 12px", 
+                                                display: "inline-flex", 
+                                                alignItems: "center", 
+                                                gap: 5,
+                                                boxShadow: "0 4px 10px rgba(0, 0, 0, 0.08)"
+                                              }}>
+                                                <span style={{ fontSize: 9.5, color: "rgba(255, 255, 255, 0.7)", fontWeight: 700, letterSpacing: "0.03em" }}>SCORE</span>
+                                                <span style={{ 
+                                                  fontSize: 12, 
+                                                  fontWeight: 900, 
+                                                  color: evScore >= 80 ? "#4ADE80" : evScore >= 60 ? "#FBBF24" : "#F87171" 
+                                                }}>{evScore}</span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        {/* Criteria Grid */}
+                                        {criteriaEntries.length > 0 && (
+                                          <div>
+                                            <div style={{ 
+                                              display: "grid", 
+                                              gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", 
+                                              gap: "8px 24px",
+                                              background: "#FAF9F6",
+                                              borderRadius: 12,
+                                              border: "1px solid #E8E2D9",
+                                              padding: "12px 16px"
+                                            }}>
+                                              {criteriaEntries.map(([field, val]) => (
+                                                <div key={field} style={{ 
+                                                  display: "flex", 
+                                                  justifyContent: "space-between", 
+                                                  alignItems: "center", 
+                                                  gap: 8, 
+                                                  padding: "6px 0", 
+                                                  borderBottom: "1px dashed rgba(232, 226, 217, 0.6)" 
+                                                }}>
+                                                  <span style={{ fontSize: 11.5, color: T.inkMid, fontWeight: 600 }}>{field}</span>
+                                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                                    <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+                                                      {Array.from({ length: 5 }).map((_, di) => (
+                                                        <div 
+                                                          key={di} 
+                                                          style={{ 
+                                                            width: 14, 
+                                                            height: 5, 
+                                                            borderRadius: 2.5, 
+                                                            background: di < val ? recStyle.color : "#E2E8F0", 
+                                                            transition: "background 0.2s" 
+                                                          }} 
+                                                        />
+                                                      ))}
+                                                    </div>
+                                                    <span style={{ fontSize: 10.5, fontWeight: 800, color: T.ink, minWidth: 20, textAlign: "right" }}>{val}/5</span>
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+
+                                            {/* Feedback Notes */}
+                                            {ev.notes && (
+                                              <div style={{ 
+                                                marginTop: 12, 
+                                                padding: "12px 16px", 
+                                                background: "#ffffff", 
+                                                borderRadius: 12, 
+                                                border: "1px solid #E8E2D9",
+                                                borderLeft: `4px solid ${recStyle.color}`,
+                                                position: "relative",
+                                                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.01)"
+                                              }}>
+                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                                                  <span style={{ fontSize: 9.5, fontWeight: 800, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                                                    Feedback Remarks
+                                                  </span>
+                                                  <span style={{ fontSize: 18, fontWeight: 900, color: `${recStyle.color}2A`, fontFamily: "Georgia, serif", lineHeight: 1 }}>“</span>
+                                                </div>
+                                                <span style={{ fontStyle: "italic", fontSize: 12, color: T.inkMid, lineHeight: 1.6, display: "block" }}>
+                                                  "{ev.notes}"
+                                                </span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+
+                          </div>
+                        )}
                       </div>
-                      {roundInv.remarks && (
-                        <div style={{ fontSize: 11, color: T.inkLight, background: "#fff", padding: 6, borderRadius: 4, border: `1px solid ${T.border}` }}>
-                          <strong>Remarks:</strong> {roundInv.remarks}
-                        </div>
-                      )}
-                      {roundInv.meetingLink && (
-                        <div style={{ fontSize: 11, marginTop: 2 }}>
-                          <strong>Link:</strong>{" "}
-                          <a
-                            href={roundInv.meetingLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ color: T.primary, textDecoration: "none", fontWeight: 600 }}
-                          >
-                            {roundInv.meetingLink}
-                          </a>
-                        </div>
-                      )}
                     </div>
                   );
-                })}
-              </div>
+                });
+              })()}
+            </div>
             </div>
 
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>

@@ -55,6 +55,29 @@ function ScoreDots({ value, max = 5 }) {
   );
 }
 
+function ScoreCapsules({ value, max = 5, isMobileCard = false }) {
+  return (
+    <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+      {Array.from({ length: max }).map((_, i) => {
+        const active = i < value;
+        return (
+          <div
+            key={i}
+            style={{
+              width: 14,
+              height: 5,
+              borderRadius: 2.5,
+              background: active ? (isMobileCard ? "#fff" : MAROON) : (isMobileCard ? "rgba(255, 255, 255, 0.2)" : T.border),
+              transition: "background 0.15s"
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+
 export default function Panelist({ interviews = [], setInterviews, jobPostings = [], panelists = [], currentUser = "admin" }) {
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
@@ -578,28 +601,40 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
                           <span style={{ fontSize: 12, transition: "transform 0.2s", display: "inline-block", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
                         </button>
                         {isExpanded && (
-                          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10, maxHeight: 180, overflowY: "auto", paddingRight: 4 }} className="carousel-scroll">
+                          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12, maxHeight: 220, overflowY: "auto", paddingRight: 4 }} className="carousel-scroll">
                             {evaluations.map((ev, index) => {
                               const evScore = computeScore(ev.scores);
-                              const recStyle = REC_COLORS[ev.recommendation] || { bg: "rgba(255,255,255,0.1)", color: "#fff" };
+                              const recStyle = REC_COLORS[ev.recommendation] || { bg: "rgba(255,255,255,0.15)", color: "#fff" };
                               return (
-                                <div key={index} style={{ background: "rgba(255,255,255,0.06)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", padding: 10 }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                                    <span style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{ev.panelist}</span>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                      <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 99, padding: "1px 6px", background: recStyle.bg, color: recStyle.color }}>{ev.recommendation}</span>
-                                      {evScore !== null && <span style={{ fontSize: 10, fontWeight: 800, color: evScore >= 80 ? T.green : evScore >= 60 ? T.accentDark : T.red, background: evScore >= 80 ? T.greenLight : evScore >= 60 ? T.accentLight : T.redLight, borderRadius: 99, padding: "1px 6px" }}>{evScore}</span>}
+                                <div key={index} style={{ background: "rgba(255,255,255,0.06)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)", padding: 12 }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 6 }}>
+                                    <span style={{ fontSize: 12.5, fontWeight: 800, color: "#fff" }}>{ev.panelist}</span>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                      <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 99, padding: "2px 8px", background: recStyle.bg, color: recStyle.color }}>{ev.recommendation}</span>
+                                      {evScore !== null && (
+                                        <span style={{ fontSize: 10.5, fontWeight: 800, color: "#fff", background: "rgba(255,255,255,0.15)", borderRadius: 99, padding: "2px 8px" }}>
+                                          Score {evScore}
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
-                                  <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 4, marginBottom: ev.notes ? 6 : 0 }}>
+                                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                                     {Object.entries(ev.scores).map(([f, v]) => (
-                                      <div key={f} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "rgba(255,255,255,0.7)" }}>
+                                      <div key={f} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11.5, color: "rgba(255,255,255,0.85)" }}>
                                         <span>{f}</span>
-                                        <span>{v}/5</span>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                          <ScoreCapsules value={v} isMobileCard={true} />
+                                          <span style={{ fontWeight: 700 }}>{v}/5</span>
+                                        </div>
                                       </div>
                                     ))}
                                   </div>
-                                  {ev.notes && <div style={{ fontSize: 11, fontStyle: "italic", color: "rgba(255,255,255,0.8)", borderTop: "1px dashed rgba(255,255,255,0.1)", paddingTop: 4, marginTop: 4 }}>"{ev.notes}"</div>}
+                                  {ev.notes && (
+                                    <div style={{ marginTop: 8, padding: "8px 12px", background: "rgba(255,255,255,0.04)", borderRadius: 8, borderLeft: "3px solid rgba(255,255,255,0.4)", fontSize: 11, lineHeight: 1.5 }}>
+                                      <div style={{ fontSize: 8, fontWeight: 800, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Feedback</div>
+                                      <span style={{ fontStyle: "italic", color: "rgba(255,255,255,0.9)" }}>"{ev.notes}"</span>
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}
@@ -653,7 +688,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
                       </div>
 
                       {interview.reminderSentAt && (
-                        <div onClick={(e) => { e.stopPropagation(); if (!setInterviews) return; setInterviews((prev) => prev.map((i) => i.candidate === interview.candidate && i.role === interview.role && i.round === interview.round ? { ...i, reminderSentAt: undefined } : i)); }} style={{ margin: "0 26px 0", background: "linear-gradient(135deg, #EDE7F6, #F3E5F5)", border: "1.5px solid #CE93D8", borderRadius: 10, padding: "10px 16px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", animation: "pulse-reminder 2s infinite" }} title="Click to dismiss reminder">
+                        <div onClick={(e) => { e.stopPropagation(); if (!setInterviews) return; setInterviews((prev) => prev.map((i) => i.candidate === interview.candidate && i.role === interview.role && i.round === interview.round ? { ...i, reminderSentAt: undefined } : i)); }} style={{ margin: "16px 0 0", background: "linear-gradient(135deg, #EDE7F6, #F3E5F5)", border: "1.5px solid #CE93D8", borderRadius: 10, padding: "10px 16px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", animation: "pulse-reminder 2s infinite" }} title="Click to dismiss reminder">
                           <span style={{ fontSize: 18 }}>🔔</span>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontSize: 12, fontWeight: 800, color: "#6A1B9A" }}>Reminder Sent</div>
@@ -707,40 +742,52 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
                       )}
 
                       {isExpanded && evaluations.length > 0 && (
-                        <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
+                        <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
                           {evaluations.map((ev, idx) => {
                             const evScore = computeScore(ev.scores);
                             const recStyle = REC_COLORS[ev.recommendation] || { bg: T.canvas, color: T.inkMid };
                             return (
-                              <div key={idx} style={{ background: T.canvas, borderRadius: 12, border: `1px solid ${T.border}`, overflow: "hidden" }}>
-                                <div style={{ padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: T.primaryLight, borderBottom: `1px solid ${T.border}` }}>
-                                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: MAROON, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 12, flexShrink: 0 }}>
+                              <div key={idx} style={{ background: "#fff", borderRadius: 14, border: `1.5px solid ${T.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.02)", overflow: "hidden", transition: "all 0.2s ease" }}>
+                                <div style={{ padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "linear-gradient(to right, #F8FAFC, #FFFFFF)", borderBottom: `1.5px solid ${T.border}` }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: T.primaryLight, color: MAROON, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, border: `1px solid ${T.primary}22`, flexShrink: 0 }}>
                                       {ev.panelist.split(" ").map((n) => n[0]).join("")}
                                     </div>
                                     <div>
-                                      <div style={{ fontSize: 13, fontWeight: 800, color: MAROON }}>{ev.panelist}</div>
-                                      <div style={{ fontSize: 10, color: T.inkFaint }}>{new Date(ev.submittedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</div>
+                                      <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink }}>{ev.panelist}</div>
+                                      <div style={{ fontSize: 10.5, color: T.inkFaint, marginTop: 1 }}>
+                                        Evaluated on {new Date(ev.submittedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                                      </div>
                                     </div>
                                   </div>
                                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                    <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 99, padding: "3px 10px", background: recStyle.bg, color: recStyle.color, border: `1px solid ${recStyle.color}33` }}>{ev.recommendation}</span>
-                                    {evScore !== null && <ScoreCircle score={evScore} />}
+                                    <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 99, padding: "4px 12px", background: recStyle.bg, color: recStyle.color, border: `1px solid ${recStyle.color}22`, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>{ev.recommendation}</span>
+                                    {evScore !== null && (
+                                      <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: evScore >= 80 ? T.greenLight : evScore >= 60 ? T.accentLight : T.redLight, borderRadius: 999, padding: "4px 10px", border: `1px solid ${evScore >= 80 ? T.green : evScore >= 60 ? T.accentDark : T.red}33` }}>
+                                        <span style={{ fontSize: 10, color: T.inkFaint, fontWeight: 700 }}>Score</span>
+                                        <span style={{ fontSize: 12.5, fontWeight: 900, color: evScore >= 80 ? T.green : evScore >= 60 ? T.accentDark : T.red }}>{evScore}</span>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
-                                <div style={{ padding: "12px 16px" }}>
-                                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 20px", marginBottom: ev.notes ? 12 : 0 }}>
+                                <div style={{ padding: "16px 20px" }}>
+                                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px", marginBottom: ev.notes ? 16 : 0 }}>
                                     {Object.entries(ev.scores).map(([field, val]) => (
-                                      <div key={field} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                                        <span style={{ fontSize: 12, color: T.inkMid, fontWeight: 600, minWidth: 0, flex: 1 }}>{field}</span>
-                                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                          <ScoreDots value={val} />
-                                          <span style={{ fontSize: 11, fontWeight: 700, color: T.inkLight, minWidth: 14, textAlign: "right" }}>{val}/5</span>
+                                      <div key={field} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "6px 0", borderBottom: `1px dashed ${T.border}` }}>
+                                        <span style={{ fontSize: 12.5, color: T.inkMid, fontWeight: 600 }}>{field}</span>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                          <ScoreCapsules value={val} />
+                                          <span style={{ fontSize: 11, fontWeight: 800, color: T.ink, minWidth: 16, textAlign: "right" }}>{val}/5</span>
                                         </div>
                                       </div>
                                     ))}
                                   </div>
-                                  {ev.notes && <div style={{ marginTop: 8, padding: "8px 12px", background: "#fff", borderRadius: 8, border: `1px solid ${T.border}`, fontSize: 12, color: T.inkMid, fontStyle: "italic", lineHeight: 1.5 }}>"{ev.notes}"</div>}
+                                  {ev.notes && (
+                                    <div style={{ marginTop: 14, padding: "12px 16px", background: "#F8FAFC", borderRadius: 10, borderLeft: `4px solid ${MAROON}`, fontSize: 12.5, color: T.inkMid, lineHeight: 1.6 }}>
+                                      <div style={{ fontSize: 9, fontWeight: 800, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Feedback Notes</div>
+                                      <span style={{ fontStyle: "italic", color: T.ink }}>"{ev.notes}"</span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             );
