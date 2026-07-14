@@ -53,6 +53,42 @@ export const toDisplayTime = (t) => {
 const toApiMode = (m) => (m === "Online" ? "Online" : "Offline");
 const toDisplayMode = (m) => (m === "Online" ? "Online" : "In-Person");
 
+// The backend validates `criteria` to contain exactly these keys — anything else
+// must go in `custom_criteria`. The evaluation form shows these as the default
+// rows, plus whatever rows the panelist adds via "Add custom field".
+export const CORE_CRITERIA = [
+  "Communication Skills",
+  "Subject Knowledge",
+  "Confidence",
+  "Problem Solving",
+  "Cultural Fit",
+];
+
+// The form works with ONE flat { criterionName: score } object — the caller never
+// has to know which rows are "core" vs "custom". This splits it the way the API
+// requires right before sending.
+const splitCriteria = (flat = {}) => {
+  const criteria = {};
+  const custom_criteria = {};
+  Object.entries(flat).forEach(([key, value]) => {
+    if (CORE_CRITERIA.includes(key)) criteria[key] = value;
+    else custom_criteria[key] = value;
+  });
+  return { criteria, custom_criteria };
+};
+
+// Map one panelist evaluation record -> a flat shape for the UI (merges criteria +
+// custom_criteria back into one object, mirroring how the form edits them).
+export const normalizeEvaluation = (e) => ({
+  id: e.id,
+  panelistId: e.panelist,
+  criteria: { ...(e.criteria || {}), ...(e.custom_criteria || {}) },
+  overallScore: e.overall_score ?? null,
+  rec: e.recommendation || "—",
+  notes: e.notes || "",
+  submittedAt: e.submitted_at || null,
+});
+
 // Map one API record -> the shape the Interview Panel screen expects.
 // The backend now has a real "Pending" status; fall back to date presence only
 // if status is somehow missing.
@@ -64,6 +100,7 @@ export const normalizeInterview = (r) => ({
   date: r.date || "",
   time: toDisplayTime(r.time),
   panel: Array.isArray(r.panel_details) ? r.panel_details.map((p) => p.name) : [],
+  panelDetails: Array.isArray(r.panel_details) ? r.panel_details : [],
   score: r.score ?? null,
   rec: r.recommendation || "—",
   status: r.status || (r.date ? "Scheduled" : "Pending"),
@@ -72,6 +109,8 @@ export const normalizeInterview = (r) => ({
   round: r.round ?? 1,
   remarks: r.feedback || "",
   reminderSentAt: r.reminder_sent_at || null,
+  evaluations: Array.isArray(r.evaluations) ? r.evaluations.map(normalizeEvaluation) : [],
+  evaluationSummary: r.evaluation_summary || null, // { assigned_count, submitted_count, average_score }
 });
 
 // Build a backend payload from frontend fields. Only keys that are provided are
@@ -125,6 +164,29 @@ export async function createInterview(payload) {
   }
 
   return normalizeInterview(await res.json());
+}
+
+// Build the `panelist_evaluation` payload for PATCH /api/interviews/{id}/.
+// `criteria` is ONE flat object with both core and custom rows — this splits it
+// into `criteria`/`custom_criteria` the way the API requires.
+export const buildPanelistEvaluationPayload = ({ panelistId, criteria, rec, notes }) => {
+  const { criteria: coreCriteria, custom_criteria } = splitCriteria(criteria);
+  return {
+    panelist_evaluation: {
+      panelist: panelistId,
+      criteria: coreCriteria,
+      custom_criteria,
+      recommendation: rec === "—" ? "" : rec,
+      notes: notes || "",
+    },
+  };
+};
+
+// PATCH /api/interviews/{backendId}/ with a single panelist's evaluation
+// (criteria/custom_criteria/recommendation/notes) -> normalized interview record,
+// including the updated `evaluations[]` and `evaluationSummary`.
+export async function submitPanelistEvaluation(backendId, { panelistId, criteria, rec, notes }) {
+  return updateInterview(backendId, buildPanelistEvaluationPayload({ panelistId, criteria, rec, notes }));
 }
 
 // PATCH /api/interviews/{backendId}/ -> normalized record.

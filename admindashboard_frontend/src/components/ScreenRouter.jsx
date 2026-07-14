@@ -102,6 +102,7 @@ export default function ScreenRouter({ active, s, navigate, onGiveOffer }) {
           interviews={s.interviews}
           setInterviews={s.setInterviews}
           jobPostings={s.jobPostings}
+          panelists={s.panelists}
           currentUser={s.currentUser?.role || "admin"}
         />
       );

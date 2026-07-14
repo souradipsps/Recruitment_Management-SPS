@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { T, font } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
+import { submitPanelistEvaluation } from "../api/interviewsApi";
 
 const MAROON = T.primary;
 
@@ -54,7 +55,7 @@ function ScoreDots({ value, max = 5 }) {
   );
 }
 
-export default function Panelist({ interviews = [], setInterviews, jobPostings = [], currentUser = "admin" }) {
+export default function Panelist({ interviews = [], setInterviews, jobPostings = [], panelists = [], currentUser = "admin" }) {
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
   const hScroll = useHorizontalScroll();
@@ -71,13 +72,31 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
   const [expandedCards, setExpandedCards] = useState({});
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [filterActiveIndex, setFilterActiveIndex] = useState(0);
+  const [isSubmittingEval, setIsSubmittingEval] = useState(false);
   const scrollRef = useRef(null);
+
+  // The interviews API stores each evaluation against a panelist ID, but this
+  // screen (and its mock local-auth) works with panelist display NAMES —
+  // resolve between the two via the panelists list (has real backend ids).
+  const getPanelistId = (name) => panelists.find((p) => p.name === name)?.backendId;
+  const getPanelistName = (id) => panelists.find((p) => p.backendId === id)?.name || `Panelist #${id}`;
+
+  // Adapt an interview's API-shaped evaluations (panelistId/criteria/rec) into the
+  // { panelist, scores, recommendation, notes, submittedAt } shape this screen renders.
+  const getDisplayEvaluations = (interview) =>
+    (interview.evaluations || []).map((e) => ({
+      panelist: e.panelistId != null ? getPanelistName(e.panelistId) : e.panelist,
+      scores: e.criteria || e.scores || {},
+      recommendation: e.rec || e.recommendation,
+      notes: e.notes || "",
+      submittedAt: e.submittedAt,
+    }));
 
   const canEvaluate = (interview) => {
     const isAdmin = currentUser === "admin";
     const isAssignedPanelist = interview.panel?.includes(currentUser);
     if (!isAdmin && !isAssignedPanelist) return { allowed: false, reason: "You are not authorized to evaluate candidates" };
-    const alreadyEvaluated = interview.evaluations?.some((e) => e.panelist === currentUser);
+    const alreadyEvaluated = getDisplayEvaluations(interview).some((e) => e.panelist === currentUser);
     if (alreadyEvaluated && !isAdmin) return { allowed: false, reason: "You have already evaluated this candidate" };
     return { allowed: true };
   };
@@ -108,13 +127,11 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
   const scrollCarousel = (dir) =>
     hScroll.ref.current?.scrollBy({ left: dir === "left" ? -300 : 300, behavior: "smooth" });
 
-  const openEval = (interview) => {
-    setSelectedInterview(interview);
-    setEvaluatorName(currentUser);
-    const existingEval = interview.evaluations?.find((e) => e.panelist === currentUser);
+  const loadEvaluatorState = (interview, panelistName) => {
+    const existingEval = getDisplayEvaluations(interview).find((e) => e.panelist === panelistName);
     if (existingEval) {
       setScores(existingEval.scores || {});
-      setCustomFields(existingEval.customFields || []);
+      setCustomFields(Object.keys(existingEval.scores || {}).filter((f) => !DEFAULT_FIELDS.includes(f)));
       setNotes(existingEval.notes || "");
       setRecommendation(existingEval.recommendation || "Strong Hire");
     } else {
@@ -123,23 +140,21 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
       setNotes("");
       setRecommendation("Strong Hire");
     }
+  };
+
+  const openEval = (interview) => {
+    setSelectedInterview(interview);
+    // Admin isn't a real panelist and can't submit under its own name — default
+    // to the first assigned panelist instead. A logged-in panelist evaluates as themselves.
+    const initialEvaluator = currentUser === "admin" ? (interview.panel || [])[0] || "" : currentUser;
+    setEvaluatorName(initialEvaluator);
+    loadEvaluatorState(interview, initialEvaluator);
     setNewField("");
   };
 
   const handleEvaluatorChange = (interview, panelistName) => {
     setEvaluatorName(panelistName);
-    const existingEval = interview.evaluations?.find((e) => e.panelist === panelistName);
-    if (existingEval) {
-      setScores(existingEval.scores || {});
-      setCustomFields(existingEval.customFields || []);
-      setNotes(existingEval.notes || "");
-      setRecommendation(existingEval.recommendation || "Strong Hire");
-    } else {
-      setScores({});
-      setCustomFields([]);
-      setNotes("");
-      setRecommendation("Strong Hire");
-    }
+    loadEvaluatorState(interview, panelistName);
   };
 
   const updateScore = (field, value) => setScores((prev) => ({ ...prev, [field]: value }));
@@ -161,42 +176,43 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
     );
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!evaluatorName.trim()) { alert("Please enter your name before submitting."); return; }
     if (!setInterviews || !selectedInterview) return;
+    if (Object.keys(scores).length === 0) { alert("Please rate at least one criterion before submitting."); return; }
 
-    const newEval = {
-      panelist: evaluatorName.trim(),
-      scores,
-      customFields,
-      recommendation,
-      notes,
-      submittedAt: new Date().toISOString(),
-    };
+    const panelistId = getPanelistId(evaluatorName.trim());
+    if (panelistId == null) {
+      alert(`"${evaluatorName}" is not a registered panelist, so this evaluation can't be saved. Ask an admin to register you as a panelist first.`);
+      return;
+    }
+    if (selectedInterview.backendId == null) {
+      alert("This interview hasn't been saved yet — please contact an admin.");
+      return;
+    }
 
-    setInterviews((prev) =>
-      prev.map((i) => {
-        if (i.candidate !== selectedInterview.candidate || i.role !== selectedInterview.role || i.round !== selectedInterview.round) return i;
-        const isAdmin = currentUser === "admin";
-        let updatedEvals = [...(i.evaluations || [])];
-        if (isAdmin && evaluatorName !== currentUser) {
-          const existingIdx = updatedEvals.findIndex((e) => e.panelist === evaluatorName.trim());
-          if (existingIdx >= 0) updatedEvals[existingIdx] = newEval;
-          else updatedEvals = [...updatedEvals, newEval];
-        } else {
-          const existingIdx = updatedEvals.findIndex((e) => e.panelist === evaluatorName.trim());
-          if (existingIdx >= 0) updatedEvals[existingIdx] = newEval;
-          else updatedEvals = [...updatedEvals, newEval];
-        }
-        const allScores = updatedEvals.map((e) => computeScore(e.scores)).filter((s) => s !== null);
-        const avgScore = allScores.length ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length) : i.score;
-        return { ...i, evaluations: updatedEvals, score: avgScore, rec: recommendation, status: "Completed" };
-      })
-    );
+    setIsSubmittingEval(true);
+    try {
+      const updated = await submitPanelistEvaluation(selectedInterview.backendId, {
+        panelistId,
+        criteria: scores, // core + custom criteria in one flat object; the API client splits them
+        rec: recommendation,
+        notes,
+      });
 
-    const key = `${selectedInterview.candidate}-${selectedInterview.role}-${selectedInterview.round}`;
-    setExpandedCards((prev) => ({ ...prev, [key]: true }));
-    setSelectedInterview(null);
+      setInterviews((prev) =>
+        prev.map((i) => (i.backendId === updated.backendId ? updated : i))
+      );
+
+      const key = `${selectedInterview.candidate}-${selectedInterview.role}-${selectedInterview.round}`;
+      setExpandedCards((prev) => ({ ...prev, [key]: true }));
+      setSelectedInterview(null);
+    } catch (err) {
+      console.error("Failed to submit evaluation:", err);
+      alert("Could not submit the evaluation. Please try again.");
+    } finally {
+      setIsSubmittingEval(false);
+    }
   };
 
   const toggleExpand = (key) => setExpandedCards((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -222,8 +238,8 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
           <div style={{ padding: 12, background: isMobileCard ? "rgba(255,255,255,0.05)" : "#fff", borderRadius: 8, border: `1px solid ${isMobileCard ? "rgba(255,255,255,0.15)" : T.border}` }}>
             <label style={{ display: "block", fontWeight: 700, marginBottom: 6, fontSize: 9, color: isMobileCard ? "rgba(255,255,255,0.5)" : T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em" }}>Evaluating as</label>
             <select value={evaluatorName} onChange={(e) => handleEvaluatorChange(interview, e.target.value)} style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${isMobileCard ? "rgba(255,255,255,0.2)" : T.border}`, fontSize: 12, fontWeight: 600, color: isMobileCard ? "#fff" : T.inkMid, background: isMobileCard ? "#3a0010" : "#fff", cursor: "pointer", outline: "none" }}>
-              <option value={currentUser}>{currentUser}</option>
-              {(interview.panel || []).filter((name) => name !== currentUser).map((name) => (
+              {(interview.panel || []).length === 0 && <option value="">No panelists assigned</option>}
+              {(interview.panel || []).map((name) => (
                 <option key={name} value={name}>{name}</option>
               ))}
             </select>
@@ -296,7 +312,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
 
         <div style={{ padding: "16px 0 0", borderTop: `1px solid ${isMobileCard ? "rgba(255,255,255,0.15)" : T.border}`, display: "flex", justifyContent: "flex-end", gap: 10, background: isMobileCard ? "transparent" : T.canvas }}>
           <button onClick={() => setSelectedInterview(null)} style={{ padding: "8px 16px", borderRadius: 8, border: `1.5px solid ${isMobileCard ? "rgba(255,255,255,0.25)" : T.border}`, cursor: "pointer", fontWeight: 600, background: isMobileCard ? "rgba(255,255,255,0.1)" : "#fff", color: isMobileCard ? "#fff" : T.inkMid, fontSize: 12 }}>Cancel</button>
-          <button onClick={handleSubmit} style={{ background: isMobileCard ? T.accent : MAROON, color: isMobileCard ? "#3a0010" : "#fff", border: "none", padding: "8px 20px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 13, boxShadow: `0 4px 12px ${isMobileCard ? T.accent : MAROON}33` }}>Submit Evaluation</button>
+          <button disabled={isSubmittingEval} onClick={handleSubmit} style={{ background: isMobileCard ? T.accent : MAROON, color: isMobileCard ? "#3a0010" : "#fff", border: "none", padding: "8px 20px", borderRadius: 8, cursor: isSubmittingEval ? "not-allowed" : "pointer", opacity: isSubmittingEval ? 0.7 : 1, fontWeight: 700, fontSize: 13, boxShadow: `0 4px 12px ${isMobileCard ? T.accent : MAROON}33` }}>{isSubmittingEval ? "Submitting…" : "Submit Evaluation"}</button>
         </div>
       </div>
     );
@@ -480,7 +496,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
           <div ref={scrollRef} onScroll={(e) => { if (isMobile) { const scrollLeft = e.currentTarget.scrollLeft; const cardWidth = e.currentTarget.clientWidth; const newIndex = Math.round(scrollLeft / cardWidth); setCurrentCardIndex(newIndex); } }} className="carousel-scroll" style={{ display: "flex", flexDirection: isMobile ? "row" : "column", alignItems: isMobile ? "flex-start" : undefined, gap: 20, overflowX: isMobile ? "auto" : undefined, overflowY: isMobile ? "hidden" : undefined, scrollSnapType: isMobile ? "x mandatory" : undefined, WebkitOverflowScrolling: isMobile ? "touch" : undefined, paddingBottom: isMobile ? 20 : undefined, marginBottom: isMobile ? 10 : undefined, paddingLeft: isMobile ? 12 : undefined, paddingRight: isMobile ? 12 : undefined, margin: isMobile ? "0 -12px" : undefined }}>
             {filteredInterviews.map((interview, idx) => {
               const cardKey = `${interview.candidate}-${interview.role}-${interview.round}`;
-              const evaluations = interview.evaluations || [];
+              const evaluations = getDisplayEvaluations(interview);
               const totalScore = computeTotalScore(evaluations);
               const isCompleted = interview.status === "Completed";
               const isExpanded = expandedCards[cardKey] ?? evaluations.length > 0;
@@ -667,7 +683,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                           {(interview.panel || []).length > 0 ? (
                             (interview.panel || []).map((panelistName) => {
-                              const hasEvaluated = interview.evaluations?.some((e) => e.panelist === panelistName);
+                              const hasEvaluated = evaluations.some((e) => e.panelist === panelistName);
                               return (
                                 <div key={panelistName} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 999, background: hasEvaluated ? T.greenLight : "#FEF3C7", color: hasEvaluated ? T.green : "#B45309", fontSize: 11, fontWeight: 700, border: `1px solid ${hasEvaluated ? T.green + "33" : "#FDE68A"}` }}>
                                   <span>{hasEvaluated ? "✓" : "○"}</span>
