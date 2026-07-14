@@ -1,3 +1,4 @@
+import urllib.parse
 from django.db.models import Count, Q
 from django.utils import timezone
 from django.core.cache import cache
@@ -6,6 +7,19 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
+
+def _get_cached_list_response(viewset_instance, request, cache_key_prefix, timeout=900):
+    sorted_params = sorted(request.query_params.items())
+    params_str = urllib.parse.urlencode(sorted_params)
+    cache_key = f"{cache_key_prefix}_{params_str}"
+    
+    data = cache.get(cache_key)
+    if data is None:
+        response = super(viewset_instance.__class__, viewset_instance).list(request)
+        data = response.data
+        cache.set(cache_key, data, timeout=timeout)
+        return response
+    return Response(data)
 
 from users.permissions import IsHRAdmin, IsHRAdminOrReadOnly
 from applications.models import JobApplication, GeneralApplication
@@ -41,6 +55,9 @@ class ExistingRoleViewSet(viewsets.ModelViewSet):
     filterset_fields   = ["department", "status", "type"]
     ordering_fields    = ["department", "role", "headcount", "filled"]
 
+    def list(self, request, *args, **kwargs):
+        return _get_cached_list_response(self, request, "existing_roles_list")
+
     @action(detail=False, methods=["get"])
     def departments(self, request):
         depts = ExistingRole.objects.values_list("department", flat=True).distinct()
@@ -60,12 +77,15 @@ class ExistingRoleViewSet(viewsets.ModelViewSet):
 
 
 class RoleRequestViewSet(viewsets.ModelViewSet):
-    queryset           = RoleRequest.objects.select_related("created_by").all()
+    queryset           = RoleRequest.objects.select_related("created_by").prefetch_related("approvals", "approvals__history").all()
     serializer_class   = RoleRequestSerializer
     permission_classes = [IsHRAdmin]
     search_fields      = ["role", "department", "request_id"]
     filterset_fields   = ["status", "department"]
     ordering_fields    = ["date", "status"]
+
+    def list(self, request, *args, **kwargs):
+        return _get_cached_list_response(self, request, "role_requests_list")
 
     @action(detail=True, methods=["patch"])
     def update_status(self, request, pk=None):
@@ -77,12 +97,15 @@ class RoleRequestViewSet(viewsets.ModelViewSet):
 
 
 class JobRequestViewSet(viewsets.ModelViewSet):
-    queryset           = JobRequest.objects.all()
+    queryset           = JobRequest.objects.select_related("category", "created_by").prefetch_related("approvals", "approvals__history").all()
     serializer_class   = JobRequestSerializer
     permission_classes = [IsHRAdmin]
     search_fields      = ["role", "request_id"]
     filterset_fields   = ["status", "type"]
     ordering_fields    = ["created_at", "status"]
+
+    def list(self, request, *args, **kwargs):
+        return _get_cached_list_response(self, request, "job_requests_list")
 
     @action(detail=True, methods=["patch"])
     def update_status(self, request, pk=None):
@@ -96,16 +119,26 @@ class JobRequestViewSet(viewsets.ModelViewSet):
 
 
 class ApprovalRequestViewSet(viewsets.ModelViewSet):
-    queryset           = ApprovalRequest.objects.prefetch_related("history").all()
+    queryset           = ApprovalRequest.objects.select_related(
+                             "job_request", "job_request__category", "role_request", "role_request__created_by"
+                         ).prefetch_related("history").all()
     serializer_class   = ApprovalRequestSerializer
     permission_classes = [IsHRAdmin]
     search_fields      = ["request_id", "title", "submitted_by"]
     filterset_fields   = ["status", "type"]
     ordering_fields    = ["date", "status"]
 
+    def list(self, request, *args, **kwargs):
+        return _get_cached_list_response(self, request, "approval_requests_list")
+
     @action(detail=True, methods=["post"])
     def action(self, request, pk=None):
         approval = self.get_object()
+        if approval.status != "Pending":
+            return Response(
+                {"error": "This approval request has already been processed."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         serializer = ApprovalActionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -132,6 +165,8 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
                 role_req.salary_range = serializer.validated_data["salary_range"]
             if "experience" in serializer.validated_data:
                 role_req.experience = serializer.validated_data["experience"]
+            if "employment_type" in serializer.validated_data:
+                role_req.type = serializer.validated_data["employment_type"]
             role_req.save()
 
         # Update JobRequest if type is Job Request
@@ -178,11 +213,36 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
         )
 
         if new_status == "Approved" and approval.type == "Job Request" and approval.job_request:
-            approval.job_request.status = "Approved"
-            approval.job_request.save()
+            job_req = approval.job_request
+            job_req.status = "Approved"
+            job_req.save()
+
+            # Auto-create a JobPosting from the approved JobRequest
+            from jobs.models import JobPosting
+            from users.utils import auto_id
+
+            # Only create if no posting already exists for this job request
+            if not JobPosting.objects.filter(job_request=job_req).exists():
+                JobPosting.objects.create(
+                    posting_id=auto_id("JP", JobPosting),
+                    role=job_req.role,
+                    department=job_req.department,
+                    type=job_req.type or "Full-time",
+                    category=job_req.category,
+                    location=job_req.location or "Guwahati, Assam",
+                    description=job_req.description,
+                    experience=job_req.experience,
+                    salary_range=job_req.salary_range,
+                    educational_qualifications=job_req.educational_qualifications,
+                    skills_required=job_req.skills_required,
+                    channel="Career Page",
+                    status="Unpublished",
+                    job_request=job_req,
+                )
         if new_status == "Approved" and approval.type == "Role Request" and approval.role_request:
-            approval.role_request.status = "Approved"
-            approval.role_request.save()
+            role_req = approval.role_request
+            role_req.status = "Approved"
+            role_req.save()
         if new_status == "Sent Back" and approval.type == "Role Request" and approval.role_request:
             approval.role_request.status = "Sent Back"
             approval.role_request.save()
@@ -206,7 +266,7 @@ class JobPostingViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = JobPosting.objects.select_related("category")
+        queryset = JobPosting.objects.select_related("category", "job_request")
         if not user.is_authenticated or user.role == "candidate":
             return queryset.filter(status="Published").order_by("-created_at")
         return queryset.annotate(annotated_application_count=Count("job_applications")).order_by("-created_at")
@@ -218,7 +278,7 @@ class JobPostingViewSet(viewsets.ModelViewSet):
         return JobPostingSerializer
 
     def get_permissions(self):
-        if self.action in ["list", "retrieve", "public"]:
+        if self.action in ["public"]:
             return [AllowAny()]
         return [IsHRAdmin()]
 
@@ -229,7 +289,7 @@ class JobPostingViewSet(viewsets.ModelViewSet):
         cache_key = f"public_jobs_{category}_{q}"
         data = cache.get(cache_key)
         if not data:
-            qs = JobPosting.objects.select_related("category").filter(status="Published")
+            qs = JobPosting.objects.select_related("category", "job_request").filter(status="Published")
             if category and category != "All Positions":
                 qs = qs.filter(category__name=category)
             if q:

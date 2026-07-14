@@ -18,6 +18,7 @@ class Panelist(models.Model):
 
 class Interview(models.Model):
     STATUS_CHOICES = [
+        ("Pending",    "Pending"),
         ("Scheduled",  "Scheduled"),
         ("Completed",  "Completed"),
         ("Cancelled",  "Cancelled"),
@@ -32,6 +33,11 @@ class Interview(models.Model):
         ("Rejected",  "Rejected"),
         ("On Hold",   "On Hold"),
         ("Next Round","Next Round"),
+        ("Strong Hire", "Strong Hire"),
+        ("Hire", "Hire"),
+        ("Hold", "Hold"),
+        ("Reject", "Reject"),
+        ("Pending", "Pending"),
     ]
 
     interview_id   = models.CharField(max_length=30, unique=True)
@@ -41,18 +47,19 @@ class Interview(models.Model):
     )
     candidate_name = models.CharField(max_length=200)
     role           = models.CharField(max_length=200)
-    date           = models.DateField()
-    time           = models.TimeField()
+    date           = models.DateField(null=True, blank=True)
+    time           = models.TimeField(null=True, blank=True)
     panel          = models.ManyToManyField(Panelist, blank=True, related_name="interviews")
     score          = models.PositiveIntegerField(null=True, blank=True)
     recommendation = models.CharField(
         max_length=20, choices=RECOMMENDATION_CHOICES, blank=True
     )
     feedback       = models.TextField(blank=True)
-    status         = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Scheduled")
+    status         = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Pending")
     mode           = models.CharField(max_length=20, choices=MODE_CHOICES, default="Online")
     meeting_link   = models.URLField(blank=True)
     round          = models.PositiveIntegerField(default=1)
+    reminder_sent_at = models.DateTimeField(null=True, blank=True)
     created_at     = models.DateTimeField(auto_now_add=True)
     updated_at     = models.DateTimeField(auto_now=True)
 
@@ -62,6 +69,46 @@ class Interview(models.Model):
 
     def __str__(self):
         return f"{self.interview_id} — {self.candidate_name} (Round {self.round})"
+
+
+class InterviewEvaluation(models.Model):
+    interview = models.ForeignKey(
+        Interview,
+        on_delete=models.CASCADE,
+        related_name="evaluations",
+    )
+    panelist = models.ForeignKey(
+        Panelist,
+        on_delete=models.CASCADE,
+        related_name="evaluations",
+    )
+    criteria = models.JSONField(default=dict, blank=True)
+    custom_criteria = models.JSONField(default=dict, blank=True)
+    overall_score = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        editable=False,
+    )
+    recommendation = models.CharField(
+        max_length=20,
+        choices=Interview.RECOMMENDATION_CHOICES,
+        blank=True,
+    )
+    notes = models.TextField(blank=True)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "interview_evaluations"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["interview", "panelist"],
+                name="unique_interview_panelist_evaluation",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.interview.interview_id} — {self.panelist.name}"
 
 
 from django.db.models.signals import post_save
