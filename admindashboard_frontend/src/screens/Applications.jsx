@@ -3,6 +3,7 @@ import { T, statusVariant } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
 import { Card, SectionTitle, Table, Mono, Badge, Input, Btn, Modal, ModalHeader, Select, FormField } from "../components/ui";
 import { updateApplicationStatus, updateGeneralApplicationStatus } from "../api/applicationsApi";
+import { createInterview } from "../api/interviewsApi";
 
 const STATUS_OPTIONS = [
   { value: "Shortlisted", label: "Shortlisted" },
@@ -17,6 +18,8 @@ export default function Applications({
   setGeneralApplications,
   jobPostings = [],
   jobRequests = [],
+  interviews = [],
+  setInterviews,
   onNavigate,
 }) {
   const bp = useBreakpoint();
@@ -136,6 +139,27 @@ export default function Applications({
       setStatusModalApp(null);
       if (status === "Shortlisted") {
         setSelectedApp(null);
+
+        // Create the Round 1 interview record right away so the candidate shows up in
+        // Interview Panel as "Pending" immediately — the schedule step then just PATCHes it.
+        const role = isJob ? app.role : app.preferredRole;
+        const alreadyExists = interviews.some(
+          (i) => i.candidate === app.name && i.role === role && i.round === 1
+        );
+        if (!alreadyExists && setInterviews) {
+          try {
+            const created = await createInterview({
+              candidate: app.name,
+              role,
+              round: 1,
+              applicationId: isJob ? app.backendId : null,
+            });
+            setInterviews((prev) => [...prev, created]);
+          } catch (err) {
+            setStatusError(err.message || "Shortlisted, but failed to initialize the interview record.");
+          }
+        }
+
         if (onNavigate) {
           onNavigate("interview-panel");
         }
