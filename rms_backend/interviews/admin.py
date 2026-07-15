@@ -10,8 +10,8 @@ class PanelistAdmin(admin.ModelAdmin):
 
 @admin.register(Interview)
 class InterviewAdmin(admin.ModelAdmin):
-    list_display  = ["interview_id", "candidate_name", "role", "date", "time", "mode", "status", "score"]
-    list_filter   = ["status", "mode", "round"]
+    list_display  = ["interview_id", "candidate_name", "role", "date", "time", "mode", "status", "score", "candidate_present"]
+    list_filter   = ["status", "mode", "round", "candidate_present"]
     search_fields = ["interview_id", "candidate_name", "role"]
     filter_horizontal = ["panel"]
     ordering      = ["-date"]

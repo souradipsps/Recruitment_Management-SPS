@@ -80,9 +80,24 @@ class InterviewSerializer(serializers.ModelSerializer):
             "id", "interview_id", "application", "candidate_name", "role", "date", "time",
             "panel", "panel_details", "score", "recommendation", "feedback", "status",
             "mode", "meeting_link", "round", "reminder_sent_at", "created_at", "updated_at",
-            "evaluations", "panelist_evaluation", "evaluation_summary"
+            "evaluations", "panelist_evaluation", "evaluation_summary", "candidate_present"
         ]
         read_only_fields = ["interview_id", "created_at", "updated_at"]
+
+    def validate(self, attrs):
+        if self.instance:
+            final_present = attrs.get("candidate_present", self.instance.candidate_present)
+            final_status = attrs.get("status", self.instance.status)
+        else:
+            final_present = attrs.get("candidate_present", None)
+            final_status = attrs.get("status", "Pending")
+
+        if "panelist_evaluation" in attrs:
+            if final_present is False or (final_status == "Cancelled" and final_present is not True):
+                raise serializers.ValidationError({
+                    "panelist_evaluation": ["This interview was cancelled (candidate absent) and cannot be evaluated."]
+                })
+        return attrs
 
     def get_evaluation_summary(self, instance):
         evals = instance.evaluations.all()
@@ -112,6 +127,9 @@ class InterviewSerializer(serializers.ModelSerializer):
 
         interview = Interview.objects.create(**validated_data)
         interview.panel.set(panel_data)
+
+        # Update status based on candidate_present or evaluations count
+        interview.update_status()
 
         # Trigger email notification task ONLY if date and time are both set
         if interview.date and interview.time:
@@ -194,6 +212,14 @@ class InterviewSerializer(serializers.ModelSerializer):
                 },
             )
 
+        # Update status based on latest panel/evaluation/candidate_present updates
+        revert_on_incomplete = (
+            panel_data is not None or
+            evaluation_data is not None or
+            "candidate_present" in validated_data
+        )
+        instance.update_status(revert_on_incomplete=revert_on_incomplete)
+
         from django.db import transaction
 
         # Trigger emails ONLY if the interview actually has a date and time scheduled!
@@ -233,6 +259,7 @@ class InterviewScoreSerializer(serializers.ModelSerializer):
         old_score = instance.score
 
         instance = super().update(instance, validated_data)
+        instance.update_status()
 
         if instance.status == "Completed" and instance.score is not None:
             if not was_completed or instance.score != old_score:

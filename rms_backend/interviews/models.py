@@ -60,6 +60,7 @@ class Interview(models.Model):
     meeting_link   = models.URLField(blank=True)
     round          = models.PositiveIntegerField(default=1)
     reminder_sent_at = models.DateTimeField(null=True, blank=True)
+    candidate_present = models.BooleanField(null=True, blank=True)
     created_at     = models.DateTimeField(auto_now_add=True)
     updated_at     = models.DateTimeField(auto_now=True)
 
@@ -69,6 +70,28 @@ class Interview(models.Model):
 
     def __str__(self):
         return f"{self.interview_id} — {self.candidate_name} (Round {self.round})"
+
+    def update_status(self, revert_on_incomplete=False):
+        if hasattr(self, '_prefetched_objects_cache'):
+            self._prefetched_objects_cache = {}
+            
+        assigned_count = self.panel.count()
+        submitted_count = self.evaluations.filter(overall_score__isnull=False).count()
+        
+        old_status = self.status
+        
+        if self.candidate_present is False:
+            self.status = "Cancelled"
+        elif assigned_count == submitted_count and assigned_count > 0:
+            self.status = "Completed"
+        elif revert_on_incomplete and self.status in ["Completed", "Cancelled"]:
+            if self.date and self.time:
+                self.status = "Scheduled"
+            else:
+                self.status = "Pending"
+                
+        if self.status != old_status:
+            self.save(update_fields=["status"])
 
 
 class InterviewEvaluation(models.Model):
