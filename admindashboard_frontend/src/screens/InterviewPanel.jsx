@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { T, font } from "../theme";
 import { statusVariant } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
@@ -60,6 +60,17 @@ export default function InterviewPanel({
   const [selectedAppDetail, setSelectedAppDetail] = useState(null);
   const [showAddPanelistModal, setShowAddPanelistModal] = useState(false);
   const [reminderCandidate, setReminderCandidate] = useState(null);
+
+  const [tempPanelists, setTempPanelists] = useState([]);
+  const [isSavingPanelists, setIsSavingPanelists] = useState(false);
+
+  useEffect(() => {
+    if (assigningCandidate) {
+      setTempPanelists(assigningCandidate.interview?.panel || []);
+    } else {
+      setTempPanelists([]);
+    }
+  }, [assigningCandidate]);
 
   // Form validations for Add Panelist
   const [panelistErrors, setPanelistErrors] = useState({ name: "", email: "", phone: "" });
@@ -526,37 +537,60 @@ export default function InterviewPanel({
     }
   };
 
-  const handleTogglePanelistForCandidate = async (panelistName) => {
-    if (!assigningCandidate || !setInterviews) return;
+  const handleTogglePanelistTemp = (panelistName) => {
+    setTempPanelists((prev) =>
+      prev.includes(panelistName)
+        ? prev.filter((p) => p !== panelistName)
+        : [...prev, panelistName]
+    );
+  };
 
-    const current = assigningCandidate.interview?.panel || [];
-    const newPanel = current.includes(panelistName)
-      ? current.filter((p) => p !== panelistName)
-      : [...current, panelistName];
+  const handleSavePanelists = async () => {
+    if (!assigningCandidate || !setInterviews) return;
 
     const backendId = assigningCandidate.interview?.backendId;
     const payload = buildInterviewPayload(
       backendId != null
-        ? { panelIds: resolvePanelIds(newPanel) }
+        ? { panelIds: resolvePanelIds(tempPanelists) }
         : {
           candidate: assigningCandidate.name,
           role: assigningCandidate.role,
           round: assigningCandidate.activeRound,
           status: "Pending",
-          panelIds: resolvePanelIds(newPanel),
+          panelIds: resolvePanelIds(tempPanelists),
         }
     );
 
+    setIsSavingPanelists(true);
     try {
       const norm = backendId != null
         ? await updateInterview(backendId, payload)
         : await createInterview(payload);
       upsertInterview(norm);
-      setAssigningCandidate((prevCand) => ({ ...prevCand, interview: norm }));
+      setAssigningCandidate(null);
     } catch (err) {
-      console.error("Failed to update interview panel:", err);
-      alert("Could not update the panel assignment. Please try again.");
+      console.error("Failed to save interview panel:", err);
+      alert("Could not save the panel assignment. Please try again.");
+    } finally {
+      setIsSavingPanelists(false);
     }
+  };
+
+  const handleCloseAssignModal = async () => {
+    if (!assigningCandidate) return;
+    const current = assigningCandidate.interview?.panel || [];
+    const sortedCurrent = [...current].sort();
+    const sortedTemp = [...tempPanelists].sort();
+    const hasChanged = JSON.stringify(sortedCurrent) !== JSON.stringify(sortedTemp);
+
+    if (hasChanged) {
+      const shouldSave = window.confirm("You have unsaved changes. Do you want to save them?");
+      if (shouldSave) {
+        await handleSavePanelists();
+        return;
+      }
+    }
+    setAssigningCandidate(null);
   };
 
   // Shared save path for both the evaluation modal and the inline mobile-card
@@ -2142,8 +2176,8 @@ export default function InterviewPanel({
       </Modal>
 
       {/* Assign Panelist Modal */}
-      <Modal open={!!assigningCandidate} onClose={() => setAssigningCandidate(null)} maxWidth={440}>
-        <ModalHeader title="Assign Panelists" onClose={() => setAssigningCandidate(null)} />
+      <Modal open={!!assigningCandidate} onClose={handleCloseAssignModal} maxWidth={440}>
+        <ModalHeader title="Assign Panelists" onClose={handleCloseAssignModal} />
         {assigningCandidate && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ background: T.canvas, borderRadius: 10, padding: 12, border: `1px solid ${T.border}`, marginBottom: 4 }}>
@@ -2156,11 +2190,11 @@ export default function InterviewPanel({
             <FormField label="Available Panel Members">
               <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 240, overflowY: "auto", paddingRight: 4 }}>
                 {panelists.map((p) => {
-                  const isAssigned = (assigningCandidate.interview?.panel || []).includes(p.name);
+                  const isAssigned = tempPanelists.includes(p.name);
                   return (
                     <div
                       key={p.name}
-                      onClick={() => handleTogglePanelistForCandidate(p.name)}
+                      onClick={() => handleTogglePanelistTemp(p.name)}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -2200,8 +2234,9 @@ export default function InterviewPanel({
               </div>
             </FormField>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-              <Btn label="Save" onClick={() => setAssigningCandidate(null)} />
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
+              <Btn label="Cancel" variant="ghost" disabled={isSavingPanelists} onClick={handleCloseAssignModal} />
+              <Btn label={isSavingPanelists ? "Saving..." : "Save"} disabled={isSavingPanelists} onClick={handleSavePanelists} />
             </div>
           </div>
         )}
