@@ -538,7 +538,84 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [], i
             </div>
 
             <div style={{ display: "flex", gap: 10, justifyContent: isMobile ? "stretch" : "flex-end", borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
-              <Btn label="Download PDF" onClick={() => alert("PDF download would be implemented here.")} style={{ flex: isMobile ? 1 : undefined }} />
+              <Btn
+                label="Download PDF"
+                onClick={() => {
+                  const printWindow = window.open("", "_blank");
+                  printWindow.document.write(`
+                    <html>
+                      <head>
+                        <title>Offer Letter - ${viewOffer.candidate}</title>
+                        <style>
+                          body {
+                            font-family: 'Inter', sans-serif;
+                            padding: 40px;
+                            color: #333;
+                            line-height: 1.6;
+                          }
+                          .header {
+                            text-align: center;
+                            border-bottom: 2px solid #72102a;
+                            padding-bottom: 20px;
+                            margin-bottom: 30px;
+                          }
+                          .title {
+                            font-size: 24px;
+                            font-weight: 850;
+                            color: #72102a;
+                            margin: 0;
+                          }
+                          .subtitle {
+                            font-size: 12px;
+                            color: #666;
+                            text-transform: uppercase;
+                            letter-spacing: 0.05em;
+                            margin-top: 5px;
+                          }
+                          .content {
+                            font-size: 15px;
+                            margin-top: 30px;
+                          }
+                          .footer {
+                            border-top: 1px solid #eee;
+                            padding-top: 20px;
+                            margin-top: 40px;
+                          }
+                          @media print {
+                            body {
+                              padding: 0;
+                            }
+                          }
+                        </style>
+                      </head>
+                      <body>
+                        <div class="header">
+                          <h1 class="title">South Point School</h1>
+                          <div class="subtitle">Offer of Employment</div>
+                        </div>
+                        <div class="content">
+                          <p>Dear <strong>${viewOffer.candidate}</strong>,</p>
+                          <p>We are pleased to offer you the position of <strong>${viewOffer.role}</strong> at South Point School. The monthly compensation for this role is <strong>${viewOffer.ctc}</strong>.</p>
+                          <p>This offer is valid until <strong>${viewOffer.expiry}</strong>. Please confirm your acceptance by the deadline.</p>
+                        </div>
+                        <div class="footer">
+                          <p>Warm regards,<br/><strong>HR Department</strong><br/>South Point School</p>
+                        </div>
+                        <script>
+                          window.onload = function() {
+                            window.print();
+                            setTimeout(function() {
+                              window.close();
+                            }, 500);
+                          };
+                        </script>
+                      </body>
+                    </html>
+                  `);
+                  printWindow.document.close();
+                }}
+                style={{ flex: isMobile ? 1 : undefined }}
+              />
               <Btn label="Close" variant="ghost" onClick={() => setViewOffer(null)} style={{ flex: isMobile ? 1 : undefined }} />
             </div>
           </>

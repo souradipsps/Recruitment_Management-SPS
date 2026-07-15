@@ -146,8 +146,10 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
   const statusFilteredInterviews = statusFilter === "All"
     ? scheduledInterviews
     : statusFilter === "Pending"
-      ? scheduledInterviews.filter((i) => i.status !== "Completed")
-      : scheduledInterviews.filter((i) => i.status === "Completed");
+      ? scheduledInterviews.filter((i) => i.status !== "Completed" && i.status !== "Cancelled")
+      : statusFilter === "Completed"
+        ? scheduledInterviews.filter((i) => i.status === "Completed")
+        : scheduledInterviews.filter((i) => i.status === "Cancelled");
 
   const filteredInterviews = selectedRole
     ? statusFilteredInterviews.filter((i) => i.role === selectedRole)
@@ -505,7 +507,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: T.ink }}>
-          {statusFilter === "All" ? "All Interviews" : statusFilter === "Pending" ? "Pending Interviews" : "Completed Interviews"}
+          {statusFilter === "All" ? "All Interviews" : statusFilter === "Pending" ? "Pending Interviews" : statusFilter === "Completed" ? "Completed Interviews" : "Cancelled Interviews"}
           <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, marginLeft: 8 }}>({filteredInterviews.length})</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -528,6 +530,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
             <option value="All">All</option>
             <option value="Pending">Pending</option>
             <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
           </select>
         </div>
       </div>
