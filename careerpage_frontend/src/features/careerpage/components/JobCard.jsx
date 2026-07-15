@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { MapPin, IndianRupee, Briefcase } from "lucide-react";
+import { MapPin, IndianRupee, Briefcase, Share2, Check, ArrowRight } from "lucide-react";
+import { routes } from "../../../routes";
 import "./css/JobCard.css";
 
 // A single opportunity card. `showOverlay` renders the blurred "See More"
@@ -21,7 +22,7 @@ export function JobCard({ job, applied, onApply, showOverlay, onSeeMore }) {
       const fontSizeVal = parseFloat(computedStyle.fontSize);
       const lineHeight = isNaN(lineHeightVal) ? fontSizeVal * 1.65 : lineHeightVal;
       const isOver = element.scrollHeight > lineHeight * 2.2;
-      
+
       setIsOverflowing(isOver);
       if (isOver) {
         setHeights({
@@ -45,48 +46,87 @@ export function JobCard({ job, applied, onApply, showOverlay, onSeeMore }) {
 
   const handleShare = () => {
     const text = `${job.title} at South Point School, Guwahati — ${job.type} | ${job.department}`;
+    const url = `${window.location.origin}${routes.jobApply(job.id)}`;
     if (navigator.share) {
-      navigator.share({ title: job.title, text, url: window.location.href });
+      navigator.share({ title: job.title, text, url });
     } else {
-      navigator.clipboard.writeText(`${text}\n${window.location.href}`);
+      navigator.clipboard.writeText(`${text}\n${url}`);
       toast.success("Job details copied to clipboard!");
     }
+  };
+
+  const parseList = (arr) => {
+    if (!arr) return [];
+    return arr.flatMap((item) =>
+      typeof item === "string"
+        ? item.split(",").map((s) => s.trim()).filter(Boolean)
+        : item
+    );
+  };
+
+  const formatSalary = (salary) => {
+    if (!salary) return "30k\u201150k";
+    return salary
+      .toString()
+      .replace(/(\d+)000/g, "$1k")
+      .replace(/(\d+),000/g, "$1k")
+      .replace(/\s*-\s*/g, "\u2011")
+      .replace(/\s*–\s*/g, "\u2011")
+      .replace(/\s*—\s*/g, "\u2011")
+      .replace(/\s*to\s*/gi, "\u2011");
   };
 
   return (
     <div id={`job-card-${job.id}`} className="job-card flex flex-col h-full">
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="p-5 pb-3">
-        <div className="flex items-start justify-between gap-3 mb-1">
-          <h3 className="jc-title">{job.title}</h3>
-          <span className="jc-type-badge">{job.type}</span>
+      <div className="jc-header-container">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="jc-title">{job.title}</h3>
+            <div className="jc-department-label">{job.department}</div>
+          </div>
+          <span className={`jc-type-badge ${job.type.toLowerCase().includes("full") ? "full-time" : "part-time"}`}>
+            {job.type}
+          </span>
         </div>
-        <div className="jc-department">{job.department}</div>
+      </div>
+
+      {/* ── Meta Grid ───────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-2 px-6 pb-3">
+        <div className="jc-meta-card">
+          <span className="jc-meta-label">Location</span>
+          <span className="jc-meta-val">
+            <MapPin size={12} className="jc-meta-icon-mini" />
+            <span>{job.location}</span>
+          </span>
+        </div>
+        <div className="jc-meta-card">
+          <span className="jc-meta-label">Experience</span>
+          <span className="jc-meta-val">
+            <Briefcase size={12} className="jc-meta-icon-mini" />
+            <span>{job.experience ?? "2–5 yrs"}</span>
+          </span>
+        </div>
+        <div className="jc-meta-card">
+          <span className="jc-meta-label">Salary</span>
+          <span className="jc-meta-val">
+            <IndianRupee size={12} className="jc-meta-icon-mini" />
+            <span className="jc-salary-full">{job.salaryRange ?? "30k – 50k"}</span>
+            <span className="jc-salary-short">{formatSalary(job.salaryRange)}</span>
+          </span>
+        </div>
       </div>
 
       <div className="jc-divider" />
 
-      {/* ── Meta row ────────────────────────────────────────────────────── */}
-      <div className="px-5 pt-3 pb-3 flex flex-wrap gap-4">
-        <span className="jc-meta-item flex items-center gap-1">
-          <MapPin size={12} />{job.location}
-        </span>
-        <span className="jc-meta-item flex items-center gap-1">
-          <Briefcase size={12} />{job.experience ?? "2–5 yrs"}
-        </span>
-        <span className="jc-meta-item flex items-center gap-1">
-          <IndianRupee size={12} />{job.salaryRange ?? "30k – 50k"}
-        </span>
-      </div>
-
       {/* ── Description ─────────────────────────────────────────────────── */}
-      <div className="px-5 pb-3">
+      <div className="px-6 py-4">
         <div
           className={`jc-description-container ${isOverflowing ? "interactive" : ""} ${isExpanded ? "expanded" : "collapsed"}`}
           onClick={() => isOverflowing && setIsExpanded(!isExpanded)}
           style={{
-            height: isOverflowing 
+            height: isOverflowing
               ? (isExpanded ? heights.expandedHeight : heights.collapsedHeight)
               : "auto"
           }}
@@ -105,25 +145,31 @@ export function JobCard({ job, applied, onApply, showOverlay, onSeeMore }) {
       </div>
 
       {/* ── Qualifications & Skills ───────────────────────────────────────── */}
-      <div className="px-5 pb-4 flex flex-col md:flex-row gap-6">
+      <div className="px-6 pb-5 flex flex-col md:flex-row gap-6">
+        {/* Left Column: Education */}
         <div className="flex-1">
-          <div className="jc-qual-heading mb-2">Educational Qualifications:</div>
-          <ul className="flex flex-col gap-1">
-            {job.qualifications.map((q) => (
+          <div className="jc-section-label mb-3">Educational Qualifications</div>
+          <ul className="flex flex-col gap-2">
+            {parseList(job.qualifications).map((q) => (
               <li key={q} className="flex items-start gap-2">
-                <span className="jc-qual-bullet">•</span>
+                <span className="jc-bullet-wrapper">
+                  <Check size={12} className="jc-bullet-check" />
+                </span>
                 <span className="jc-qual-text">{q}</span>
               </li>
             ))}
           </ul>
         </div>
 
+        {/* Right Column: Skills Checklist */}
         <div className="flex-1">
-          <div className="jc-qual-heading mb-2">Required Skills & Strengths:</div>
-          <ul className="flex flex-col gap-1">
-            {(job.skills || ["Strong Communication", "Classroom Management", "Team Collaboration"]).map((s) => (
+          <div className="jc-section-label mb-3">Required Skills & Strengths</div>
+          <ul className="flex flex-col gap-2">
+            {parseList(job.skills || ["Strong Communication", "Classroom Management", "Team Collaboration"]).map((s) => (
               <li key={s} className="flex items-start gap-2">
-                <span className="jc-qual-bullet">•</span>
+                <span className="jc-bullet-wrapper">
+                  <Check size={12} className="jc-bullet-check" />
+                </span>
                 <span className="jc-qual-text">{s}</span>
               </li>
             ))}
@@ -132,16 +178,20 @@ export function JobCard({ job, applied, onApply, showOverlay, onSeeMore }) {
       </div>
 
       {/* ── Actions ─────────────────────────────────────────────────────── */}
-      <div className="mt-auto px-5 pb-5 flex gap-2">
+      <div className="mt-auto px-6 pb-6 pt-2 flex gap-3 items-center">
         {applied ? (
-          <div className="jc-applied-badge">✓ Applied</div>
+          <div className="jc-applied-badge">
+            <Check size={16} />
+            <span>Applied</span>
+          </div>
         ) : (
-          <button onClick={() => onApply(job)} className="jc-apply-btn">
-            Apply Now
+          <button onClick={() => onApply(job)} className="jc-apply-btn flex items-center justify-center gap-2">
+            <span>Apply Now</span>
+            <ArrowRight size={15} className="jc-apply-arrow" />
           </button>
         )}
-        <button onClick={handleShare} className="jc-share-btn">
-          Share
+        <button onClick={handleShare} className="jc-share-btn" title="Share Job">
+          <Share2 size={16} />
         </button>
       </div>
 

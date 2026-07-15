@@ -3,10 +3,9 @@ import { Lock, User } from "lucide-react";
 import { MAROON } from "../../../../lib/constants";
 import { PasswordInput } from "./PasswordInput";
 import { loginUser } from "../../services/authService";
-import { fetchUserProfile } from "../../services/applicationsService";
 
 // Login tab: identifier (email or 10-digit phone) + password.
-export function LoginForm({ onLoginSuccess, onClose, onSwitchTab, onForgotPassword }) {
+export function LoginForm({ onLoginSuccess, onClose, onSwitchTab, onForgotPassword, onFormSubmit, onFormError }) {
   const [login, setLogin] = useState({ identifier: "", password: "" });
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
@@ -26,24 +25,14 @@ export function LoginForm({ onLoginSuccess, onClose, onSwitchTab, onForgotPasswo
 
     setError("");
     setSubmitting(true);
+    onFormSubmit?.(); // Show branded loader when form is submitted
     try {
       const { name } = await loginUser({ identifier: login.identifier, password: login.password });
-
-      // Pull the candidate's saved profile so the dashboard/apply forms are
-      // prefilled without asking them to re-enter details already on file.
-      // Non-fatal: login has already succeeded even if this fetch fails.
-      let userData = null;
-      try {
-        userData = await fetchUserProfile();
-      } catch {
-        // ignore — fall back to the crude identifier-derived name below
-      }
-
-      const displayName = userData?.full_name || name;
-      onLoginSuccess?.(displayName, userData);
+      onLoginSuccess?.(name, null);
       onClose();
     } catch (err) {
       setError(err.message || "Login failed. Please try again.");
+      onFormError?.();
     } finally {
       setSubmitting(false);
     }

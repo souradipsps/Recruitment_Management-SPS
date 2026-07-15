@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from "react";
 import { CREAM } from "../../lib/constants";
 import { Navbar } from "./components/Navbar";
 import { HeroSection } from "./components/HeroSection";
@@ -18,6 +19,23 @@ export function CareerPage({
   onApplyJob,
   appliedJobIds,
 }) {
+  const [scrollDirection, setScrollDirection] = useState("down");
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > lastScrollY.current) {
+        setScrollDirection("down");
+      } else if (currentScrollY < lastScrollY.current) {
+        setScrollDirection("up");
+      }
+      lastScrollY.current = currentScrollY;
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
     <div
       style={{
@@ -35,10 +53,10 @@ export function CareerPage({
         onLogout={onLogout}
       />
       <HeroSection loggedInUser={loggedInUser} />
-      <OpportunitiesSection onApplyJob={onApplyJob} appliedJobIds={appliedJobIds} />
-      {!loggedInUser && <TalentPoolSection onSubmitProfile={onSignup} />}
-      <BenefitsSection />
-      <FeedbackForm />
+      <OpportunitiesSection onApplyJob={onApplyJob} appliedJobIds={appliedJobIds} scrollDirection={scrollDirection} />
+      {!loggedInUser && <TalentPoolSection onSubmitProfile={onSignup} scrollDirection={scrollDirection} />}
+      <BenefitsSection scrollDirection={scrollDirection} />
+      <FeedbackForm scrollDirection={scrollDirection} />
       <Footer />
     </div>
   );

@@ -11,7 +11,7 @@ import { ForgotPasswordForm } from "./login/ForgotPasswordForm";
 // Modal shell: renders the backdrop, header, tab bar and footer, and swaps
 // between the login / signup / forgot-password forms. Each form owns its own
 // state and talks to the backend through ../services/authService.
-export function LoginModal({ onClose, initialTab = "login", onLoginSuccess, onSignupSuccess }) {
+export function LoginModal({ onClose, initialTab = "login", onLoginSuccess, onSignupSuccess, onFormSubmit, onFormError }) {
   const [tab, setTab] = useState(initialTab);
 
   return (
@@ -38,7 +38,7 @@ export function LoginModal({ onClose, initialTab = "login", onLoginSuccess, onSi
 
           {/* Header */}
           <div className="lm-header">
-            <img src={logoImg} alt="South Point School" className="lm-header-logo" />
+            <img src={logoImg} alt="South Point School Crest" className="lm-header-logo" />
             <div className="lm-header-school">SOUTH POINT SCHOOL</div>
             <div className="lm-header-city">GUWAHATI</div>
             <div className="lm-header-motto">PURSUIT OF EXCELLENCE</div>
@@ -66,6 +66,8 @@ export function LoginModal({ onClose, initialTab = "login", onLoginSuccess, onSi
                 onClose={onClose}
                 onSwitchTab={setTab}
                 onForgotPassword={() => setTab("forgot")}
+                onFormSubmit={onFormSubmit}
+                onFormError={onFormError}
               />
             )}
 
@@ -74,19 +76,14 @@ export function LoginModal({ onClose, initialTab = "login", onLoginSuccess, onSi
                 onSignupSuccess={onSignupSuccess}
                 onClose={onClose}
                 onSwitchTab={setTab}
+                onFormSubmit={onFormSubmit}
+                onFormError={onFormError}
               />
             )}
 
             {tab === "forgot" && (
               <ForgotPasswordForm onBackToLogin={() => setTab("login")} />
             )}
-          </div>
-
-          {/* Footer info strip */}
-          <div className="lm-footer-strip">
-            {["Rukmini Gaon, Guwahati", "0381-2345678", "info@southpointguwahati.in"].map((item) => (
-              <span key={item} className="lm-footer-item">{item}</span>
-            ))}
           </div>
         </motion.div>
       </motion.div>

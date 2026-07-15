@@ -5,7 +5,8 @@ import { GOLD } from "../../../lib/constants";
 import "./css/FeedbackForm.css";
 
 // Self-contained feedback form with star rating. Owns its own form state.
-export function FeedbackForm() {
+export function FeedbackForm({ scrollDirection }) {
+  const isDown = scrollDirection === "down";
   const [feedback, setFeedback] = useState({
     name: "",
     email: "",
@@ -29,10 +30,10 @@ export function FeedbackForm() {
 
         {/* ── Section header ─────────────────────────────────────────────── */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 25 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          viewport={{ once: false, amount: 0.2 }}
+          transition={isDown ? { duration: 0.6 } : { duration: 0 }}
           className="text-center mb-10"
         >
           <div className="flex items-center justify-center gap-2 mb-3">
@@ -67,10 +68,10 @@ export function FeedbackForm() {
 
           /* ── Form card ───────────────────────────────────────────────── */
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 35 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
+            viewport={{ once: false, amount: 0.15 }}
+            transition={isDown ? { type: "spring", stiffness: 75, damping: 15 } : { duration: 0 }}
             className="ff-form-card"
           >
             {/* Name + Email row */}

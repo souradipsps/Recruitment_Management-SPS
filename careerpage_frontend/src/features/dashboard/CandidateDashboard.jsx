@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { useNavigate, useMatch } from "react-router-dom";
 import { Menu, Bell, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import logoImg from "../../assets/logo.png";
 
 import { MAROON, GOLD } from "../../lib/constants";
+import { routes } from "../../routes";
 import { updateUserProfile, fetchMyJobApplications } from "../careerpage/services/applicationsService";
 import { fetchPublicJobs } from "../careerpage/services/jobsService";
 
@@ -28,10 +30,6 @@ import { ProfilePicturePopup } from "./components/popup/ProfilePicturePopup";
 import { JobDescriptionDrawer } from "./components/popup/JobDescriptionDrawer";
 import { UnsavedChangesModal } from "./components/popup/UnsavedChangesModal";
 
-// Tracks whether the dashboard has been loaded at least once since the last
-// page load / browser refresh. Module-level so it survives component re-mounts
-// (navigating away and back) but resets when the JS bundle is re-evaluated.
-let dashboardLoadedOnce = false;
 
 // `profile.experience` holds the backend's raw choice code (e.g. "3-5") since
 // that's what the select's `value` now is — this maps it back to a friendly
@@ -51,27 +49,44 @@ export function CandidateDashboard({
   signupData,
   onLogout,
   initialProfileData,
-  initialTab = "dashboard",
   initialSection,
   onProfileUpdate,
   cameFromApply = false,
+  initialLoading = false,
+  dashboardLoadedOnce = false,
+  setDashboardLoadedOnce = () => { },
 }) {
-  // Navigation & UI state
-  const [activeTab, setActiveTab] = useState(initialTab);
+  // Navigation & UI state — the active tab is the URL (/dashboard/:tab), so
+  // switching tabs is a real navigation: deep-linkable, refresh-safe, and the
+  // browser back button steps through tab history for free.
+  const navigate = useNavigate();
+  // No <Routes>/<Route> tree exists in this app (see routes.js) — useParams()
+  // only reads from a matched Route's context, so it'd always be empty here.
+  // useMatch() matches the current URL against an arbitrary pattern instead.
+  const dashboardTabMatch = useMatch(routes.dashboardTabPattern);
+  const activeTab = dashboardTabMatch?.params.tab || "dashboard";
+  const setActiveTab = (tab) => navigate(routes.dashboardTab(tab));
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedJobDesc, setSelectedJobDesc] = useState(null);
   const [pendingNavigation, setPendingNavigation] = useState(null);
-  const [loading, setLoading] = useState(!dashboardLoadedOnce);
+
+  // If the dashboard hasn't loaded once, or if the main Lottie loader is still active, show skeleton loading
+  const [loading, setLoading] = useState(() => !dashboardLoadedOnce || initialLoading);
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   useEffect(() => {
     if (dashboardLoadedOnce) return;
+    if (initialLoading) {
+      setLoading(true);
+      return;
+    }
+    // Once initial page Lottie loader finishes, trigger the 800ms dashboard skeleton loading
     const timer = setTimeout(() => {
       setLoading(false);
-      dashboardLoadedOnce = true;
+      setDashboardLoadedOnce(true);
     }, 800);
     return () => clearTimeout(timer);
-  }, []);
+  }, [initialLoading, dashboardLoadedOnce]);
 
   // Profile data states
   const [profile, setProfile] = useState({
@@ -290,12 +305,6 @@ export function CandidateDashboard({
   const swipeTouchStartX = useRef(null);
   const swipeTouchStartY = useRef(null);
   const swipeTouchStartTime = useRef(null);
-  // Guards against the browser firing popstate for the same edge-swipe that
-  // already triggered handleSwipeTouchEnd (double-back race condition).
-  // NOT cleared on touchstart — iOS fires extra touchstart events during its own
-  // back animation which would prematurely clear the flag.
-  const swipeJustHandledRef = useRef(false);
-  const swipeFlagTimerRef = useRef(null);
 
   const handleSwipeTouchStart = (e) => {
     swipeTouchStartX.current = e.touches[0].clientX;
@@ -369,14 +378,6 @@ export function CandidateDashboard({
         }
       }
     }
-
-    // Suppress the popstate that some browsers fire for the same edge-swipe.
-    // Cleared immediately by handlePopState, or by backup timer if popstate never fires.
-    swipeJustHandledRef.current = true;
-    clearTimeout(swipeFlagTimerRef.current);
-    swipeFlagTimerRef.current = setTimeout(() => {
-      swipeJustHandledRef.current = false;
-    }, 200);
   };
 
   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
@@ -390,69 +391,45 @@ export function CandidateDashboard({
     unsavedChangesRef.current = unsaved;
   }, [unsaved]);
 
-  // Handle browser back button navigation interception
+  // Physical back button / Android back: tab switches are now real routes, so
+  // the browser already steps back through tab history on its own. The only
+  // thing left to intercept here is UI that never gets its own URL — the job
+  // description drawer and the mobile sidebar. Push a throwaway history entry
+  // while either is open so back closes it instead of leaving the dashboard;
+  // pop it again once both are closed (however they closed).
   useEffect(() => {
-    window.history.pushState({ portal: "candidate-dashboard" }, "");
+    if (!selectedJobDesc && !sidebarOpen) return;
 
+    window.history.pushState({ portal: "candidate-dashboard-overlay" }, "");
     const handlePopState = () => {
-      // Swipe gesture already handled this navigation — re-add state and bail
-      if (swipeJustHandledRef.current) {
-        swipeJustHandledRef.current = false;
-        clearTimeout(swipeFlagTimerRef.current);
-        window.history.pushState({ portal: "candidate-dashboard" }, "");
-        return;
-      }
-
-      const currentTab = activeTabRef.current;
-      const currentJobDesc = selectedJobDescRef.current;
-      const currentSidebarOpen = sidebarOpenRef.current;
-
-      if (currentJobDesc) {
-        window.history.pushState({ portal: "candidate-dashboard" }, "");
-        setSelectedJobDesc(null);
-        return;
-      }
-
-      if (currentSidebarOpen) {
-        window.history.pushState({ portal: "candidate-dashboard" }, "");
-        setSidebarOpen(false);
-        return;
-      }
-
-      if (cameFromApplyRef.current) {
-        if (currentTab !== "resume") {
-          window.history.pushState({ portal: "candidate-dashboard" }, "");
-          setActiveTab("resume");
-        } else {
-          if (unsavedChangesRef.current) {
-            window.history.pushState({ portal: "candidate-dashboard" }, "");
-            setPendingNavigation({ type: "close", bypassApplyModal: false });
-          } else {
-            onCloseRef.current(false);
-          }
-        }
-      } else {
-        if (currentTab !== "dashboard") {
-          window.history.pushState({ portal: "candidate-dashboard" }, "");
-          if (currentTab === "resume" && unsavedChangesRef.current) {
-            setPendingNavigation({ type: "tab", targetId: "dashboard" });
-          } else {
-            setActiveTab("dashboard");
-          }
-        } else {
-          onCloseRef.current(true);
-        }
-      }
+      if (selectedJobDescRef.current) setSelectedJobDesc(null);
+      else if (sidebarOpenRef.current) setSidebarOpen(false);
     };
 
     window.addEventListener("popstate", handlePopState);
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      if (window.history.state?.portal === "candidate-dashboard") {
+      if (window.history.state?.portal === "candidate-dashboard-overlay") {
         window.history.back();
       }
     };
-  }, []);
+  }, [selectedJobDesc, sidebarOpen]);
+
+  // In-app tab switches (sidebar clicks, the top-bar Back button, swipe
+  // gestures) already check hasUnsavedChanges() before calling setActiveTab,
+  // so they never land here. The only way to leave "resume" with unsaved
+  // changes while this effect sees it is the physical back/forward button —
+  // by the time popstate fires the URL (and activeTab) has already changed,
+  // so instead of blocking the navigation we react to it: send the user back
+  // to resume and ask what to do, the same prompt every other exit uses.
+  const prevTabForBackGuardRef = useRef(activeTab);
+  useEffect(() => {
+    const cameFrom = prevTabForBackGuardRef.current;
+    prevTabForBackGuardRef.current = activeTab;
+    if (cameFrom === "resume" && activeTab !== "resume" && unsavedChangesRef.current) {
+      setPendingNavigation({ type: "restoreResumeTab" });
+    }
+  }, [activeTab]);
 
   // Reset profile and resume state changes on cancellation
   const revertUnsavedChanges = () => {
@@ -1116,26 +1093,117 @@ export function CandidateDashboard({
                 </div>
               </div>
             ) : activeTab === "resume" ? (
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "280px 1fr", gap: 24 }}>
-                {/* Left card */}
-                <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #e5e7eb", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                  <div className="skeleton animate-pulse" style={{ width: 96, height: 96, borderRadius: "50%", marginBottom: 16 }} />
-                  <div className="skeleton animate-pulse" style={{ width: 140, height: 20, marginBottom: 8 }} />
-                  <div className="skeleton animate-pulse" style={{ width: 100, height: 14, marginBottom: 20 }} />
-                  <div className="skeleton animate-pulse" style={{ width: "100%", height: 36, borderRadius: 6 }} />
-                </div>
-                {/* Right details */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-                  <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #e5e7eb" }}>
-                    <div className="skeleton animate-pulse" style={{ width: 150, height: 22, marginBottom: 20 }} />
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                      {Array.from({ length: 4 }).map((_, idx) => (
-                        <div key={idx}>
-                          <div className="skeleton animate-pulse" style={{ width: 80, height: 12, marginBottom: 8 }} />
-                          <div className="skeleton animate-pulse" style={{ width: "100%", height: 38, borderRadius: 6 }} />
-                        </div>
-                      ))}
+              <div>
+                <div className="skeleton animate-pulse" style={{ width: 220, height: 28, marginBottom: 8 }} />
+                <div className="skeleton animate-pulse" style={{ width: 340, height: 16, marginBottom: 24 }} />
+
+                {/* Personal Information Card Skeleton */}
+                <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #e5e7eb", marginBottom: 20 }}>
+                  <div className="skeleton animate-pulse" style={{ width: 180, height: 22, marginBottom: 20 }} />
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
+                    <div>
+                      <div className="skeleton animate-pulse" style={{ width: 80, height: 12, marginBottom: 8 }} />
+                      <div className="skeleton animate-pulse" style={{ width: "100%", height: 38, borderRadius: 6 }} />
                     </div>
+                    <div>
+                      <div className="skeleton animate-pulse" style={{ width: 80, height: 12, marginBottom: 8 }} />
+                      <div className="skeleton animate-pulse" style={{ width: "100%", height: 38, borderRadius: 6 }} />
+                    </div>
+                    <div style={{ gridColumn: isMobile ? "span 1" : "span 2" }}>
+                      <div className="skeleton animate-pulse" style={{ width: 100, height: 12, marginBottom: 8 }} />
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <div className="skeleton animate-pulse" style={{ flex: 1, height: 38, borderRadius: 6 }} />
+                        <div className="skeleton animate-pulse" style={{ width: 120, height: 38, borderRadius: 6 }} />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="skeleton animate-pulse" style={{ width: 100, height: 12, marginBottom: 8 }} />
+                      <div className="skeleton animate-pulse" style={{ width: "100%", height: 38, borderRadius: 6 }} />
+                    </div>
+                    <div>
+                      <div className="skeleton animate-pulse" style={{ width: 110, height: 12, marginBottom: 8 }} />
+                      <div className="skeleton animate-pulse" style={{ width: "100%", height: 38, borderRadius: 6 }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Professional Information Card Skeleton */}
+                <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #e5e7eb", marginBottom: 20 }}>
+                  <div className="skeleton animate-pulse" style={{ width: 200, height: 22, marginBottom: 20 }} />
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
+                    {Array.from({ length: 6 }).map((_, idx) => (
+                      <div key={idx}>
+                        <div className="skeleton animate-pulse" style={{ width: idx % 2 === 0 ? 150 : 90, height: 12, marginBottom: 8 }} />
+                        <div className="skeleton animate-pulse" style={{ width: "100%", height: 38, borderRadius: 6 }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* CV / Resume Card Skeleton */}
+                <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #e5e7eb", marginBottom: 20 }}>
+                  <div className="skeleton animate-pulse" style={{ width: 120, height: 22, marginBottom: 20 }} />
+                  {/* Current resume box */}
+                  <div style={{ border: "1px solid #e5e7eb", padding: 16, borderRadius: 8, marginBottom: 16 }}>
+                    <div className="skeleton animate-pulse" style={{ width: 110, height: 14, marginBottom: 12 }} />
+                    <div className="skeleton animate-pulse" style={{ width: 180, height: 16, marginBottom: 12 }} />
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <div className="skeleton animate-pulse" style={{ width: 110, height: 28, borderRadius: 6 }} />
+                      <div className="skeleton animate-pulse" style={{ width: 90, height: 28, borderRadius: 6 }} />
+                    </div>
+                  </div>
+                  {/* Upload zone */}
+                  <div style={{ border: "2px dashed #e5e7eb", padding: 24, borderRadius: 8, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                    <div className="skeleton animate-pulse" style={{ width: 28, height: 28, borderRadius: "50%", marginBottom: 12 }} />
+                    <div className="skeleton animate-pulse" style={{ width: 120, height: 16, marginBottom: 6 }} />
+                    <div className="skeleton animate-pulse" style={{ width: 180, height: 12 }} />
+                  </div>
+                </div>
+
+                {/* Save Button Skeleton */}
+                <div className="skeleton animate-pulse" style={{ width: 140, height: 42, borderRadius: 6 }} />
+              </div>
+            ) : activeTab === "notifications" ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div className="skeleton animate-pulse" style={{ width: 180, height: 26, marginBottom: 8 }} />
+                {Array.from({ length: 4 }).map((_, idx) => (
+                  <div key={idx} style={{ background: "#fff", padding: "16px 20px", borderRadius: 10, border: "1px solid #e5e7eb", display: "flex", alignItems: "flex-start", gap: 14 }}>
+                    <div className="skeleton animate-pulse" style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div className="skeleton animate-pulse" style={{ width: "70%", height: 14, marginBottom: 8 }} />
+                      <div className="skeleton animate-pulse" style={{ width: "45%", height: 12 }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : activeTab === "interviews" ? (
+              <div>
+                <div className="skeleton animate-pulse" style={{ width: 200, height: 26, marginBottom: 8 }} />
+                <div className="skeleton animate-pulse" style={{ width: 260, height: 14, marginBottom: 24 }} />
+                {Array.from({ length: 2 }).map((_, idx) => (
+                  <div key={idx} style={{ background: "#fff", padding: 20, borderRadius: 12, border: "1px solid #e5e7eb", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div className="skeleton animate-pulse" style={{ width: 160, height: 16, marginBottom: 8 }} />
+                      <div className="skeleton animate-pulse" style={{ width: 120, height: 13, marginBottom: 6 }} />
+                      <div className="skeleton animate-pulse" style={{ width: 100, height: 13 }} />
+                    </div>
+                    <div className="skeleton animate-pulse" style={{ width: 80, height: 28, borderRadius: 8 }} />
+                  </div>
+                ))}
+              </div>
+            ) : activeTab === "onboarding" ? (
+              <div>
+                <div className="skeleton animate-pulse" style={{ width: 170, height: 26, marginBottom: 8 }} />
+                <div className="skeleton animate-pulse" style={{ width: 300, height: 14, marginBottom: 24 }} />
+                <div style={{ background: "#fff", padding: 24, borderRadius: 12, border: "1px solid #e5e7eb", marginBottom: 16 }}>
+                  <div className="skeleton animate-pulse" style={{ width: 130, height: 18, marginBottom: 16 }} />
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    {Array.from({ length: 4 }).map((_, idx) => (
+                      <div key={idx} style={{ background: "#f9fafb", padding: 16, borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                        <div className="skeleton animate-pulse" style={{ width: "80%", height: 13, marginBottom: 8 }} />
+                        <div className="skeleton animate-pulse" style={{ width: "100%", height: 36, borderRadius: 6 }} />
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1256,7 +1324,14 @@ export function CandidateDashboard({
       {/* Unsaved Changes Tab Navigation Confirm Overlay */}
       <UnsavedChangesModal
         open={!!pendingNavigation}
-        onDismiss={() => setPendingNavigation(null)}
+        onDismiss={() => {
+          // The physical back button already left "resume" by the time we
+          // could ask — staying means sending the URL back there ourselves.
+          if (pendingNavigation?.type === "restoreResumeTab") {
+            navigate(routes.dashboardTab("resume"));
+          }
+          setPendingNavigation(null);
+        }}
         onDiscard={() => {
           const action = pendingNavigation;
           setPendingNavigation(null);

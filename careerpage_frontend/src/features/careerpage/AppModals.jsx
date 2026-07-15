@@ -1,4 +1,5 @@
 import { AnimatePresence } from "motion/react";
+import { useNavigate } from "react-router-dom";
 import { LoginModal } from "./modals/LoginModal";
 import { ApplyModal } from "./modals/ApplyModal";
 import JobApplicationModal from "./modals/JobApplicationModal";
@@ -7,19 +8,22 @@ import {
   buildApplicationFormProfile,
   applyProfessionalData,
 } from "../../lib/profileData";
-import { mapUserResponseToSavedProfile } from "./services/applicationsService";
+import { fetchUserProfile, mapUserResponseToSavedProfile } from "./services/applicationsService";
+import { routes } from "../../routes";
 
 // Renders the four overlay views (login, dashboard, job application, apply)
 // driven by `deferredView`. All shell state and setters arrive via the `app`
-// bag so App itself stays a thin composition layer.
+// bag so App itself stays a thin composition layer. Which URL each overlay
+// closes back to is decided here via `navigate()`.
 export default function AppModals({ app }) {
+  const navigate = useNavigate();
+
   const {
     deferredView,
     loginTab,
     applyAfterSignup,
     cameFromApply,
     cameFromSection,
-    dashboardInitialTab,
     loggedInUser,
     signupData,
     selectedJob,
@@ -28,19 +32,18 @@ export default function AppModals({ app }) {
     mergedProfileData,
     reloadWithLoader,
     handleLogout,
-    setShowLogin,
     setApplyAfterSignup,
     setLoggedInUser,
-    setShowDashboard,
     setSignupData,
-    setShowApply,
-    setShowJobApplicationModal,
     setCameFromApply,
     setCameFromSection,
     setAppliedJobIds,
     setApplicationDraft,
     setSavedProfileData,
-    setDashboardInitialTab,
+    setShowLoader,
+    initialLoading,
+    dashboardLoadedOnce,
+    setDashboardLoadedOnce,
   } = app;
 
   return (
@@ -49,32 +52,48 @@ export default function AppModals({ app }) {
         {deferredView === "login" && (
           <LoginModal
             onClose={() => {
-              setShowLogin(false);
+              // SignupForm calls onSignupSuccess then this onClose in the same
+              // synchronous handler — reading applyAfterSignup here (captured
+              // in this render, before the setState below commits) keeps both
+              // calls agreeing on the same destination.
+              navigate(applyAfterSignup ? routes.apply : routes.home);
               setApplyAfterSignup(false);
             }}
             initialTab={loginTab}
+            onFormSubmit={() => setShowLoader(true)}
+            onFormError={() => setShowLoader(false)}
             onLoginSuccess={(name, userData) => {
               setLoggedInUser(name);
-              if (userData) {
-                setSignupData({
-                  name: userData.first_name,
-                  lastName: userData.last_name,
-                  email: userData.email,
-                  phone: userData.phone,
-                });
-                const saved = mapUserResponseToSavedProfile(userData);
-                if (saved) setSavedProfileData(saved);
-              }
-              setShowLogin(false);
-              setShowDashboard(false);
-              reloadWithLoader();
+
+              // Delay turning off loader to prevent login modal flicker during transition
+              setTimeout(() => {
+                setShowLoader(false);
+              }, 300);
+
+              // Background fetch of profile details so user isn't waiting on it to log in
+              fetchUserProfile()
+                .then((fetchedData) => {
+                  if (fetchedData) {
+                    setSignupData({
+                      name: fetchedData.first_name,
+                      lastName: fetchedData.last_name,
+                      email: fetchedData.email,
+                      phone: fetchedData.phone,
+                    });
+                    const saved = mapUserResponseToSavedProfile(fetchedData);
+                    if (saved) setSavedProfileData(saved);
+                  }
+                })
+                .catch(() => {});
             }}
             onSignupSuccess={(data) => {
               setLoggedInUser(data.name);
               setSignupData(data);
-              setApplyAfterSignup(false);
-              if (applyAfterSignup) setShowApply(true);
-              reloadWithLoader();
+
+              // Delay turning off loader to prevent signup modal flicker during transition
+              setTimeout(() => {
+                setShowLoader(false);
+              }, 300);
             }}
           />
         )}
@@ -84,27 +103,28 @@ export default function AppModals({ app }) {
         {deferredView === "dashboard" && (
           <CandidateDashboard
             onClose={(bypassApplyModal) => {
-              setShowDashboard(false);
-              if (cameFromApply && !bypassApplyModal) {
-                setShowJobApplicationModal(true);
+              if (cameFromApply && !bypassApplyModal && selectedJob) {
+                navigate(routes.jobApply(selectedJob.id));
                 setCameFromApply(false);
               } else {
-                setShowJobApplicationModal(false);
                 setCameFromApply(false);
                 setCameFromSection(undefined);
+                navigate(routes.home);
               }
             }}
             onLogout={handleLogout}
             userName={loggedInUser}
             signupData={signupData}
             initialProfileData={mergedProfileData}
-            initialTab={dashboardInitialTab}
             initialSection={cameFromSection}
             onProfileUpdate={(updatedData) => {
               setSavedProfileData(updatedData);
               setApplicationDraft(null);
             }}
             cameFromApply={cameFromApply}
+            initialLoading={initialLoading}
+            dashboardLoadedOnce={dashboardLoadedOnce}
+            setDashboardLoadedOnce={setDashboardLoadedOnce}
           />
         )}
       </AnimatePresence>
@@ -124,10 +144,12 @@ export default function AppModals({ app }) {
                 : null
             }
             onClose={() => {
-              setShowJobApplicationModal(false);
+              navigate(routes.home);
               setApplicationDraft(null);
               setCameFromSection(undefined);
             }}
+            onFormSubmit={() => setShowLoader(true)}
+            onFormError={() => setShowLoader(false)}
             onSubmit={(jobId, _formData, professionalData) => {
               setAppliedJobIds((prev) => [...prev, jobId]);
               setApplicationDraft(null);
@@ -142,9 +164,7 @@ export default function AppModals({ app }) {
               setApplicationDraft(draftData);
               setCameFromApply(true);
               setCameFromSection(section);
-              setShowJobApplicationModal(false);
-              setDashboardInitialTab("resume");
-              setShowDashboard(true);
+              navigate(routes.dashboardTab("resume"));
             }}
             profileData={buildApplicationFormProfile({ savedProfileData, signupData, loggedInUser })}
             resumeFile={savedProfileData?.resumeFile || null}
@@ -159,11 +179,12 @@ export default function AppModals({ app }) {
       <AnimatePresence>
         {deferredView === "apply" && (
           <ApplyModal
-            onClose={() => setShowApply(false)}
+            onClose={() => navigate(routes.home)}
             signupData={signupData}
+            onFormSubmit={() => setShowLoader(true)}
+            onFormError={() => setShowLoader(false)}
             onSubmitData={(data) => {
               setSavedProfileData(data);
-              setShowApply(false);
             }}
           />
         )}

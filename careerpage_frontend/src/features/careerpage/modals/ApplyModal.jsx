@@ -92,7 +92,7 @@ function SkillsMultiSelect({ options, selected, onChange, placeholder }) {
   );
 }
 
-export function ApplyModal({ onClose, signupData, onSubmitData }) {
+export function ApplyModal({ onClose, signupData, onSubmitData, onFormSubmit, onFormError }) {
   const fileRef = useRef(null);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -135,6 +135,7 @@ export function ApplyModal({ onClose, signupData, onSubmitData }) {
     if (selectedSkills.length === 0) { toast.error("Please select at least one Skill / Strength"); return; }
     if (!fileName) { toast.error("Please upload your CV / Resume"); return; }
 
+    onFormSubmit?.();
     setSubmitting(true);
     try {
       await updateUserProfile(
@@ -153,6 +154,7 @@ export function ApplyModal({ onClose, signupData, onSubmitData }) {
         selectedRoles, experience: form.experience, education: form.education, degreeName: form.degreeName,
       });
 
+      onFormError?.();
       const fullName = [firstName, lastName].filter(Boolean).join(" ");
       const data = {
         fullName, email: form.email, phone: form.phone, location: form.location,
@@ -167,6 +169,7 @@ export function ApplyModal({ onClose, signupData, onSubmitData }) {
       setSubmitted(true);
     } catch (err) {
       toast.error(err.message || "Could not submit your application. Please try again.");
+      onFormError?.();
     } finally {
       setSubmitting(false);
     }

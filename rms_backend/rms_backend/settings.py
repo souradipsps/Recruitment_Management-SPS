@@ -104,7 +104,7 @@ else:
                 "PASSWORD": url.password,
                 "HOST": url.hostname,
                 "PORT": url.port or 5432,
-                "CONN_MAX_AGE": config("CONN_MAX_AGE", default=600, cast=int),
+                "CONN_MAX_AGE": config("CONN_MAX_AGE", default=0, cast=int),
             }
         }
     else:
@@ -116,7 +116,7 @@ else:
                 "PASSWORD": config("DB_PASSWORD", default=""),
                 "HOST": config("DB_HOST", default="127.0.0.1"),
                 "PORT": config("DB_PORT", default="5432"),
-                "CONN_MAX_AGE": config("CONN_MAX_AGE", default=600, cast=int),
+                "CONN_MAX_AGE": config("CONN_MAX_AGE", default=0, cast=int),
             }
         }
 
@@ -167,7 +167,7 @@ CSRF_TRUSTED_ORIGINS = config(
 # ─── Django REST Framework ────────────────────────────────────────────────────
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "users.utils.CachedJWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -262,8 +262,13 @@ else:
 
 # ─── Email Configuration ─────────────────────────────────────────────────────
 USE_SMTP_EMAIL = config("USE_SMTP_EMAIL", default=False, cast=bool)
+USE_RESEND = config("USE_RESEND", default=False, cast=bool)
 
-if USE_SMTP_EMAIL:
+if USE_RESEND:
+    EMAIL_BACKEND = "rms_backend.resend_backend.ResendEmailBackend"
+    RESEND_API_KEY = config("RESEND_API_KEY", default="")
+    DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="onboarding@resend.dev")
+elif USE_SMTP_EMAIL:
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
     EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
     EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
@@ -273,4 +278,5 @@ if USE_SMTP_EMAIL:
     DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="no-reply@southpoint.edu")
 else:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
 

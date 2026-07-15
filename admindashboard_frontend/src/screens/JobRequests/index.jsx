@@ -1,5 +1,5 @@
 import { useBreakpoint } from "../../hooks";
-import { SectionTitle, Btn, Input } from "../../components/ui";
+import { SectionTitle, Btn, Input, Select } from "../../components/ui";
 import { useJobRequests } from "./useJobRequests";
 import JobRequestStatusFilter from "./JobRequestStatusFilter";
 import JobRequestSentBackBanner from "./JobRequestSentBackBanner";
@@ -29,6 +29,12 @@ export default function JobRequests(props) {
           value={s.search}
           onChange={(e) => s.setSearch(e.target.value)}
           style={{ maxWidth: 360, flex: 1 }}
+        />
+        <Select
+          value={s.deptFilter}
+          onChange={(e) => s.setDeptFilter(e.target.value)}
+          options={s.filterDeptOptions}
+          style={{ maxWidth: 220 }}
         />
       </div>
 

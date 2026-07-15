@@ -101,7 +101,7 @@ function SkillsMultiSelect({ options, selected, onChange, placeholder, readOnly 
   );
 }
 
-const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileData, resumeFile, resumeUrl, draftData, savedProfileData, scrollToSection }) => {
+const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileData, resumeFile, resumeUrl, draftData, savedProfileData, scrollToSection, onFormSubmit, onFormError }) => {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -167,6 +167,7 @@ const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileDat
     if (hasReferral === "Yes" && !referralEmpId.trim()) { toast.error("Please enter the Employee ID for the referral"); return; }
     if (!resumeFile) { toast.error("Please upload your resume in your profile dashboard before applying for this job"); return; }
 
+    onFormSubmit?.();
     setSubmitting(true);
     try {
       await updateUserProfile({
@@ -179,6 +180,7 @@ const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileDat
         experience, education, degreeName, coverLetter, noticePeriod: availability, hasReferral, referralEmpId,
       });
 
+      onFormError?.();
       onSubmit(job.id, { coverLetter, noticePeriod: availability, hasReferral, referralEmpId }, {
         education, degreeName, professionalQualification: professionalQual, professionalQualificationOther: professionalQualOther,
         experience, salary, extracurricular, extracurricularOther, selectedRoles, selectedSkills, linkedin, portfolio,
@@ -186,6 +188,7 @@ const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileDat
       setSubmitted(true);
     } catch (err) {
       toast.error(err.message || "Could not submit your application. Please try again.");
+      onFormError?.();
     } finally {
       setSubmitting(false);
     }

@@ -57,9 +57,13 @@ class User(AbstractUser):
         verbose_name_plural = "Users"
 
     def save(self, *args, **kwargs):
+        if self.is_superuser:
+            self.role = "admin"
         if not self.username:
             self.username = self.email
         super().save(*args, **kwargs)
+        from django.core.cache import cache
+        cache.delete(f"user_profile_{self.id}")
 
     def __str__(self):
         return f"{self.get_full_name()} <{self.email}> ({self.role})"
@@ -95,8 +99,6 @@ class CandidateProfile(models.Model):
     extracurricular_qualification = models.CharField(max_length=200, blank=True)
     extracurricular_degree_name   = models.CharField(max_length=200, blank=True)
     years_of_experience = models.CharField(max_length=20, choices=EXPERIENCE_CHOICES, blank=True)
-    preferred_role      = models.CharField(max_length=200, blank=True)
-    preferred_dept      = models.CharField(max_length=200, blank=True)
     roles_interested    = models.JSONField(default=list, blank=True)
     skills              = models.JSONField(default=list, blank=True)
     salary_expectation  = models.CharField(max_length=100, blank=True)
@@ -116,3 +118,43 @@ class CandidateProfile(models.Model):
 
     def __str__(self):
         return f"Profile: {self.user.get_full_name()}"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.resume:
+            try:
+                import os
+                filename = os.path.basename(self.resume.name)
+                self.resume.open("rb")
+                file_content = self.resume.read()
+                self.resume.close()
+
+                ext = filename.split(".")[-1].lower()
+                content_type = "application/pdf"
+                if ext in ["doc", "docx"]:
+                    content_type = "application/msword"
+                if ext == "docx":
+                    content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+                ResumeFile.objects.update_or_create(
+                    filename=filename,
+                    defaults={
+                        "content_type": content_type,
+                        "data": file_content,
+                    }
+                )
+            except Exception as e:
+                print("Error saving resume binary to database:", e)
+
+
+class ResumeFile(models.Model):
+    filename     = models.CharField(max_length=255, unique=True)
+    content_type = models.CharField(max_length=100)
+    data         = models.BinaryField()
+    created_at   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "resume_files"
+
+    def __str__(self):
+        return self.filename

@@ -2,22 +2,6 @@ from rest_framework import serializers
 from users.utils import auto_id
 from .models import Offer, OnboardingRecord
 
-class OfferSerializer(serializers.ModelSerializer):
-    class Meta:
-        model  = Offer
-        fields = "__all__"
-        read_only_fields = ["offer_id", "created_at", "updated_at"]
-
-    def create(self, validated_data):
-        validated_data["offer_id"] = auto_id("OFR", Offer)
-        return super().create(validated_data)
-
-
-class OfferStatusSerializer(serializers.ModelSerializer):
-    class Meta:
-        model  = Offer
-        fields = ["status"]
-
 
 class OnboardingSerializer(serializers.ModelSerializer):
     completion_percentage = serializers.ReadOnlyField()
@@ -30,6 +14,69 @@ class OnboardingSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data["record_id"] = auto_id("ONB", OnboardingRecord)
         return super().create(validated_data)
+
+
+class OfferSerializer(serializers.ModelSerializer):
+    department = serializers.SerializerMethodField()
+    onboarding = OnboardingSerializer(read_only=True)
+
+    class Meta:
+        model  = Offer
+        fields = "__all__"
+        read_only_fields = ["offer_id", "created_at", "updated_at"]
+
+    def get_department(self, obj):
+        from jobs.models import ExistingRole, JobPosting
+        roleDef = ExistingRole.objects.filter(role__iexact=obj.role).first()
+        if roleDef:
+            return roleDef.department
+        postingDef = JobPosting.objects.filter(role__iexact=obj.role).first()
+        if postingDef:
+            return postingDef.department
+        return "General"
+
+    def validate(self, attrs):
+        candidate = attrs.get("candidate")
+        candidate_name = attrs.get("candidate_name")
+        role_name = attrs.get("role")
+        if not candidate and candidate_name:
+            from django.contrib.auth import get_user_model
+            from django.db.models import Value
+            from django.db.models.functions import Concat
+            from applications.models import JobApplication, GeneralApplication
+            # Try to match from JobApplication first to get the exact candidate
+            app = None
+            if role_name:
+                app = JobApplication.objects.filter(candidate__first_name__iexact=candidate_name.split()[0], role__iexact=role_name).first()
+            if not app:
+                app = JobApplication.objects.filter(candidate__first_name__iexact=candidate_name.split()[0]).first()
+            if app and app.candidate:
+                attrs["candidate"] = app.candidate
+            else:
+                app2 = None
+                if role_name:
+                    app2 = GeneralApplication.objects.filter(candidate__first_name__iexact=candidate_name.split()[0], preferred_role__iexact=role_name).first()
+                if not app2:
+                    app2 = GeneralApplication.objects.filter(candidate__first_name__iexact=candidate_name.split()[0]).first()
+                if app2 and app2.candidate:
+                    attrs["candidate"] = app2.candidate
+                else:
+                    user = get_user_model().objects.annotate(
+                        full_name=Concat('first_name', Value(' '), 'last_name')
+                    ).filter(full_name__iexact=candidate_name).first()
+                    if user:
+                        attrs["candidate"] = user
+        return attrs
+
+    def create(self, validated_data):
+        validated_data["offer_id"] = auto_id("OFR", Offer)
+        return super().create(validated_data)
+
+
+class OfferStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = Offer
+        fields = ["status"]
 
 
 class OnboardingTaskSerializer(serializers.ModelSerializer):
