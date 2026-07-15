@@ -9,10 +9,26 @@ import InterviewPanel from "../screens/InterviewPanel";
 import Panelist from "../screens/Panelist";
 import Onboarding from "../screens/Onboarding";
 import OfferManagement from "../screens/OfferManagement";
+import { isAdmin, resolvePanelistName } from "../authRules";
 
 // Maps the active nav id to its screen, wiring in shared state.
 // `s` is the app state bag from App; `navigate(id)` switches the active screen.
 export default function ScreenRouter({ active, s, navigate, onGiveOffer }) {
+  // Non-admins (panelists) can only ever reach the Panelist screen, no matter
+  // what `active` is — this is what actually blocks stray navigation (e.g. the
+  // "Pending" bell in TopBar), not just hiding the sidebar buttons for it.
+  if (!isAdmin(s.currentUser)) {
+    return (
+      <Panelist
+        interviews={s.interviews}
+        setInterviews={s.setInterviews}
+        jobPostings={s.jobPostings}
+        panelists={s.panelists}
+        currentUser={resolvePanelistName(s.currentUser, s.panelists)}
+      />
+    );
+  }
+
   switch (active) {
     case "dashboard":
       return <Dashboard approvalRequests={s.approvalRequests} />;
@@ -103,7 +119,7 @@ export default function ScreenRouter({ active, s, navigate, onGiveOffer }) {
           setInterviews={s.setInterviews}
           jobPostings={s.jobPostings}
           panelists={s.panelists}
-          currentUser={s.currentUser?.role || "admin"}
+          currentUser="admin"
         />
       );
     case "offer-management":

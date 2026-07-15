@@ -124,13 +124,22 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
     return { allowed: true };
   };
 
-  const enrichedPostings = jobPostings.map((p) => ({
-    ...p,
-    count: interviews.filter((i) => i.role === p.role && i.date && i.status !== "Completed").length,
-  }));
+  // A non-admin panelist only ever sees interviews (and, below, job cards) they're
+  // actually assigned to — `currentUser` is their own name once resolved via email
+  // (see ScreenRouter/authRules.resolvePanelistName), matched against `interview.panel`.
+  const myInterviews = currentUser === "admin"
+    ? interviews
+    : interviews.filter((i) => i.panel?.includes(currentUser));
+
+  const enrichedPostings = jobPostings
+    .map((p) => ({
+      ...p,
+      count: myInterviews.filter((i) => i.role === p.role && i.date && i.status !== "Completed").length,
+    }))
+    .filter((p) => currentUser === "admin" || myInterviews.some((i) => i.role === p.role));
 
   const selectedRole = enrichedPostings.find((p) => p.id === selectedJobId)?.role ?? null;
-  const scheduledInterviews = interviews.filter((i) => i.date);
+  const scheduledInterviews = myInterviews.filter((i) => i.date);
 
   const statusFilteredInterviews = statusFilter === "All"
     ? scheduledInterviews

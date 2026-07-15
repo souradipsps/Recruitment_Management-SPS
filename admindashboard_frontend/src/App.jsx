@@ -12,6 +12,7 @@ import { fetchPanelists } from "./api/panelistsApi";
 import { fetchInterviews } from "./api/interviewsApi";
 import { fetchOffers, createOffer } from "./api/offersApi";
 import { logout } from "./api/authApi";
+import { isAdmin } from "./authRules";
 
 import Auth from "./screens/Auth";
 import ModuleSelector from "./screens/ModuleSelector";
@@ -68,6 +69,16 @@ export default function App() {
     return () => { active = false; };
   }, [currentUser]);
 
+  // Panelists only ever have one destination (the Panelist screen) — skip the
+  // module picker entirely and drop them straight in, instead of making them
+  // click through a module list that's otherwise meaningless to them.
+  useEffect(() => {
+    if (currentUser && !selectedModule && !isAdmin(currentUser)) {
+      setSelectedModule("Recruitment");
+      setActive("panelist");
+    }
+  }, [currentUser, selectedModule]);
+
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
   const isTablet = bp === "tablet";
@@ -118,12 +129,15 @@ export default function App() {
   }
 
   if (!selectedModule) {
+    // Non-admins are routed straight in by the effect above — nothing to render
+    // while that resolves (avoids flashing the module picker first).
+    if (!isAdmin(currentUser)) return null;
     return (
       <ModuleSelector
         currentUser={currentUser}
         onSelectModule={(mod) => {
           setSelectedModule(mod);
-          setActive(currentUser.role === "admin" ? "dashboard" : "panelist");
+          setActive("dashboard");
         }}
         onLogout={handleLogout}
       />
@@ -154,10 +168,10 @@ export default function App() {
         isMobile={isMobile}
         isCompact={isCompact}
         pageLabel={pageLabel}
-        pendingCount={pendingCount}
+        pendingCount={isAdmin(currentUser) ? pendingCount : 0}
         onOpenSidebar={() => setSidebarOpen(true)}
         onNavPending={() => handleNav("approval-requests")}
-        onBackToModules={() => setSelectedModule(null)}
+        onBackToModules={isAdmin(currentUser) ? () => setSelectedModule(null) : undefined}
       />
 
       {/* Main layout container (Sidebar + Screen Content) */}
