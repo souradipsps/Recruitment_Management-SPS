@@ -152,7 +152,7 @@ export async function createInterview(fields) {
   const res = await fetch(INTERVIEWS_URL, {
     method: "POST",
     headers: authHeaders(),
-    body: JSON.stringify({ round: 1, mode: "In-Person", ...toBackendFields(fields) }),
+    body: JSON.stringify({ round: 1, mode: toBackendMode("In-Person"), ...toBackendFields(fields) }),
   });
 
   if (!res.ok) {
