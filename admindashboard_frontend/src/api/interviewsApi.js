@@ -112,6 +112,7 @@ export const normalizeInterview = (r) => ({
   reminderSentAt: r.reminder_sent_at || null,
   evaluations: Array.isArray(r.evaluations) ? r.evaluations.map(normalizeEvaluation) : [],
   evaluationSummary: r.evaluation_summary || null, // { assigned_count, submitted_count, average_score }
+  candidatePresent: r.candidate_present !== undefined ? r.candidate_present : null,
 });
 
 // Build a backend payload from frontend fields. Only keys that are provided are
@@ -130,6 +131,7 @@ export const buildInterviewPayload = (fi) => {
   // ignored in favor of per-panelist evaluations (see file header).
   if (fi.reminderSentAt !== undefined) p.reminder_sent_at = fi.reminderSentAt;
   if (fi.panelIds !== undefined) p.panel = fi.panelIds;
+  if (fi.candidatePresent !== undefined) p.candidate_present = fi.candidatePresent;
   return p;
 };
 
