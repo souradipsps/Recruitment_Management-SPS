@@ -3,10 +3,27 @@ import { T, font } from "../theme";
 import { statusVariant } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
 import { Card, SectionTitle, Table, Mono, Badge, Btn, Modal, ModalHeader, FormField, Input } from "../components/ui";
-import { EXISTING_ROLES, INTERVIEWS } from "../data";
+import { EXISTING_ROLES } from "../data";
 import { createOffer, updateOffer } from "../api/offersApi";
 
-export default function OfferManagement({ offers, setOffers, jobPostings = [] }) {
+// Interview score for an offer's candidate — the panel's average from that
+// candidate's FINAL round (highest round number), not just whichever interview
+// record happens to come first in the API response.
+const getInterviewScore = (interviews, candidate, role) => {
+  const matches = interviews.filter((inv) => inv.candidate === candidate && inv.role === role);
+  if (matches.length === 0) return null;
+  const finalRound = matches.reduce((latest, inv) => (inv.round > latest.round ? inv : latest), matches[0]);
+  return finalRound?.evaluationSummary?.average_score ?? null;
+};
+
+const getRoundOrdinal = (round) => {
+  if (round === 1) return "1st Round";
+  if (round === 2) return "2nd Round";
+  if (round === 3) return "3rd Round";
+  return `${round}th Round`;
+};
+
+export default function OfferManagement({ offers, setOffers, jobPostings = [], interviews = [], panelists = [] }) {
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
   const [viewOffer, setViewOffer] = useState(null);
@@ -17,9 +34,68 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [] })
   const [genSubmitting, setGenSubmitting] = useState(false);
   const [selectedPostingId, setSelectedPostingId] = useState(null);
   const [selectedOfferForModal, setSelectedOfferForModal] = useState(null);
+  const [historyCandidate, setHistoryCandidate] = useState(null);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [filterActiveIndex, setFilterActiveIndex] = useState(0);
   const scrollRef = useRef(null);
+
+  const formatDateAndTime = (dateStr, timeStr) => {
+    if (!dateStr) return "—";
+    try {
+      const dateObj = new Date(dateStr);
+      let formattedDate = "";
+      let yearDigits = "";
+
+      if (isNaN(dateObj.getTime())) {
+        const parts = dateStr.split("-");
+        if (parts.length === 3) {
+          const year = parseInt(parts[0], 10);
+          const month = parseInt(parts[1], 10) - 1;
+          const day = parseInt(parts[2], 10);
+          const d = new Date(year, month, day);
+          if (!isNaN(d.getTime())) {
+            formattedDate = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+            yearDigits = String(year).slice(-2);
+          }
+        }
+      } else {
+        formattedDate = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        yearDigits = String(dateObj.getFullYear()).slice(-2);
+      }
+
+      if (!formattedDate) {
+        return `${dateStr}${timeStr ? ` · ${timeStr}` : ""}`;
+      }
+
+      const formattedTime = timeStr
+        ? timeStr.replace(/^0/, "").replace(/:00\s*/, " ").trim()
+        : "";
+
+      return `${formattedDate}, ’${yearDigits}${formattedTime ? ` · ${formattedTime}` : ""}`;
+    } catch (e) {
+      return `${dateStr}${timeStr ? ` · ${timeStr}` : ""}`;
+    }
+  };
+
+  const avatar = (name, size = 32, fontSize = 12) => (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        background: T.primaryLight,
+        color: T.primary,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize,
+        fontWeight: 700,
+        flexShrink: 0,
+      }}
+    >
+      {name.split(" ").map((n) => n[0]).join("")}
+    </div>
+  );
 
   const hScroll = useHorizontalScroll();
   const accentColor = T.blue;
@@ -71,6 +147,32 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [] })
 
   return (
     <div>
+      <style>{`
+        .btn-view-history {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 11.5px;
+          font-weight: 700;
+          color: #72102a;
+          background: rgba(114, 16, 42, 0.06);
+          border: 1px solid rgba(114, 16, 42, 0.18);
+          border-radius: 8px;
+          padding: 6px 12px;
+          cursor: pointer;
+          transition: all 0.2s ease-in-out;
+        }
+        .btn-view-history:hover {
+          background: #72102a;
+          color: #fff;
+          border-color: #72102a;
+          transform: translateY(-1.5px);
+          box-shadow: 0 4px 12px rgba(114, 16, 42, 0.25);
+        }
+        .btn-view-history:active {
+          transform: translateY(0);
+        }
+      `}</style>
       <SectionTitle title="Offer Management" sub="Review generated offers and track status end-to-end" />
 
       {enrichedPostings.length > 0 && (
@@ -204,7 +306,7 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [] })
 
           <div ref={scrollRef} onScroll={(e) => { const scrollLeft = e.currentTarget.scrollLeft; const cardWidth = e.currentTarget.clientWidth; const newIndex = Math.round(scrollLeft / cardWidth); setCurrentCardIndex(newIndex); }} style={{ display: "flex", overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none", gap: 16, padding: "0 16px 20px", margin: "0 -16px" }}>
             {filteredOffers.map((o, idx) => {
-              const interview = INTERVIEWS.find(inv => inv.candidate === o.candidate && inv.role === o.role);
+              const score = getInterviewScore(interviews, o.candidate, o.role);
               const cardBackground = "linear-gradient(135deg, #72102a 0%, #3a0010 100%)";
               return (
                 <div key={o.id} onClick={() => setSelectedOfferForModal(o)} style={{ flexShrink: 0, minWidth: "calc(100% - 32px)", borderRadius: 20, background: cardBackground, color: "#fff", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: 24, position: "relative", boxShadow: "0 14px 40px rgba(0,0,0,0.25)", cursor: "pointer", minHeight: 380 }}>
@@ -225,8 +327,45 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [] })
                         <div style={{ fontSize: 12, fontWeight: 600 }}>{o.id}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: 10, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>Interview Score</div>
-                        <div style={{ fontSize: 12, fontWeight: 600 }}>{interview && interview.score !== null ? `${interview.score}` : "—"}</div>
+                        <div style={{ fontSize: 10, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontWeight: 700, marginBottom: 4 }}>Interview Score</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
+                          {score !== null ? (
+                            <span style={{
+                              fontSize: 11, fontWeight: 800,
+                              background: score >= 80 ? T.greenLight : score >= 60 ? T.amberLight : T.redLight,
+                              color: score >= 80 ? T.green : score >= 60 ? T.amber : T.red,
+                              border: `1px solid ${score >= 80 ? "#A7F3D0" : score >= 60 ? "#FDE68A" : "#FCA5A5"}`,
+                              padding: "3px 8px", borderRadius: 6,
+                              display: "inline-flex", alignItems: "center", gap: 3
+                            }}>
+                              ★ {score}
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontStyle: "italic" }}>—</span>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setHistoryCandidate({ candidate: o.candidate, role: o.role });
+                            }}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 3,
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: "#fff",
+                              background: "rgba(255,255,255,0.2)",
+                              border: "1px solid rgba(255,255,255,0.3)",
+                              borderRadius: 6,
+                              padding: "2px 8px",
+                              cursor: "pointer",
+                              transition: "all 0.2s"
+                            }}
+                          >
+                            📊 View
+                          </button>
+                        </div>
                       </div>
                       <div>
                         <div style={{ fontSize: 10, textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>CTC</div>
@@ -277,10 +416,19 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [] })
             cols={["Offer ID", "Candidate", "Role", "Score", "Status", "Generate", "Actions"]}
             onRowClick={(i) => setSelectedOfferForModal(filteredOffers[i])}
             rows={filteredOffers.map((o) => {
-              const interview = INTERVIEWS.find(inv => inv.candidate === o.candidate && inv.role === o.role);
-              const score = interview && interview.score !== null ? (
-                <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: "50%", background: "#E6F6ED", color: "#00796B", fontWeight: 800, fontSize: 13 }}>{interview.score}</div>
-              ) : "—";
+              const interviewScore = getInterviewScore(interviews, o.candidate, o.role);
+              const score = (
+                <div style={{ display: "flex", justifyContent: "flex-start", width: "100%" }} onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => {
+                      setHistoryCandidate({ candidate: o.candidate, role: o.role });
+                    }}
+                    className="btn-view-history"
+                  >
+                    📊 View
+                  </button>
+                </div>
+              );
               return [
                 <Mono v={o.id} />,
                 <strong style={{ color: T.ink }}>{o.candidate}</strong>,
@@ -323,7 +471,24 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [] })
                 { label: "Offer ID", value: selectedOfferForModal.id },
                 { label: "Candidate", value: selectedOfferForModal.candidate },
                 { label: "Role Name", value: selectedOfferForModal.role },
-                { label: "Interview Score", value: (() => { const int = INTERVIEWS.find(i => i.candidate === selectedOfferForModal.candidate && i.role === selectedOfferForModal.role); return int && int.score !== null ? `${int.score} / 100` : "—"; })() },
+                 {
+                  label: "Interview Score",
+                  value: (() => {
+                    return (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setHistoryCandidate({ candidate: selectedOfferForModal.candidate, role: selectedOfferForModal.role });
+                          }}
+                          className="btn-view-history"
+                        >
+                          📊 View
+                        </button>
+                      </div>
+                    );
+                  })()
+                },
                 { label: "CTC (Monthly)", value: selectedOfferForModal.ctc || "—" },
                 { label: "Issued Date", value: selectedOfferForModal.issued || "—" },
                 { label: "Expiry Date", value: selectedOfferForModal.expiry || "—" },
@@ -449,6 +614,325 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [] })
           />
           <Btn label="Cancel" variant="ghost" disabled={genSubmitting} onClick={() => { setShowGenerateModal(false); setGenOfferId(null); }} style={{ flex: isMobile ? 1 : undefined }} />
         </div>
+      </Modal>
+
+      {/* Custom Rounds History Modal using same UI style as InterviewPanel */}
+      <Modal open={!!historyCandidate} onClose={() => setHistoryCandidate(null)} maxWidth={700}>
+        {historyCandidate && (
+          <>
+            <ModalHeader title="Interview Rounds History" onClose={() => setHistoryCandidate(null)} />
+            
+            {/* Header info */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 16,
+                marginBottom: 20,
+                padding: 16,
+                background: T.primaryLight,
+                borderRadius: 12,
+              }}
+            >
+              {avatar(historyCandidate.candidate, 56, 18)}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: T.ink }}>{historyCandidate.candidate}</div>
+                <div style={{ color: T.inkLight, fontSize: 13, marginTop: 2 }}>{historyCandidate.role}</div>
+              </div>
+            </div>
+
+            {/* Rounds History Log */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 0, maxHeight: 450, overflowY: "auto", paddingRight: 8 }}>
+              {(() => {
+                const candInts = interviews.filter((i) => i.candidate === historyCandidate.candidate && i.role === historyCandidate.role);
+                const activeRnd = candInts.length > 0 ? Math.max(...candInts.map((i) => i.round || 1)) : 1;
+                const roundsToRender = Array.from({ length: activeRnd }, (_, i) => i + 1).filter((r) => {
+                  const hasInv = candInts.some((i) => i.round === r);
+                  return r === activeRnd || hasInv;
+                });
+
+                return roundsToRender.map((r, idx, arr) => {
+                  const roundInv = candInts.find((i) => i.round === r);
+                  const isCompleted = roundInv?.status === "Completed";
+                  const isScheduled = roundInv?.status === "Scheduled";
+                  const hasInv = !!roundInv;
+
+                  let nodeBg = "#E2E8F0";
+                  let nodeBorder = "#CBD5E1";
+                  if (hasInv) {
+                    if (isCompleted) {
+                      nodeBg = T.green;
+                      nodeBorder = T.greenLight;
+                    } else if (isScheduled) {
+                      nodeBg = T.primary;
+                      nodeBorder = T.primaryLight;
+                    } else {
+                      nodeBg = T.amber;
+                      nodeBorder = T.amberLight;
+                    }
+                  }
+
+                  return (
+                    <div key={r} style={{ display: "flex", gap: 16 }} className="animate-fade-in-up">
+                      {/* Timeline Indicator Column */}
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 20, flexShrink: 0 }}>
+                        {/* Top line segment */}
+                        <div style={{ width: 2, flex: idx === 0 ? "0 0 12px" : 1, background: idx === 0 ? "transparent" : T.border }} />
+                        {/* Node */}
+                        <div style={{
+                          width: 12,
+                          height: 12,
+                          borderRadius: "50%",
+                          background: nodeBg,
+                          border: `3px solid ${nodeBorder}`,
+                          boxShadow: hasInv && !isCompleted ? `0 0 0 3px ${nodeBg}22` : "none",
+                          flexShrink: 0,
+                          zIndex: 2,
+                          transition: "all 0.2s"
+                        }} />
+                        {/* Bottom line segment */}
+                        <div style={{ width: 2, flex: idx === arr.length - 1 ? "0 0 12px" : 1, background: idx === arr.length - 1 ? "transparent" : T.border }} />
+                      </div>
+
+                      {/* Right Column: Card Content */}
+                      <div style={{ flex: 1, paddingBottom: idx < arr.length - 1 ? 20 : 0 }}>
+                        {!roundInv ? (
+                          <div style={{
+                            padding: "12px 16px",
+                            background: "#F8FAFC",
+                            borderRadius: 12,
+                            border: `1.5px dashed ${T.border}`,
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center"
+                          }}>
+                            <div>
+                              <span style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{getRoundOrdinal(r)}</span>
+                              <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 2 }}>Round has not been scheduled yet</div>
+                            </div>
+                            <span style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              color: T.amber,
+                              background: T.amberLight,
+                              border: `1px solid ${T.amber}33`,
+                              padding: "3px 10px",
+                              borderRadius: 99
+                            }}>
+                              Pending Schedule
+                            </span>
+                          </div>
+                        ) : (
+                          <div style={{
+                            padding: "16px 20px",
+                            background: isCompleted ? "#F0FDF4" : isScheduled ? "#F0F9FF" : "#FFFBEB",
+                            borderRadius: 14,
+                            border: `1.5px solid ${isCompleted ? "#DCFCE7" : isScheduled ? "#E0F2FE" : "#FEF3C7"}`,
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.01)"
+                          }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                              <span style={{ fontSize: 13.5, fontWeight: 850, color: isCompleted ? "#166534" : isScheduled ? "#075985" : "#92400E" }}>
+                                {getRoundOrdinal(r)}
+                              </span>
+                              <Badge label={roundInv.status} variant={statusVariant(roundInv.status)} />
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "10px 16px", fontSize: 11.5, color: T.inkMid }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 14 }}>📅</span>
+                                <div>
+                                  <div style={{ fontSize: 9.5, color: T.inkFaint, textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>Date &amp; Time</div>
+                                  <div style={{ fontWeight: 600, color: T.ink }}>{roundInv.date ? formatDateAndTime(roundInv.date, roundInv.time) : "Not Scheduled"}</div>
+                                </div>
+                              </div>
+
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 14 }}>🏢</span>
+                                <div>
+                                  <div style={{ fontSize: 9.5, color: T.inkFaint, textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>Mode</div>
+                                  <div style={{ fontWeight: 600, color: T.ink }}>{roundInv.mode || "In-Person"}</div>
+                                </div>
+                              </div>
+
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 14 }}>👥</span>
+                                <div>
+                                  <div style={{ fontSize: 9.5, color: T.inkFaint, textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>Panelists</div>
+                                  <div style={{ fontWeight: 600, color: T.ink }}>{roundInv.panel?.join(", ") || "None"}</div>
+                                </div>
+                              </div>
+
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 14 }}>📊</span>
+                                <div>
+                                  <div style={{ fontSize: 9.5, color: T.inkFaint, textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>Evaluation Status</div>
+                                  <div style={{ fontWeight: 600, color: T.ink }}>
+                                    {(() => {
+                                      const evals = roundInv.evaluations || [];
+                                      const summary = roundInv.evaluationSummary;
+                                      if (evals.length > 0) {
+                                        const avgScore = summary?.average_score ?? Math.round(evals.reduce((sum, e) => sum + (e.overallScore || 0), 0) / evals.length);
+                                        return (
+                                          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                            <strong style={{ color: avgScore >= 80 ? T.green : avgScore >= 60 ? T.accentDark : T.red }}>{avgScore}/100</strong>
+                                            <span style={{ fontSize: 10, background: "rgba(0,0,0,0.06)", padding: "1px 6px", borderRadius: 4, fontWeight: 700 }}>
+                                              {summary?.submitted_count ?? evals.length}/{summary?.assigned_count ?? (roundInv.panel?.length || "?")} evaluated
+                                            </span>
+                                          </span>
+                                        );
+                                      }
+                                      return <span style={{ color: T.inkFaint, fontStyle: "italic" }}>Not Evaluated</span>;
+                                    })()}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Per-Panelist Evaluation Scorecards */}
+                            {(roundInv.evaluations || []).length > 0 && (
+                              <div style={{ marginTop: 20, borderTop: "1.5px solid rgba(0,0,0,0.06)", paddingTop: 18 }}>
+                                <div style={{ 
+                                  fontSize: 10, 
+                                  fontWeight: 800, 
+                                  color: T.inkLight, 
+                                  textTransform: "uppercase", 
+                                  letterSpacing: "0.08em", 
+                                  marginBottom: 14,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 6
+                                }}>
+                                  <span>📋</span> Panelist Evaluations ({roundInv.evaluations.length})
+                                </div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                                  {roundInv.evaluations.map((ev, evIdx) => {
+                                    const pName = ev.panelistId != null
+                                      ? (panelists.find((p) => p.backendId === ev.panelistId)?.name || `Panelist #${ev.panelistId}`)
+                                      : `Panelist ${evIdx + 1}`;
+                                    const criteriaEntries = Object.entries(ev.criteria || {});
+                                    const evScore = ev.overallScore ?? (criteriaEntries.length > 0 ? Math.round((criteriaEntries.reduce((s, [, v]) => s + v, 0) / criteriaEntries.length) * 20) : null);
+
+                                    const REC_COLORS = {
+                                      "Strong Hire": { bg: "#ECFDF5", color: "#059669" },
+                                      "Hire": { bg: "#F0FDF4", color: "#16A34A" },
+                                      "Hold": { bg: "#FFFBEB", color: "#D97706" },
+                                      "Reject": { bg: "#FEF2F2", color: "#DC2626" },
+                                      "Selected": { bg: "#ECFDF5", color: "#059669" },
+                                      "Rejected": { bg: "#FEF2F2", color: "#DC2626" },
+                                      "On Hold": { bg: "#FFFBEB", color: "#D97706" },
+                                      "Next Round": { bg: "#F0F9FF", color: "#0284C7" },
+                                    };
+                                    const recStyle = REC_COLORS[ev.rec] || { bg: "#F8FAFC", color: T.inkLight };
+
+                                    return (
+                                      <div 
+                                        key={evIdx} 
+                                        style={{ 
+                                          background: "#ffffff", 
+                                          borderRadius: 16, 
+                                          border: "1px solid #ECE7E1", 
+                                          borderLeft: `5px solid ${recStyle.color}`,
+                                          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.02)",
+                                          overflow: "hidden",
+                                          padding: "16px 20px"
+                                        }}
+                                      >
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
+                                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                            <div style={{ 
+                                              width: 36, 
+                                              height: 36, 
+                                              borderRadius: "50%", 
+                                              background: `linear-gradient(135deg, ${T.primary} 0%, ${T.primaryDark} 100%)`, 
+                                              color: "#ffffff", 
+                                              display: "flex", 
+                                              alignItems: "center", 
+                                              justifyContent: "center", 
+                                              fontWeight: 800, 
+                                              fontSize: 12, 
+                                              flexShrink: 0,
+                                              boxShadow: "0 3px 8px rgba(114, 16, 42, 0.15)"
+                                            }}>
+                                              {pName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                                            </div>
+                                            <div>
+                                              <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink, letterSpacing: "-0.01em" }}>{pName}</div>
+                                              {ev.submittedAt && (
+                                                <div style={{ fontSize: 10, color: T.inkFaint, marginTop: 1, display: "flex", alignItems: "center", gap: 4 }}>
+                                                  <span>📅</span>
+                                                  {new Date(ev.submittedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+
+                                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                            {ev.rec && ev.rec !== "—" && (
+                                              <span style={{ 
+                                                fontSize: 10.5, 
+                                                fontWeight: 700, 
+                                                borderRadius: 100, 
+                                                padding: "4px 12px", 
+                                                background: recStyle.bg, 
+                                                color: recStyle.color, 
+                                                border: `1px solid ${recStyle.color}1A`,
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: 4
+                                              }}>
+                                                {ev.rec}
+                                              </span>
+                                            )}
+                                            {evScore !== null && (
+                                              <span style={{ 
+                                                fontSize: 11, 
+                                                fontWeight: 800, 
+                                                color: evScore >= 80 ? T.green : evScore >= 60 ? T.accentDark : T.red,
+                                                background: evScore >= 80 ? T.greenLight : evScore >= 60 ? T.accentLight : T.redLight,
+                                                padding: "4px 10px", 
+                                                borderRadius: 100,
+                                                border: `1px solid ${evScore >= 80 ? "#A7F3D0" : evScore >= 60 ? T.border : "#FCA5A5"}`
+                                              }}>
+                                                ★ {evScore}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        {/* Criteria scores grid */}
+                                        {criteriaEntries.length > 0 && (
+                                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, background: T.canvas, padding: 12, borderRadius: 10, marginBottom: 12, border: `1px solid ${T.border}` }}>
+                                            {criteriaEntries.map(([cName, cVal]) => (
+                                              <div key={cName} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11 }}>
+                                                <span style={{ color: T.inkLight }}>{cName}</span>
+                                                <strong style={{ color: T.ink }}>{cVal}/5</strong>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+
+                                        {/* Remarks */}
+                                        {ev.notes && (
+                                          <div style={{ fontSize: 12, color: T.inkMid, lineHeight: 1.5, background: T.canvas, padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, fontStyle: "italic" }}>
+                                            "{ev.notes}"
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </>
+        )}
       </Modal>
     </div>
   );
