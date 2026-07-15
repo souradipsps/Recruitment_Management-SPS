@@ -17,7 +17,7 @@
 // date/time/panel are all optional on the backend, so a round can be created with
 // just candidate_name + role (no schedule yet) and filled in later via PATCH.
 
-import { authHeaders, getAccessToken, API_BASE_URL } from "./authApi";
+import { authHeaders, authFetch, getAccessToken, API_BASE_URL } from "./authApi";
 
 const API_URL = `${API_BASE_URL}/interviews/`;
 
@@ -137,7 +137,7 @@ export const buildInterviewPayload = (fi) => {
 
 // GET /api/interviews/ -> normalized array.
 export async function fetchInterviews() {
-  const res = await fetch(API_URL, { headers: authHeaders() });
+  const res = await authFetch(API_URL, { headers: authHeaders() });
 
   if (!res.ok) {
     throw new Error(`Failed to load interviews (${res.status} ${res.statusText})`);
@@ -154,7 +154,7 @@ export async function fetchInterviews() {
 export async function createInterview(payload) {
   if (!getAccessToken()) throw new Error("Not authenticated — please log in.");
 
-  const res = await fetch(API_URL, {
+  const res = await authFetch(API_URL, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -195,7 +195,7 @@ export async function submitPanelistEvaluation(backendId, { panelistId, criteria
 export async function updateInterview(backendId, payload) {
   if (!getAccessToken()) throw new Error("Not authenticated — please log in.");
 
-  const res = await fetch(`${API_URL}${backendId}/`, {
+  const res = await authFetch(`${API_URL}${backendId}/`, {
     method: "PATCH",
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -211,7 +211,7 @@ export async function updateInterview(backendId, payload) {
 
 // DELETE /api/interviews/{backendId}/
 export async function deleteInterview(backendId) {
-  const res = await fetch(`${API_URL}${backendId}/`, {
+  const res = await authFetch(`${API_URL}${backendId}/`, {
     method: "DELETE",
     headers: authHeaders(),
   });

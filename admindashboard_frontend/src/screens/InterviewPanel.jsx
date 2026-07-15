@@ -1444,15 +1444,23 @@ export default function InterviewPanel({
                         )}
                         {existingOffer ? (
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleDeclineOfferInPanel(c.name, c.role); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (existingOffer.status === "Accepted") {
+                                alert("Offer already accepted");
+                              } else {
+                                handleDeclineOfferInPanel(c.name, c.role);
+                              }
+                            }}
                             disabled={isPreviousRound}
                             style={{
                               width: "100%", padding: "10px 0", borderRadius: 10,
-                              background: isPreviousRound ? "rgba(255,255,255,0.05)" : "rgba(239, 68, 68, 0.2)",
-                              color: isPreviousRound ? "rgba(255,255,255,0.3)" : "#FCA5A5",
-                              border: isPreviousRound ? "none" : "1px solid rgba(239, 68, 68, 0.3)",
-                              fontSize: 13, fontWeight: 700, cursor: isPreviousRound ? "not-allowed" : "pointer",
-                              opacity: isPreviousRound ? 0.6 : 1,
+                              background: (isPreviousRound || existingOffer.status === "Accepted") ? "rgba(255,255,255,0.05)" : "rgba(239, 68, 68, 0.2)",
+                              color: (isPreviousRound || existingOffer.status === "Accepted") ? "rgba(255,255,255,0.3)" : "#FCA5A5",
+                              border: (isPreviousRound || existingOffer.status === "Accepted") ? "none" : "1px solid rgba(239, 68, 68, 0.3)",
+                              fontSize: 13, fontWeight: 700,
+                              cursor: (isPreviousRound || existingOffer.status === "Accepted") ? "not-allowed" : "pointer",
+                              opacity: (isPreviousRound || existingOffer.status === "Accepted") ? 0.6 : 1,
                             }}
                           >Decline</button>
                         ) : (
@@ -1812,10 +1820,21 @@ export default function InterviewPanel({
                             )}
                             {existingOffer ? (
                               <button
-                                onClick={() => handleDeclineOfferInPanel(c.name, c.role)}
+                                onClick={() => {
+                                  if (existingOffer.status === "Accepted") {
+                                    alert("Offer already accepted");
+                                  } else {
+                                    handleDeclineOfferInPanel(c.name, c.role);
+                                  }
+                                }}
                                 disabled={isPreviousRound}
-                                style={{ ...actionBtnStyle("danger", isPreviousRound), width: "100%", textAlign: "center" }}
-                                className={isPreviousRound ? "" : "btn-action-hover"}
+                                style={{
+                                  ...actionBtnStyle("danger", isPreviousRound || existingOffer.status === "Accepted"),
+                                  width: "100%",
+                                  textAlign: "center",
+                                  cursor: (isPreviousRound || existingOffer.status === "Accepted") ? "not-allowed" : "pointer"
+                                }}
+                                className={(isPreviousRound || existingOffer.status === "Accepted") ? "" : "btn-action-hover"}
                               >
                                 Decline
                               </button>

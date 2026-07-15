@@ -2,7 +2,7 @@
 // PATCH /applications/{id}/update_status/) and general applications
 // (GET /general-applications/, PATCH /general-applications/{id}/).
 // Auth token comes from the login flow via authApi (read dynamically per request).
-import { authHeaders, API_BASE_URL } from "./authApi";
+import { authHeaders, authFetch, API_BASE_URL } from "./authApi";
 
 const API_URL = `${API_BASE_URL}/applications/`;
 const GENERAL_API_URL = `${API_BASE_URL}/general-applications/`;
@@ -30,7 +30,7 @@ export const normalizeApplication = (r) => ({
 
 // GET /api/applications/ -> normalized array (admin: all job-posting applications).
 export async function fetchApplications() {
-  const res = await fetch(API_URL, { headers: authHeaders() });
+  const res = await authFetch(API_URL, { headers: authHeaders() });
 
   if (!res.ok) {
     throw new Error(`Failed to load applications (${res.status} ${res.statusText})`);
@@ -43,7 +43,7 @@ export async function fetchApplications() {
 
 // PATCH /api/applications/{backendId}/update_status/
 export async function updateApplicationStatus(backendId, status, adminNote = "") {
-  const res = await fetch(`${API_URL}${backendId}/update_status/`, {
+  const res = await authFetch(`${API_URL}${backendId}/update_status/`, {
     method: "PATCH",
     headers: authHeaders(),
     body: JSON.stringify({ status, ...(adminNote ? { admin_note: adminNote } : {}) }),
@@ -76,7 +76,7 @@ export const normalizeGeneralApplication = (r) => ({
 
 // GET /api/general-applications/ -> normalized array (admin: all general/profile applications).
 export async function fetchGeneralApplications() {
-  const res = await fetch(GENERAL_API_URL, { headers: authHeaders() });
+  const res = await authFetch(GENERAL_API_URL, { headers: authHeaders() });
 
   if (!res.ok) {
     throw new Error(`Failed to load general applications (${res.status} ${res.statusText})`);
@@ -90,7 +90,7 @@ export async function fetchGeneralApplications() {
 // PATCH /api/general-applications/{backendId}/ — no dedicated update_status action,
 // so this uses the ModelViewSet's partial_update (HR Admin only).
 export async function updateGeneralApplicationStatus(backendId, status, adminNote = "") {
-  const res = await fetch(`${GENERAL_API_URL}${backendId}/`, {
+  const res = await authFetch(`${GENERAL_API_URL}${backendId}/`, {
     method: "PATCH",
     headers: authHeaders(),
     body: JSON.stringify({ status, ...(adminNote ? { admin_note: adminNote } : {}) }),

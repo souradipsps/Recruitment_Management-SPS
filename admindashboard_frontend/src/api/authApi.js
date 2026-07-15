@@ -1,8 +1,8 @@
 // Central authentication + token store.
-// Replaces the hardcoded VITE_API_ACCESS_TOKEN: the access/refresh tokens now
-// come from POST /api/auth/login/ and are persisted in localStorage. Every other
-// api module reads the current token via getAccessToken()/authHeaders(), so the
-// token is always read dynamically at call time (never captured at import time).
+// Access/refresh tokens come from POST /api/auth/login/ and are persisted in
+// localStorage — there is no .env fallback token anymore. Every other api module
+// reads the current token via getAccessToken()/authHeaders(), so the token is
+// always read dynamically at call time (never captured at import time).
 
 // Backend API root, from .env (VITE_API_BASE_URL). Single source of truth for
 // every api module — they import this exported constant rather than reading env.
@@ -15,14 +15,11 @@ const ACCESS_KEY = "rms_access_token";
 const REFRESH_KEY = "rms_refresh_token";
 const USER_KEY = "rms_user";
 
-// Optional fallback so a token in .env (if present) still works during transition.
-const ENV_TOKEN = import.meta.env.VITE_API_ACCESS_TOKEN || "";
-
 export function getAccessToken() {
   try {
-    return localStorage.getItem(ACCESS_KEY) || ENV_TOKEN;
+    return localStorage.getItem(ACCESS_KEY) || "";
   } catch {
-    return ENV_TOKEN;
+    return "";
   }
 }
 
@@ -167,4 +164,37 @@ export async function refreshAccessToken() {
 
 export function logout() {
   clearAuth();
+}
+
+// Fired when a request 401s and the refresh token can't recover it — App.jsx
+// listens for this to force the login screen instead of leaving the UI stuck
+// "logged in" with every screen silently empty.
+export const AUTH_EXPIRED_EVENT = "rms:auth-expired";
+
+// Drop-in replacement for fetch() used by every other api/*.js module. On a 401,
+// transparently refreshes the access token and retries the request ONCE. If the
+// refresh also fails (refresh token expired/invalid), clears auth and dispatches
+// AUTH_EXPIRED_EVENT so the app can show the login screen — instead of every
+// fetch silently failing forever until the user manually logs out and back in.
+export async function authFetch(url, options = {}) {
+  const doFetch = () =>
+    fetch(url, { ...options, headers: { ...(options.headers || {}), ...authHeaders() } });
+
+  let res = await doFetch();
+
+  if (res.status === 401) {
+    const newAccess = await refreshAccessToken();
+    if (newAccess) {
+      res = await doFetch(); // authHeaders() re-reads the token, now refreshed
+    } else {
+      clearAuth();
+      try {
+        window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+      } catch {
+        /* non-browser environment */
+      }
+    }
+  }
+
+  return res;
 }

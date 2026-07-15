@@ -11,7 +11,7 @@ import { fetchApplications, fetchGeneralApplications } from "./api/applicationsA
 import { fetchPanelists } from "./api/panelistsApi";
 import { fetchInterviews } from "./api/interviewsApi";
 import { fetchOffers, createOffer } from "./api/offersApi";
-import { logout } from "./api/authApi";
+import { logout, AUTH_EXPIRED_EVENT } from "./api/authApi";
 import { isAdmin } from "./authRules";
 
 import Auth from "./screens/Auth";
@@ -78,6 +78,18 @@ export default function App() {
       setActive("panelist");
     }
   }, [currentUser, selectedModule]);
+
+  // If the access token expires and the refresh token can't recover it (authFetch
+  // already cleared the stored tokens), force back to the login screen instead of
+  // leaving every section silently empty until the user manually logs out.
+  useEffect(() => {
+    const onAuthExpired = () => {
+      setCurrentUser(null);
+      setSelectedModule(null);
+    };
+    window.addEventListener(AUTH_EXPIRED_EVENT, onAuthExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onAuthExpired);
+  }, [setCurrentUser, setSelectedModule]);
 
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";

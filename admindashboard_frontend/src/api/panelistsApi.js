@@ -1,6 +1,6 @@
 // Panelists API client.
 // Auth token comes from the login flow via authApi (read dynamically per request).
-import { authHeaders, getAccessToken, API_BASE_URL } from "./authApi";
+import { authHeaders, authFetch, getAccessToken, API_BASE_URL } from "./authApi";
 
 const API_URL = `${API_BASE_URL}/panelists/`;
 
@@ -16,7 +16,7 @@ export const normalizePanelist = (p) => ({
 
 // GET /api/panelists/ -> normalized array.
 export async function fetchPanelists() {
-  const res = await fetch(API_URL, { headers: authHeaders() });
+  const res = await authFetch(API_URL, { headers: authHeaders() });
 
   if (!res.ok) {
     throw new Error(`Failed to load panelists (${res.status} ${res.statusText})`);
@@ -40,7 +40,7 @@ export async function createPanelist({ name, email, phone }) {
     phone: (phone || "").trim(),
   };
 
-  const res = await fetch(API_URL, {
+  const res = await authFetch(API_URL, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify(payload),

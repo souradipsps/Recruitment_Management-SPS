@@ -1,6 +1,6 @@
 // Job Requests API client.
 // Auth token comes from the login flow via authApi (read dynamically per request).
-import { authHeaders, getAccessToken, API_BASE_URL } from "./authApi";
+import { authHeaders, authFetch, getAccessToken, API_BASE_URL } from "./authApi";
 
 const API_URL = `${API_BASE_URL}/job-requests/`;
 
@@ -38,7 +38,7 @@ export const normalizeJobRequest = (r) => ({
 
 // GET /api/job-requests/ -> normalized array.
 export async function fetchJobRequests() {
-  const res = await fetch(API_URL, {
+  const res = await authFetch(API_URL, {
     headers: authHeaders(),
   });
 
@@ -75,7 +75,7 @@ export async function createJobRequest(formData, submittedBy) {
 
   const payload = { ...buildJobRequestPayload(formData), submitted_by: submittedBy };
 
-  const res = await fetch(API_URL, {
+  const res = await authFetch(API_URL, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -96,7 +96,7 @@ export async function updateJobRequestStatus(backendId, status) {
     throw new Error("Not authenticated — please log in.");
   }
 
-  const res = await fetch(`${API_URL}${backendId}/`, {
+  const res = await authFetch(`${API_URL}${backendId}/`, {
     method: "PATCH",
     headers: authHeaders(),
     body: JSON.stringify({ status }),
@@ -119,7 +119,7 @@ export async function updateJobRequestFields(backendId, formData) {
     throw new Error("Not authenticated — please log in.");
   }
 
-  const res = await fetch(`${API_URL}${backendId}/`, {
+  const res = await authFetch(`${API_URL}${backendId}/`, {
     method: "PATCH",
     headers: authHeaders(),
     body: JSON.stringify(buildJobRequestPayload(formData)),

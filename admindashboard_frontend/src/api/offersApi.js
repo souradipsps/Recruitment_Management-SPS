@@ -1,6 +1,6 @@
 // Offers API client.
 // Auth token comes from the login flow via authApi (read dynamically per request).
-import { authHeaders, API_BASE_URL } from "./authApi";
+import { authHeaders, authFetch, API_BASE_URL } from "./authApi";
 
 const API_URL = `${API_BASE_URL}/offers/`;
 
@@ -20,7 +20,7 @@ export const normalizeOffer = (o) => ({
 
 // GET /api/offers/ -> normalized array.
 export async function fetchOffers() {
-  const res = await fetch(API_URL, { headers: authHeaders() });
+  const res = await authFetch(API_URL, { headers: authHeaders() });
 
   if (!res.ok) {
     throw new Error(`Failed to load offers (${res.status} ${res.statusText})`);
@@ -33,7 +33,7 @@ export async function fetchOffers() {
 
 // POST /api/offers/ -> create (or effectively regenerate) an offer.
 export async function createOffer({ candidate, role, ctc, issued, expiry, joining, status, candidateId }) {
-  const res = await fetch(API_URL, {
+  const res = await authFetch(API_URL, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify({
@@ -59,7 +59,7 @@ export async function createOffer({ candidate, role, ctc, issued, expiry, joinin
 
 // DELETE /api/offers/{backendId}/
 export async function deleteOffer(backendId) {
-  const res = await fetch(`${API_URL}${backendId}/`, {
+  const res = await authFetch(`${API_URL}${backendId}/`, {
     method: "DELETE",
     headers: authHeaders(),
   });
@@ -81,7 +81,7 @@ export async function updateOffer(backendId, fields) {
   if (fields.joining !== undefined) body.joining_date = fields.joining;
   if (fields.status !== undefined) body.status = fields.status;
 
-  const res = await fetch(`${API_URL}${backendId}/`, {
+  const res = await authFetch(`${API_URL}${backendId}/`, {
     method: "PATCH",
     headers: authHeaders(),
     body: JSON.stringify(body),
