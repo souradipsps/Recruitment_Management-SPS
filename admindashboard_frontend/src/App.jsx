@@ -40,10 +40,6 @@ export default function App() {
   // Persisted app data (each mirrors itself to localStorage).
   const [selectedPanelists] = usePersistentState("selectedPanelists", ["Dr. Roy", "Mr. Patel", "Ms. Nisha"]);
 
-  // Live-API-backed: interviews come straight from the database (no mock seed, no
-  // localStorage) so shortlisting/rejecting a candidate is immediately reflected here.
-  const [interviews, setInterviews] = useState([]);
-
   // Session-scoped auth/module selection.
   const [currentUser, setCurrentUser] = useSessionState("currentUser", null);
   const [selectedModule, setSelectedModule] = useSessionState("selectedModule", null);
