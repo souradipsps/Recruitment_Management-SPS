@@ -40,6 +40,10 @@ export default function App() {
   // Persisted app data (each mirrors itself to localStorage).
   const [selectedPanelists] = usePersistentState("selectedPanelists", ["Dr. Roy", "Mr. Patel", "Ms. Nisha"]);
 
+  // Live-API-backed: interviews come straight from the database (no mock seed, no
+  // localStorage) so shortlisting/rejecting a candidate is immediately reflected here.
+  const [interviews, setInterviews] = useState([]);
+
   // Session-scoped auth/module selection.
   const [currentUser, setCurrentUser] = useSessionState("currentUser", null);
   const [selectedModule, setSelectedModule] = useSessionState("selectedModule", null);
@@ -90,6 +94,15 @@ export default function App() {
     window.addEventListener(AUTH_EXPIRED_EVENT, onAuthExpired);
     return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onAuthExpired);
   }, [setCurrentUser, setSelectedModule]);
+
+  // Load interviews from the API on mount.
+  useEffect(() => {
+    let active = true;
+    fetchInterviews()
+      .then((data) => { if (active) setInterviews(data); })
+      .catch((err) => console.error("Failed to load interviews:", err));
+    return () => { active = false; };
+  }, [setInterviews]);
 
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
