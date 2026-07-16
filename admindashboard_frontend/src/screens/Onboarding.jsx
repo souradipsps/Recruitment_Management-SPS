@@ -4,17 +4,12 @@ import { statusVariant } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
 import { Card, SectionTitle, Mono, Badge, Btn, Modal, ModalHeader } from "../components/ui";
 import { JOB_APPLICATIONS, GENERAL_APPLICATIONS, OFFERS } from "../data";
+import { authHeaders, authFetch, API_BASE_URL } from "../api/authApi";
 
 // Onboarding API client — GET /api/onboarding/, PATCH /api/onboarding/{id}/tasks/.
-// Uses the access token from .env, mirroring applicationsApi.js.
-const ONBOARDING_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const ONBOARDING_URL = `${ONBOARDING_API_BASE_URL}/onboarding/`;
-const ONBOARDING_ACCESS_TOKEN = import.meta.env.VITE_API_ACCESS_TOKEN;
-
-const onboardingAuthHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${ONBOARDING_ACCESS_TOKEN}`,
-});
+// Token comes from the login flow via authApi (read dynamically per request,
+// with automatic refresh-and-retry on 401), same as every other api module.
+const ONBOARDING_URL = `${API_BASE_URL}/onboarding/`;
 
 // verified_docs / rejected_docs are stored on the backend as a JSON-encoded string
 // (e.g. '["aadhar","pan"]'), not a real JSON field — parse defensively.
@@ -62,7 +57,7 @@ const normalizeOnboardingRecord = (r) => ({
 
 // GET /api/onboarding/ -> normalized array (live from the database).
 async function fetchOnboardingRecords() {
-  const res = await fetch(ONBOARDING_URL, { headers: onboardingAuthHeaders() });
+  const res = await authFetch(ONBOARDING_URL, { headers: authHeaders() });
 
   if (!res.ok) {
     throw new Error(`Failed to load onboarding records (${res.status} ${res.statusText})`);
@@ -75,9 +70,9 @@ async function fetchOnboardingRecords() {
 
 // PATCH /api/onboarding/{backendId}/tasks/ — partial update of task_* booleans.
 async function updateOnboardingTasks(backendId, fields) {
-  const res = await fetch(`${ONBOARDING_URL}${backendId}/tasks/`, {
+  const res = await authFetch(`${ONBOARDING_URL}${backendId}/tasks/`, {
     method: "PATCH",
-    headers: onboardingAuthHeaders(),
+    headers: authHeaders(),
     body: JSON.stringify(fields),
   });
 
@@ -92,9 +87,9 @@ async function updateOnboardingTasks(backendId, fields) {
 // PATCH /api/onboarding/{backendId}/ — the main detail endpoint, used for fields the
 // /tasks/ action doesn't expose (verified_docs / rejected_docs).
 async function updateOnboardingDocs(backendId, fields) {
-  const res = await fetch(`${ONBOARDING_URL}${backendId}/`, {
+  const res = await authFetch(`${ONBOARDING_URL}${backendId}/`, {
     method: "PATCH",
-    headers: onboardingAuthHeaders(),
+    headers: authHeaders(),
     body: JSON.stringify(fields),
   });
 
