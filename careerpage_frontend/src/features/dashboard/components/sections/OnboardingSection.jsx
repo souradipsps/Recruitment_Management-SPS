@@ -6,10 +6,13 @@ import { OnboardingProgress } from "./onboarding/OnboardingProgress";
 import "../css/sections/OnboardingSection.css";
 
 export function OnboardingSection({
+  offer,
+  offerLoading,
+  offerActionLoading,
+  onAcceptOffer,
+  onDeclineOffer,
   offerAccepted,
-  setOfferAccepted,
   offerRejected,
-  setOfferRejected,
   showOfferConfirm,
   setShowOfferConfirm,
   docs,
@@ -62,10 +65,13 @@ export function OnboardingSection({
       </p>
 
       <OfferLetterCard
+        offer={offer}
+        offerLoading={offerLoading}
+        offerActionLoading={offerActionLoading}
+        onAcceptOffer={onAcceptOffer}
+        onDeclineOffer={onDeclineOffer}
         offerAccepted={offerAccepted}
-        setOfferAccepted={setOfferAccepted}
         offerRejected={offerRejected}
-        setOfferRejected={setOfferRejected}
         showOfferConfirm={showOfferConfirm}
         setShowOfferConfirm={setShowOfferConfirm}
       />
