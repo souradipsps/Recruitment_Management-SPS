@@ -509,6 +509,7 @@ export default function InterviewPanel({
     if (!setInterviews || !schedulingCandidate) return;
 
     const existing = schedulingCandidate.interview;
+    const isExisting = existing?.backendId != null;
     const payload = buildInterviewPayload({
       candidate: schedulingCandidate.name,
       role: schedulingCandidate.role,
@@ -518,12 +519,16 @@ export default function InterviewPanel({
       meetingLink: scheduleForm.mode === "Online" ? scheduleForm.meetingLink : "",
       round: schedulingCandidate.activeRound,
       status: "Scheduled",
-      panelIds: resolvePanelIds(existing?.panel || []),
+      // Only send the panel when creating a fresh row. On reschedule (updating an
+      // existing row) we omit it so the backend leaves the assigned panelists
+      // untouched — re-sending name-resolved ids risks silently dropping any
+      // panelist whose name didn't resolve. See resolvePanelIds.
+      ...(isExisting ? {} : { panelIds: resolvePanelIds(existing?.panel || []) }),
     });
 
     setIsSavingSchedule(true);
     try {
-      const norm = existing?.backendId != null
+      const norm = isExisting
         ? await updateInterview(existing.backendId, payload)
         : await createInterview(payload);
       upsertInterview(norm);
