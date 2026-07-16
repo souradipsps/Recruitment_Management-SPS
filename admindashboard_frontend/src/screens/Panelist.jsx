@@ -1,8 +1,8 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { T, font } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
-import { submitPanelistEvaluation, updateInterview } from "../api/interviewsApi";
+import { submitPanelistEvaluation, updateInterview, fetchUpcomingInterviews } from "../api/interviewsApi";
 
 const MAROON = T.primary;
 
@@ -98,7 +98,19 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
   const [filterActiveIndex, setFilterActiveIndex] = useState(0);
   const [isSubmittingEval, setIsSubmittingEval] = useState(false);
   const [confirmData, setConfirmData] = useState(null);
+  const [upcomingInterviews, setUpcomingInterviews] = useState([]);
   const scrollRef = useRef(null);
+
+  // Upcoming interviews come from the dedicated GET /api/interviews/upcoming/
+  // endpoint (status "Scheduled" AND date >= today) rather than being derived
+  // from the full interviews list — a single source of truth for "upcoming".
+  useEffect(() => {
+    let cancelled = false;
+    fetchUpcomingInterviews()
+      .then((data) => { if (!cancelled) setUpcomingInterviews(data); })
+      .catch((err) => console.error("Failed to load upcoming interviews:", err));
+    return () => { cancelled = true; };
+  }, []);
 
   // The interviews API stores each evaluation against a panelist ID, but this
   // screen (and its mock local-auth) works with panelist display NAMES —
@@ -133,10 +145,17 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
     ? interviews
     : interviews.filter((i) => i.panel?.includes(currentUser));
 
+  // Scope the API's upcoming list the same way as myInterviews: admin sees all,
+  // a panelist only their own. (The /upcoming/ endpoint returns every upcoming
+  // interview for non-candidate users, so the panel filter is applied here.)
+  const myUpcoming = currentUser === "admin"
+    ? upcomingInterviews
+    : upcomingInterviews.filter((i) => i.panel?.includes(currentUser));
+
   const enrichedPostings = jobPostings
     .map((p) => ({
       ...p,
-      count: myInterviews.filter((i) => i.role === p.role && i.date && i.status !== "Completed").length,
+      count: myUpcoming.filter((i) => i.role === p.role).length,
     }))
     .filter((p) => currentUser === "admin" || myInterviews.some((i) => i.role === p.role));
 
@@ -155,7 +174,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
     ? statusFilteredInterviews.filter((i) => i.role === selectedRole)
     : statusFilteredInterviews;
 
-  const upcomingCount = scheduledInterviews.filter((i) => i.status !== "Completed").length;
+  const upcomingCount = myUpcoming.length;
   const evaluatedCount = scheduledInterviews.filter((i) => i.evaluations?.length > 0).length;
 
   const selectJob = (id) => setSelectedJobId(id);

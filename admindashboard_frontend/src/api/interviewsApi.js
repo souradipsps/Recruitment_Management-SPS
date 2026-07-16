@@ -148,6 +148,22 @@ export async function fetchInterviews() {
   return list.map(normalizeInterview);
 }
 
+// GET /api/interviews/upcoming/ -> normalized array of upcoming interviews only
+// (backend filters to status="Scheduled" AND date >= today). Candidates get their
+// own; HR/admin/panelist users get all upcoming ones. Callers that need to scope a
+// panelist to their own interviews should filter the result by panel membership.
+export async function fetchUpcomingInterviews() {
+  const res = await authFetch(`${API_URL}upcoming/`, { headers: authHeaders() });
+
+  if (!res.ok) {
+    throw new Error(`Failed to load upcoming interviews (${res.status} ${res.statusText})`);
+  }
+
+  const data = await res.json();
+  const list = Array.isArray(data) ? data : data.results || []; // handle DRF pagination
+  return list.map(normalizeInterview);
+}
+
 // POST /api/interviews/ -> normalized record. `payload` must already be a backend
 // payload (build it with buildInterviewPayload). Only candidate_name + role are
 // required by the API — a round can be created before it's scheduled.
