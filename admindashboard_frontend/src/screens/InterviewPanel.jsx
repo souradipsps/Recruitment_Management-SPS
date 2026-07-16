@@ -1,8 +1,11 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { T, font } from "../theme";
 import { statusVariant } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
 import { Card, SectionTitle, Badge, Btn, Modal, ModalHeader, FormField, Select, Input } from "../components/ui";
+import { createPanelist } from "../api/panelistsApi";
+import { createInterview, updateInterview, deleteInterview, buildInterviewPayload } from "../api/interviewsApi";
+import { deleteOffer } from "../api/offersApi";
 
 const TIME_OPTIONS = [
   { value: "9:00 AM", label: "9:00 AM" },
@@ -58,8 +61,20 @@ export default function InterviewPanel({
   const [showAddPanelistModal, setShowAddPanelistModal] = useState(false);
   const [reminderCandidate, setReminderCandidate] = useState(null);
 
+  const [tempPanelists, setTempPanelists] = useState([]);
+  const [isSavingPanelists, setIsSavingPanelists] = useState(false);
+
+  useEffect(() => {
+    if (assigningCandidate) {
+      setTempPanelists(assigningCandidate.interview?.panel || []);
+    } else {
+      setTempPanelists([]);
+    }
+  }, [assigningCandidate]);
+
   // Form validations for Add Panelist
   const [panelistErrors, setPanelistErrors] = useState({ name: "", email: "", phone: "" });
+  const [isSubmittingPanelist, setIsSubmittingPanelist] = useState(false);
 
   const validateName = (name) => {
     if (!name.trim()) return "Full Name is required.";
@@ -137,6 +152,7 @@ export default function InterviewPanel({
       .filter((a) => a.status === "Shortlisted")
       .map((a) => ({
         id: a.id,
+        candidateId: a.candidateId ?? null,
         name: a.name,
         email: a.email,
         phone: a.phone || "",
@@ -151,6 +167,7 @@ export default function InterviewPanel({
       .filter((a) => a.status === "Shortlisted")
       .map((a) => ({
         id: a.id,
+        candidateId: a.candidateId ?? null,
         name: a.name,
         email: a.email,
         phone: a.phone || "",
@@ -294,41 +311,115 @@ export default function InterviewPanel({
     }
   };
 
-  const handleAdvanceSelectedRounds = () => {
+  // Resolve panelist display names -> backend ids (interviews API stores panel as ids).
+  const resolvePanelIds = (names = []) =>
+    names
+      .map((n) => panelists.find((p) => p.name === n)?.backendId)
+      .filter((id) => id != null);
+
+  // Insert or replace a normalized interview record in the shared list. Matches on
+  // backend id first, then on candidate/role/round (to replace an unsaved placeholder).
+  const upsertInterview = (norm) => {
+    if (!setInterviews) return;
+    setInterviews((prev) => {
+      const idx = prev.findIndex(
+        (i) =>
+          (norm.backendId != null && i.backendId === norm.backendId) ||
+          (i.candidate === norm.candidate && i.role === norm.role && i.round === norm.round)
+      );
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = norm;
+        return next;
+      }
+      return [...prev, norm];
+    });
+  };
+
+  const findInterviewForRound = (name, role, round) =>
+    interviews.find((i) => i.candidate === name && i.role === role && i.round === round);
+
+  const handleAdvanceSelectedRounds = async () => {
     if (selectedCandidateKeys.length === 0) {
       alert("Select at least one candidate to advance their round.");
       return;
     }
+    const toAdvance = selectableCandidates.filter((c) => selectedCandidateKeys.includes(candidateKey(c)));
     setActiveRoundOverrides((prev) => {
       const next = { ...prev };
-      selectableCandidates.forEach((c) => {
-        const key = candidateKey(c);
-        if (selectedCandidateKeys.includes(key)) {
-          next[key] = Math.min(10, c.activeRound + 1);
-        }
+      toAdvance.forEach((c) => {
+        next[candidateKey(c)] = Math.min(10, c.activeRound + 1);
       });
       return next;
     });
     setSelectedCandidateKeys([]);
+
+    // Create a fresh interview row in the DB for each advanced candidate's next
+    // round — only candidate/role/round are sent; schedule + panel come later.
+    for (const c of toAdvance) {
+      const newRound = Math.min(10, c.activeRound + 1);
+      if (newRound === c.activeRound) continue;
+      if (findInterviewForRound(c.name, c.role, newRound)?.backendId != null) continue;
+      try {
+        const norm = await createInterview(
+          buildInterviewPayload({ candidate: c.name, role: c.role, round: newRound, status: "Pending" })
+        );
+        upsertInterview(norm);
+      } catch (err) {
+        console.error("Failed to create next-round interview:", err);
+      }
+    }
   };
 
-  const handleIncrementCandidateRound = (c, currentRound) => {
+  const handleIncrementCandidateRound = async (c, currentRound) => {
     const newRound = Math.min(10, currentRound + 1);
+    if (newRound === currentRound) return;
     setActiveRoundOverrides((prev) => ({
       ...prev,
       [`${c.name}-${c.role}`]: newRound,
     }));
+
+    // Re-shortlist the candidate into the next round: create a fresh interview row
+    // carrying only candidate + role + round (no schedule/panel copied over).
+    if (findInterviewForRound(c.name, c.role, newRound)?.backendId != null) return;
+    try {
+      const norm = await createInterview(
+        buildInterviewPayload({ candidate: c.name, role: c.role, round: newRound, status: "Pending" })
+      );
+      upsertInterview(norm);
+    } catch (err) {
+      console.error("Failed to create next-round interview:", err);
+      alert("Could not create the next round interview. Please try again.");
+    }
   };
 
-  const handleDecrementCandidateRound = (c, currentRound) => {
+  const handleDecrementCandidateRound = async (c, currentRound) => {
     const newRound = Math.max(1, currentRound - 1);
+
+    // Delete the interview row for the round we're leaving so it can be redone
+    // (re-scheduled and re-paneled after advancing again).
+    const leaving = findInterviewForRound(c.name, c.role, currentRound);
+    if (leaving?.backendId != null) {
+      try {
+        await deleteInterview(leaving.backendId);
+      } catch (err) {
+        console.error("Failed to delete interview:", err);
+        alert("Could not delete the interview for this round. Please try again.");
+        return;
+      }
+    }
+    if (setInterviews) {
+      setInterviews((prev) =>
+        prev.filter((i) => !(i.candidate === c.name && i.role === c.role && i.round === currentRound))
+      );
+    }
     setActiveRoundOverrides((prev) => ({
       ...prev,
       [`${c.name}-${c.role}`]: newRound,
     }));
   };
 
-  const handleAddPanelist = (e) => {
+  const handleAddPanelist = async (e) => {
     e.preventDefault();
     const nameErr = validateName(newPanelistName);
     const emailErr = validateEmail(newPanelistEmail);
@@ -340,15 +431,32 @@ export default function InterviewPanel({
     }
 
     if (!setPanelists) return;
-    setPanelists((prev) => [
-      ...prev,
-      { name: newPanelistName.trim(), email: newPanelistEmail.trim(), phone: newPanelistPhone.trim() },
-    ]);
-    setNewPanelistName("");
-    setNewPanelistEmail("");
-    setNewPanelistPhone("");
-    setPanelistErrors({ name: "", email: "", phone: "" });
-    setShowAddPanelistModal(false);
+
+    setIsSubmittingPanelist(true);
+    try {
+      // Register the panelist on the backend (POST /api/panelists/).
+      // Department is intentionally not sent per requirements.
+      const created = await createPanelist({
+        name: newPanelistName,
+        email: newPanelistEmail,
+        phone: newPanelistPhone,
+      });
+
+      setPanelists((prev) => [...prev, created]);
+      setNewPanelistName("");
+      setNewPanelistEmail("");
+      setNewPanelistPhone("");
+      setPanelistErrors({ name: "", email: "", phone: "" });
+      setShowAddPanelistModal(false);
+    } catch (err) {
+      console.error("Failed to register panelist:", err);
+      setPanelistErrors((prev) => ({
+        ...prev,
+        email: "Could not register panelist. Please try again.",
+      }));
+    } finally {
+      setIsSubmittingPanelist(false);
+    }
   };
 
   const handleGiveOffer = (c) => {
@@ -357,11 +465,21 @@ export default function InterviewPanel({
     }
   };
 
-  const handleDeclineOfferInPanel = (candidateName, candidateRole) => {
-    if (setOffers) {
-      setOffers((prev) =>
-        prev.filter((o) => !(o.candidate === candidateName && o.role === candidateRole))
-      );
+  const handleDeclineOfferInPanel = async (candidateName, candidateRole) => {
+    const existing = (offers || []).find((o) => o.candidate === candidateName && o.role === candidateRole);
+    if (!existing) return;
+    try {
+      if (existing.backendId != null) {
+        await deleteOffer(existing.backendId);
+      }
+      if (setOffers) {
+        setOffers((prev) =>
+          prev.filter((o) => !(o.candidate === candidateName && o.role === candidateRole))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to decline offer:", err);
+      alert("Failed to decline offer. Please try again.");
     }
   };
 
@@ -377,7 +495,9 @@ export default function InterviewPanel({
     setShowScheduleModal(true);
   };
 
-  const handleSaveSchedule = () => {
+  const [isSavingSchedule, setIsSavingSchedule] = useState(false);
+
+  const handleSaveSchedule = async () => {
     if (!scheduleForm.date || !scheduleForm.time) {
       alert("Please select date and time.");
       return;
@@ -388,115 +508,128 @@ export default function InterviewPanel({
     }
     if (!setInterviews || !schedulingCandidate) return;
 
-    setInterviews((prev) => {
-      const existingPanel = schedulingCandidate?.interview?.panel || [];
-
-      const exists = prev.some(
-        (i) =>
-          i.candidate === schedulingCandidate.name &&
-          i.role === schedulingCandidate.role &&
-          i.round === schedulingCandidate.activeRound
-      );
-      if (exists) {
-        return prev.map((i) =>
-          i.candidate === schedulingCandidate.name &&
-            i.role === schedulingCandidate.role &&
-            i.round === schedulingCandidate.activeRound
-            ? {
-              ...i,
-              date: scheduleForm.date,
-              time: scheduleForm.time,
-              mode: scheduleForm.mode,
-              meetingLink: scheduleForm.mode === "Online" ? scheduleForm.meetingLink : "",
-              panel: existingPanel,
-              rescheduled: true,
-            }
-            : i
-        );
-      } else {
-        return [
-          ...prev,
-          {
-            id: `INT-${schedulingCandidate.id}-${schedulingCandidate.activeRound}`,
-            candidate: schedulingCandidate.name,
-            role: schedulingCandidate.role,
-            date: scheduleForm.date,
-            time: scheduleForm.time,
-            panel: [],
-            score: null,
-            rec: "—",
-            status: "Pending",
-            mode: scheduleForm.mode,
-            meetingLink: scheduleForm.mode === "Online" ? scheduleForm.meetingLink : "",
-            round: schedulingCandidate.activeRound,
-          },
-        ];
-      }
+    const existing = schedulingCandidate.interview;
+    const isExisting = existing?.backendId != null;
+    const payload = buildInterviewPayload({
+      candidate: schedulingCandidate.name,
+      role: schedulingCandidate.role,
+      date: scheduleForm.date,
+      time: scheduleForm.time,
+      mode: scheduleForm.mode,
+      meetingLink: scheduleForm.mode === "Online" ? scheduleForm.meetingLink : "",
+      round: schedulingCandidate.activeRound,
+      status: "Scheduled",
+      // Only send the panel when creating a fresh row. On reschedule (updating an
+      // existing row) we omit it so the backend leaves the assigned panelists
+      // untouched — re-sending name-resolved ids risks silently dropping any
+      // panelist whose name didn't resolve. See resolvePanelIds.
+      ...(isExisting ? {} : { panelIds: resolvePanelIds(existing?.panel || []) }),
     });
 
-    setShowScheduleModal(false);
-    setSchedulingCandidate(null);
+    setIsSavingSchedule(true);
+    try {
+      const norm = isExisting
+        ? await updateInterview(existing.backendId, payload)
+        : await createInterview(payload);
+      upsertInterview(norm);
+      setShowScheduleModal(false);
+      setSchedulingCandidate(null);
+    } catch (err) {
+      console.error("Failed to save interview schedule:", err);
+      alert("Could not save the interview schedule. Please try again.");
+    } finally {
+      setIsSavingSchedule(false);
+    }
   };
 
-  const handleTogglePanelistForCandidate = (panelistName) => {
+  const handleTogglePanelistTemp = (panelistName) => {
+    setTempPanelists((prev) =>
+      prev.includes(panelistName)
+        ? prev.filter((p) => p !== panelistName)
+        : [...prev, panelistName]
+    );
+  };
+
+  const handleSavePanelists = async () => {
     if (!assigningCandidate || !setInterviews) return;
-    setInterviews((prev) => {
-      const exists = prev.some(
-        (i) =>
-          i.candidate === assigningCandidate.name &&
-          i.role === assigningCandidate.role &&
-          i.round === assigningCandidate.activeRound
-      );
-      let updatedList = [];
-      if (exists) {
-        updatedList = prev.map((i) => {
-          if (
-            i.candidate === assigningCandidate.name &&
-            i.role === assigningCandidate.role &&
-            i.round === assigningCandidate.activeRound
-          ) {
-            const panel = i.panel || [];
-            const newPanel = panel.includes(panelistName)
-              ? panel.filter((p) => p !== panelistName)
-              : [...panel, panelistName];
-            return { ...i, panel: newPanel };
-          }
-          return i;
-        });
-      } else {
-        updatedList = [
-          ...prev,
-          {
-            id: `INT-${assigningCandidate.id}-${assigningCandidate.activeRound}`,
-            candidate: assigningCandidate.name,
-            role: assigningCandidate.role,
-            date: "",
-            time: "",
-            panel: [panelistName],
-            score: null,
-            rec: "—",
-            status: "Pending",
-            mode: "In-Person",
-            meetingLink: "",
-            round: assigningCandidate.activeRound,
-          },
-        ];
-      }
-      const updatedCand = updatedList.find(
-        (i) =>
-          i.candidate === assigningCandidate.name &&
-          i.role === assigningCandidate.role &&
-          i.round === assigningCandidate.activeRound
-      );
-      setAssigningCandidate((prevCand) => ({
-        ...prevCand,
-        interview: { ...prevCand.interview, panel: updatedCand?.panel || [] },
-      }));
-      return updatedList;
-    });
+
+    const backendId = assigningCandidate.interview?.backendId;
+    const payload = buildInterviewPayload(
+      backendId != null
+        ? { panelIds: resolvePanelIds(tempPanelists) }
+        : {
+          candidate: assigningCandidate.name,
+          role: assigningCandidate.role,
+          round: assigningCandidate.activeRound,
+          status: "Pending",
+          panelIds: resolvePanelIds(tempPanelists),
+        }
+    );
+
+    setIsSavingPanelists(true);
+    try {
+      const norm = backendId != null
+        ? await updateInterview(backendId, payload)
+        : await createInterview(payload);
+      upsertInterview(norm);
+      setAssigningCandidate(null);
+    } catch (err) {
+      console.error("Failed to save interview panel:", err);
+      alert("Could not save the panel assignment. Please try again.");
+    } finally {
+      setIsSavingPanelists(false);
+    }
   };
 
-  const submitEvaluation = () => {
+  const handleCloseAssignModal = async () => {
+    if (!assigningCandidate) return;
+    const current = assigningCandidate.interview?.panel || [];
+    const sortedCurrent = [...current].sort();
+    const sortedTemp = [...tempPanelists].sort();
+    const hasChanged = JSON.stringify(sortedCurrent) !== JSON.stringify(sortedTemp);
+
+    if (hasChanged) {
+      const shouldSave = window.confirm("You have unsaved changes. Do you want to save them?");
+      if (shouldSave) {
+        await handleSavePanelists();
+        return;
+      }
+    }
+    setAssigningCandidate(null);
+  };
+
+  // Shared save path for both the evaluation modal and the inline mobile-card
+  // evaluation form. POSTs a fresh row if the round hasn't been persisted yet,
+  // otherwise PATCHes the existing one.
+  const saveEvaluation = async (interviewLike, { avgScore, recommendationValue, remarksValue }) => {
+    const payload = buildInterviewPayload(
+      interviewLike.backendId != null
+        ? { score: avgScore, rec: recommendationValue, remarks: remarksValue, status: "Completed" }
+        : {
+          candidate: interviewLike.candidate,
+          role: interviewLike.role,
+          round: interviewLike.round,
+          date: interviewLike.date || undefined,
+          time: interviewLike.time || undefined,
+          mode: interviewLike.mode || "In-Person",
+          meetingLink: interviewLike.meetingLink || "",
+          panelIds: resolvePanelIds(interviewLike.panel || []),
+          score: avgScore,
+          rec: recommendationValue,
+          remarks: remarksValue,
+          status: "Completed",
+        }
+    );
+    const norm = interviewLike.backendId != null
+      ? await updateInterview(interviewLike.backendId, payload)
+      : await createInterview(payload);
+    upsertInterview(norm);
+    return norm;
+  };
+
+  const [isSubmittingEval, setIsSubmittingEval] = useState(false);
+
+  const submitEvaluation = async () => {
     if (!recommendation) {
       alert("Please select a recommendation.");
       return;
@@ -506,47 +639,19 @@ export default function InterviewPanel({
     const scoreValues = Object.values(scores);
     const avgScore = scoreValues.length > 0 ? Math.round((scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length) * 20) : null;
 
-    setInterviews((prev) => {
-      const exists = prev.some(
-        (i) =>
-          i.candidate === evalInterview.candidate &&
-          i.role === evalInterview.role &&
-          i.round === evalInterview.round
-      );
-      if (exists) {
-        return prev.map((i) =>
-          i.candidate === evalInterview.candidate &&
-            i.role === evalInterview.role &&
-            i.round === evalInterview.round
-            ? { ...i, score: avgScore, rec: recommendation, status: "Completed", remarks }
-            : i
-        );
-      } else {
-        return [
-          ...prev,
-          {
-            id: evalInterview.id || `INT-${Date.now()}`,
-            candidate: evalInterview.candidate,
-            role: evalInterview.role,
-            date: evalInterview.date || "",
-            time: evalInterview.time || "",
-            panel: evalInterview.panel || [],
-            score: avgScore,
-            rec: recommendation,
-            status: "Completed",
-            mode: evalInterview.mode || "In-Person",
-            meetingLink: evalInterview.meetingLink || "",
-            round: evalInterview.round,
-            remarks,
-          },
-        ];
-      }
-    });
-
-    setEvalInterview(null);
-    setScores({});
-    setRecommendation("");
-    setRemarks("");
+    setIsSubmittingEval(true);
+    try {
+      await saveEvaluation(evalInterview, { avgScore, recommendationValue: recommendation, remarksValue: remarks });
+      setEvalInterview(null);
+      setScores({});
+      setRecommendation("");
+      setRemarks("");
+    } catch (err) {
+      console.error("Failed to submit interview evaluation:", err);
+      alert("Could not submit the evaluation. Please try again.");
+    } finally {
+      setIsSubmittingEval(false);
+    }
   };
 
   const scrollCarousel = (dir) => {
@@ -1171,7 +1276,7 @@ export default function InterviewPanel({
                           <input
                             type="checkbox"
                             checked={selectedCandidateKeys.includes(candidateKey(c))}
-                            disabled={isPreviousRound}
+                            disabled={isPreviousRound || !!existingOffer}
                             onChange={(e) => {
                               e.stopPropagation();
                               toggleSelectCandidate(c);
@@ -1179,7 +1284,7 @@ export default function InterviewPanel({
                             onClick={(e) => e.stopPropagation()}
                             style={{
                               width: 18, height: 18,
-                              cursor: isPreviousRound ? "not-allowed" : "pointer",
+                              cursor: (isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
                               flexShrink: 0,
                             }}
                           />
@@ -1214,12 +1319,12 @@ export default function InterviewPanel({
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleDecrementCandidateRound(c, rnd); }}
-                                disabled={rnd <= 1 || isPreviousRound}
+                                disabled={rnd <= 1 || isPreviousRound || !!existingOffer}
                                 style={{
                                   width: 24, height: 24, borderRadius: 6, border: "none",
-                                  background: (rnd <= 1 || isPreviousRound) ? "rgba(255,255,255,0.05)" : "#fff",
-                                  color: (rnd <= 1 || isPreviousRound) ? "rgba(255,255,255,0.3)" : "#72102a",
-                                  cursor: (rnd <= 1 || isPreviousRound) ? "not-allowed" : "pointer",
+                                  background: (rnd <= 1 || isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.05)" : "#fff",
+                                  color: (rnd <= 1 || isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.3)" : "#72102a",
+                                  cursor: (rnd <= 1 || isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
                                   display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: "bold",
                                 }}
                               >−</button>
@@ -1232,12 +1337,12 @@ export default function InterviewPanel({
                               </span>
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleIncrementCandidateRound(c, rnd); }}
-                                disabled={rnd >= 10 || isPreviousRound}
+                                disabled={rnd >= 10 || isPreviousRound || !!existingOffer}
                                 style={{
                                   width: 24, height: 24, borderRadius: 6, border: "none",
-                                  background: (rnd >= 10 || isPreviousRound) ? "rgba(255,255,255,0.05)" : "#fff",
-                                  color: (rnd >= 10 || isPreviousRound) ? "rgba(255,255,255,0.3)" : "#72102a",
-                                  cursor: (rnd >= 10 || isPreviousRound) ? "not-allowed" : "pointer",
+                                  background: (rnd >= 10 || isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.05)" : "#fff",
+                                  color: (rnd >= 10 || isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.3)" : "#72102a",
+                                  cursor: (rnd >= 10 || isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
                                   display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: "bold",
                                 }}
                               >+</button>
@@ -1326,67 +1431,75 @@ export default function InterviewPanel({
                         {!isScheduled ? (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleOpenSchedule(c); }}
-                            disabled={isPreviousRound}
+                            disabled={isPreviousRound || !!existingOffer}
                             style={{
                               flex: 1, padding: "10px 0", borderRadius: 10,
-                              background: isPreviousRound ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.15)",
-                              color: isPreviousRound ? "rgba(255,255,255,0.3)" : "#fff",
-                              border: isPreviousRound ? "none" : "1px solid rgba(255,255,255,0.25)",
-                              fontSize: 13, fontWeight: 700, cursor: isPreviousRound ? "not-allowed" : "pointer",
-                              opacity: isPreviousRound ? 0.6 : 1,
+                              background: (isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.15)",
+                              color: (isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.3)" : "#fff",
+                              border: (isPreviousRound || !!existingOffer) ? "none" : "1px solid rgba(255,255,255,0.25)",
+                              fontSize: 13, fontWeight: 700, cursor: (isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
+                              opacity: (isPreviousRound || !!existingOffer) ? 0.6 : 1,
                             }}
                           >📅 Schedule</button>
                         ) : (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleOpenSchedule(c); }}
-                            disabled={isPreviousRound}
+                            disabled={isPreviousRound || !!existingOffer}
                             style={{
                               flex: 1, padding: "10px 0", borderRadius: 10,
-                              background: isPreviousRound ? "rgba(255,255,255,0.05)" : "rgba(245, 158, 11, 0.2)",
-                              color: isPreviousRound ? "rgba(255,255,255,0.3)" : "#FBBF24",
-                              border: isPreviousRound ? "none" : "1px solid rgba(245, 158, 11, 0.3)",
-                              fontSize: 13, fontWeight: 700, cursor: isPreviousRound ? "not-allowed" : "pointer",
-                              opacity: isPreviousRound ? 0.6 : 1,
+                              background: (isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.05)" : "rgba(245, 158, 11, 0.2)",
+                              color: (isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.3)" : "#FBBF24",
+                              border: (isPreviousRound || !!existingOffer) ? "none" : "1px solid rgba(245, 158, 11, 0.3)",
+                              fontSize: 13, fontWeight: 700, cursor: (isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
+                              opacity: (isPreviousRound || !!existingOffer) ? 0.6 : 1,
                             }}
                           >🔄 Reschedule</button>
                         )}
                         <button
                           onClick={(e) => { e.stopPropagation(); setAssigningCandidate(c); }}
-                          disabled={isPreviousRound || !isScheduled}
+                          disabled={isPreviousRound || !isScheduled || !!existingOffer}
                           style={{
                             flex: 1, padding: "10px 0", borderRadius: 10,
-                            background: (isPreviousRound || !isScheduled) ? "rgba(255,255,255,0.05)" : "rgba(255, 215, 0, 0.15)",
-                            color: (isPreviousRound || !isScheduled) ? "rgba(255,255,255,0.3)" : "#FBBF24",
-                            border: (isPreviousRound || !isScheduled) ? "none" : "1px solid rgba(255, 215, 0, 0.25)",
-                            fontSize: 13, fontWeight: 700, cursor: (isPreviousRound || !isScheduled) ? "not-allowed" : "pointer",
-                            opacity: (isPreviousRound || !isScheduled) ? 0.6 : 1,
+                            background: (isPreviousRound || !isScheduled || !!existingOffer) ? "rgba(255,255,255,0.05)" : "rgba(255, 215, 0, 0.15)",
+                            color: (isPreviousRound || !isScheduled || !!existingOffer) ? "rgba(255,255,255,0.3)" : "#FBBF24",
+                            border: (isPreviousRound || !isScheduled || !!existingOffer) ? "none" : "1px solid rgba(255, 215, 0, 0.25)",
+                            fontSize: 13, fontWeight: 700, cursor: (isPreviousRound || !isScheduled || !!existingOffer) ? "not-allowed" : "pointer",
+                            opacity: (isPreviousRound || !isScheduled || !!existingOffer) ? 0.6 : 1,
                           }}
                         >{i.panel && i.panel.length > 0 ? "👥 Edit Panelist" : "👥 Panelist"}</button>
                         {isScheduled && i.panel && i.panel.length > 0 && (
                           <button
                             onClick={(e) => { e.stopPropagation(); setReminderCandidate(c); }}
-                            disabled={isPreviousRound}
+                            disabled={isPreviousRound || !!existingOffer}
                             style={{
                               flex: 1, padding: "10px 0", borderRadius: 10,
-                              background: isPreviousRound ? "rgba(255,255,255,0.05)" : "rgba(167, 139, 250, 0.2)",
-                              color: isPreviousRound ? "rgba(255,255,255,0.3)" : "#C084FC",
-                              border: isPreviousRound ? "none" : "1px solid rgba(167, 139, 250, 0.3)",
-                              fontSize: 13, fontWeight: 700, cursor: isPreviousRound ? "not-allowed" : "pointer",
-                              opacity: isPreviousRound ? 0.6 : 1,
+                              background: (isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.05)" : "rgba(167, 139, 250, 0.2)",
+                              color: (isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.3)" : "#C084FC",
+                              border: (isPreviousRound || !!existingOffer) ? "none" : "1px solid rgba(167, 139, 250, 0.3)",
+                              fontSize: 13, fontWeight: 700, cursor: (isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
+                              opacity: (isPreviousRound || !!existingOffer) ? 0.6 : 1,
                             }}
                           >🔔 Reminder</button>
                         )}
                         {existingOffer ? (
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleDeclineOfferInPanel(c.name, c.role); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (existingOffer.status === "Accepted") {
+                                alert("Offer already accepted");
+                              } else {
+                                handleDeclineOfferInPanel(c.name, c.role);
+                              }
+                            }}
                             disabled={isPreviousRound}
                             style={{
                               width: "100%", padding: "10px 0", borderRadius: 10,
-                              background: isPreviousRound ? "rgba(255,255,255,0.05)" : "rgba(239, 68, 68, 0.2)",
-                              color: isPreviousRound ? "rgba(255,255,255,0.3)" : "#FCA5A5",
-                              border: isPreviousRound ? "none" : "1px solid rgba(239, 68, 68, 0.3)",
-                              fontSize: 13, fontWeight: 700, cursor: isPreviousRound ? "not-allowed" : "pointer",
-                              opacity: isPreviousRound ? 0.6 : 1,
+                              background: (isPreviousRound || existingOffer.status === "Accepted") ? "rgba(255,255,255,0.05)" : "rgba(239, 68, 68, 0.2)",
+                              color: (isPreviousRound || existingOffer.status === "Accepted") ? "rgba(255,255,255,0.3)" : "#FCA5A5",
+                              border: (isPreviousRound || existingOffer.status === "Accepted") ? "none" : "1px solid rgba(239, 68, 68, 0.3)",
+                              fontSize: 13, fontWeight: 700,
+                              cursor: (isPreviousRound || existingOffer.status === "Accepted") ? "not-allowed" : "pointer",
+                              opacity: (isPreviousRound || existingOffer.status === "Accepted") ? 0.6 : 1,
                             }}
                           >Decline</button>
                         ) : (
@@ -1501,11 +1614,13 @@ export default function InterviewPanel({
                     </div>
                   </th>
                   <th style={{ padding: "12px 10px", textAlign: "left", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle" }}>Candidate &amp; Role</th>
+                  <th style={{ padding: "12px 10px", textAlign: "center", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle", width: 100 }}>Score</th>
                   <th style={{ padding: "12px 10px", textAlign: "center", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle", width: 120 }}>Round</th>
                   <th style={{ padding: "12px 10px", textAlign: "left", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle" }}>Panelists</th>
                   <th style={{ padding: "12px 10px", textAlign: "left", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle" }}>Schedule</th>
                   <th style={{ padding: "12px 10px", textAlign: "left", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle", width: 100 }}>Mode</th>
                   <th style={{ padding: "12px 10px", textAlign: "left", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle", width: 80 }}>Link</th>
+                  <th style={{ padding: "12px 10px", textAlign: "center", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle", width: 110 }}>Status</th>
                   <th style={{ padding: "12px 10px", textAlign: "center", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle" }}>Actions</th>
                 </tr>
               </thead>
@@ -1540,11 +1655,11 @@ export default function InterviewPanel({
                             <input
                               type="checkbox"
                               checked={isChecked}
-                              disabled={isPreviousRound}
+                              disabled={isPreviousRound || !!existingOffer}
                               onChange={() => {
                                 toggleSelectCandidate(c);
                               }}
-                              style={{ width: 16, height: 16, cursor: isPreviousRound ? "not-allowed" : "pointer" }}
+                              style={{ width: 16, height: 16, cursor: (isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer" }}
                             />
                           </div>
                         </td>
@@ -1556,17 +1671,6 @@ export default function InterviewPanel({
                             <div>
                               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                 <span style={{ fontWeight: 700, color: T.ink, fontSize: 13 }}>{c.name}</span>
-                                {i.score !== null && (
-                                  <span style={{
-                                    fontSize: 9, fontWeight: 800,
-                                    background: i.score >= 80 ? T.greenLight : i.score >= 60 ? T.amberLight : T.redLight,
-                                    color: i.score >= 80 ? T.green : i.score >= 60 ? T.amber : T.red,
-                                    border: `1px solid ${i.score >= 80 ? "#A7F3D0" : i.score >= 60 ? "#FDE68A" : "#FCA5A5"}`,
-                                    padding: "1px 5px", borderRadius: 4
-                                  }}>
-                                    ★ {i.score}
-                                  </span>
-                                )}
                               </div>
                               <div style={{ fontSize: 11, color: T.inkMid, marginTop: 1 }}>{c.role}</div>
                               <div style={{ fontSize: 10, color: T.inkFaint }}>{c.email}</div>
@@ -1574,18 +1678,42 @@ export default function InterviewPanel({
                           </div>
                         </td>
 
+                        {/* Score */}
+                        <td style={{ padding: "12px 10px", textAlign: "center", verticalAlign: "middle" }}>
+                          {(() => {
+                            const evals = i.evaluations || [];
+                            const summary = i.evaluationSummary;
+                            const avgScore = summary?.average_score ?? (evals.length > 0 ? Math.round(evals.reduce((sum, e) => sum + (e.overallScore || 0), 0) / evals.length) : null);
+                            if (avgScore !== null) {
+                              return (
+                                <span style={{
+                                  fontSize: 11, fontWeight: 800,
+                                  background: avgScore >= 80 ? T.greenLight : avgScore >= 60 ? T.amberLight : T.redLight,
+                                  color: avgScore >= 80 ? T.green : avgScore >= 60 ? T.amber : T.red,
+                                  border: `1px solid ${avgScore >= 80 ? "#A7F3D0" : avgScore >= 60 ? "#FDE68A" : "#FCA5A5"}`,
+                                  padding: "3px 8px", borderRadius: 6,
+                                  display: "inline-flex", alignItems: "center", gap: 3
+                                }}>
+                                  ★ {avgScore}
+                                </span>
+                              );
+                            }
+                            return <span style={{ fontSize: 11, color: T.inkFaint, fontStyle: "italic" }}>—</span>;
+                          })()}
+                        </td>
+
                         {/* Round */}
                         <td style={{ padding: "12px 10px", textAlign: "center", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
                           <div style={{ display: "inline-flex", alignItems: "center", gap: 4, background: T.canvas, border: `1px solid ${T.border}`, borderRadius: 8, padding: "2px 4px" }}>
                             <button
                               onClick={() => handleDecrementCandidateRound(c, rnd)}
-                              disabled={rnd <= 1 || isPreviousRound}
+                              disabled={rnd <= 1 || isPreviousRound || !!existingOffer}
                               style={{
                                 width: 20, height: 20, borderRadius: 5, border: "none",
-                                background: (rnd <= 1 || isPreviousRound) ? "transparent" : T.primaryLight,
-                                color: (rnd <= 1 || isPreviousRound) ? T.inkFaint : T.primary,
+                                background: (rnd <= 1 || isPreviousRound || !!existingOffer) ? "transparent" : T.primaryLight,
+                                color: (rnd <= 1 || isPreviousRound || !!existingOffer) ? T.inkFaint : T.primary,
                                 fontWeight: "bold",
-                                cursor: (rnd <= 1 || isPreviousRound) ? "not-allowed" : "pointer",
+                                cursor: (rnd <= 1 || isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
                                 display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11,
                                 transition: "all 0.15s"
                               }}
@@ -1597,13 +1725,13 @@ export default function InterviewPanel({
                             </span>
                             <button
                               onClick={() => handleIncrementCandidateRound(c, rnd)}
-                              disabled={rnd >= 10 || isPreviousRound}
+                              disabled={rnd >= 10 || isPreviousRound || !!existingOffer}
                               style={{
                                 width: 20, height: 20, borderRadius: 5, border: "none",
-                                background: (rnd >= 10 || isPreviousRound) ? "transparent" : T.primaryLight,
-                                color: (rnd >= 10 || isPreviousRound) ? T.inkFaint : T.primary,
+                                background: (rnd >= 10 || isPreviousRound || !!existingOffer) ? "transparent" : T.primaryLight,
+                                color: (rnd >= 10 || isPreviousRound || !!existingOffer) ? T.inkFaint : T.primary,
                                 fontWeight: "bold",
-                                cursor: (rnd >= 10 || isPreviousRound) ? "not-allowed" : "pointer",
+                                cursor: (rnd >= 10 || isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
                                 display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11,
                                 transition: "all 0.15s"
                               }}
@@ -1681,24 +1809,29 @@ export default function InterviewPanel({
                           )}
                         </td>
 
+                        {/* Status */}
+                        <td style={{ padding: "12px 10px", textAlign: "center", verticalAlign: "middle" }}>
+                          <Badge label={i.status || "Pending"} variant={statusVariant(i.status || "Pending")} />
+                        </td>
+
                         {/* Actions */}
                         <td style={{ padding: "12px 10px", textAlign: "center", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
                           <div style={{ display: "grid", gridTemplateColumns: "105px 85px 90px 65px", gap: 6, justifyContent: "center", alignItems: "center" }}>
                             {!i.date ? (
                               <button
                                 onClick={() => handleOpenSchedule(c)}
-                                disabled={isPreviousRound}
-                                style={{ ...actionBtnStyle("primary", isPreviousRound), width: "100%", textAlign: "center" }}
-                                className={isPreviousRound ? "" : "btn-action-hover"}
+                                disabled={isPreviousRound || !!existingOffer}
+                                style={{ ...actionBtnStyle("primary", isPreviousRound || !!existingOffer), width: "100%", textAlign: "center" }}
+                                className={isPreviousRound || !!existingOffer ? "" : "btn-action-hover"}
                               >
                                 📅 Schedule
                               </button>
                             ) : (
                               <button
                                 onClick={() => handleOpenSchedule(c)}
-                                disabled={isPreviousRound}
-                                style={{ ...actionBtnStyle("reschedule", isPreviousRound), width: "100%", textAlign: "center" }}
-                                className={isPreviousRound ? "" : "btn-action-hover"}
+                                disabled={isPreviousRound || !!existingOffer}
+                                style={{ ...actionBtnStyle("reschedule", isPreviousRound || !!existingOffer), width: "100%", textAlign: "center" }}
+                                className={isPreviousRound || !!existingOffer ? "" : "btn-action-hover"}
                                 title={`Currently: ${formatDateAndTime(i.date, i.time)}`}
                               >
                                 🔄 Reschedule
@@ -1706,18 +1839,18 @@ export default function InterviewPanel({
                             )}
                             <button
                               onClick={() => setAssigningCandidate(c)}
-                              disabled={isPreviousRound || !i.date}
-                              style={{ ...actionBtnStyle("amber", isPreviousRound || !i.date), width: "100%", textAlign: "center" }}
-                              className={isPreviousRound || !i.date ? "" : "btn-action-hover"}
+                              disabled={isPreviousRound || !i.date || !!existingOffer}
+                              style={{ ...actionBtnStyle("amber", isPreviousRound || !i.date || !!existingOffer), width: "100%", textAlign: "center" }}
+                              className={isPreviousRound || !i.date || !!existingOffer ? "" : "btn-action-hover"}
                             >
                               {i.panel && i.panel.length > 0 ? "Edit Panelist" : "Panelist"}
                             </button>
                             {i.date && i.panel && i.panel.length > 0 ? (
                               <button
                                 onClick={() => setReminderCandidate(c)}
-                                disabled={isPreviousRound}
-                                style={{ ...actionBtnStyle("secondary", isPreviousRound), width: "100%", textAlign: "center" }}
-                                className={isPreviousRound ? "" : "btn-action-hover"}
+                                disabled={isPreviousRound || !!existingOffer}
+                                style={{ ...actionBtnStyle("secondary", isPreviousRound || !!existingOffer), width: "100%", textAlign: "center" }}
+                                className={isPreviousRound || !!existingOffer ? "" : "btn-action-hover"}
                               >
                                 🔔 Reminder
                               </button>
@@ -1726,10 +1859,21 @@ export default function InterviewPanel({
                             )}
                             {existingOffer ? (
                               <button
-                                onClick={() => handleDeclineOfferInPanel(c.name, c.role)}
+                                onClick={() => {
+                                  if (existingOffer.status === "Accepted") {
+                                    alert("Offer already accepted");
+                                  } else {
+                                    handleDeclineOfferInPanel(c.name, c.role);
+                                  }
+                                }}
                                 disabled={isPreviousRound}
-                                style={{ ...actionBtnStyle("danger", isPreviousRound), width: "100%", textAlign: "center" }}
-                                className={isPreviousRound ? "" : "btn-action-hover"}
+                                style={{
+                                  ...actionBtnStyle("danger", isPreviousRound || existingOffer.status === "Accepted"),
+                                  width: "100%",
+                                  textAlign: "center",
+                                  cursor: (isPreviousRound || existingOffer.status === "Accepted") ? "not-allowed" : "pointer"
+                                }}
+                                className={(isPreviousRound || existingOffer.status === "Accepted") ? "" : "btn-action-hover"}
                               >
                                 Decline
                               </button>
@@ -1750,7 +1894,7 @@ export default function InterviewPanel({
                       {/* Inline Evaluation Form Row */}
                       {inlineEvalKey === candidateKey(c) && (
                         <tr>
-                          <td colSpan={8} style={{ padding: 0, background: T.canvas, borderBottom: `2px solid ${T.primary}22` }}>
+                          <td colSpan={9} style={{ padding: 0, background: T.canvas, borderBottom: `2px solid ${T.primary}22` }}>
                             <div
                               style={{
                                 padding: "20px 24px",
@@ -1855,7 +1999,8 @@ export default function InterviewPanel({
                               {/* Submit actions */}
                               <div style={{ display: "flex", gap: 10 }}>
                                 <button
-                                  onClick={() => {
+                                  disabled={isSubmittingEval}
+                                  onClick={async () => {
                                     if (!recommendation) {
                                       alert("Please select a recommendation.");
                                       return;
@@ -1863,50 +2008,33 @@ export default function InterviewPanel({
                                     if (!setInterviews) return;
                                     const scoreValues = Object.values(scores);
                                     const avgScore = scoreValues.length > 0 ? Math.round((scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length) * 20) : null;
-                                    setInterviews((prev) => {
-                                      const exists = prev.some(
-                                        (iv) => iv.candidate === c.name && iv.role === c.role && iv.round === rnd
+                                    setIsSubmittingEval(true);
+                                    try {
+                                      await saveEvaluation(
+                                        { ...i, candidate: c.name, role: c.role, round: rnd },
+                                        { avgScore, recommendationValue: recommendation, remarksValue: remarks }
                                       );
-                                      if (exists) {
-                                        return prev.map((iv) =>
-                                          iv.candidate === c.name && iv.role === c.role && iv.round === rnd
-                                            ? { ...iv, score: avgScore, rec: recommendation, status: "Completed", remarks }
-                                            : iv
-                                        );
-                                      } else {
-                                        return [
-                                          ...prev,
-                                          {
-                                            id: i.id || `INT-${Date.now()}`,
-                                            candidate: c.name,
-                                            role: c.role,
-                                            date: i.date || "",
-                                            time: i.time || "",
-                                            panel: i.panel || [],
-                                            score: avgScore,
-                                            rec: recommendation,
-                                            status: "Completed",
-                                            mode: i.mode || "In-Person",
-                                            meetingLink: i.meetingLink || "",
-                                            round: rnd,
-                                            remarks,
-                                          },
-                                        ];
-                                      }
-                                    });
-                                    setInlineEvalKey(null);
-                                    setScores({});
-                                    setRecommendation("");
-                                    setRemarks("");
+                                      setInlineEvalKey(null);
+                                      setScores({});
+                                      setRecommendation("");
+                                      setRemarks("");
+                                    } catch (err) {
+                                      console.error("Failed to submit interview evaluation:", err);
+                                      alert("Could not submit the evaluation. Please try again.");
+                                    } finally {
+                                      setIsSubmittingEval(false);
+                                    }
                                   }}
                                   style={{
                                     background: T.primary, color: "#fff", border: "none", borderRadius: 10,
-                                    padding: "9px 22px", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                                    padding: "9px 22px", fontSize: 13, fontWeight: 700,
+                                    cursor: isSubmittingEval ? "not-allowed" : "pointer",
+                                    opacity: isSubmittingEval ? 0.7 : 1,
                                     boxShadow: `0 4px 12px ${T.primary}33`,
                                   }}
                                   className="btn-action-hover"
                                 >
-                                  ✓ Submit Evaluation
+                                  {isSubmittingEval ? "Submitting…" : "✓ Submit Evaluation"}
                                 </button>
                                 <button
                                   onClick={() => {
@@ -2045,16 +2173,16 @@ export default function InterviewPanel({
             )}
 
             <div style={{ display: "flex", gap: 10, marginTop: 12, justifyContent: "flex-end" }}>
-              <Btn label="Cancel" variant="ghost" onClick={() => { setShowScheduleModal(false); setSchedulingCandidate(null); }} />
-              <Btn label="Save Schedule" onClick={handleSaveSchedule} />
+              <Btn label="Cancel" variant="ghost" disabled={isSavingSchedule} onClick={() => { setShowScheduleModal(false); setSchedulingCandidate(null); }} />
+              <Btn label={isSavingSchedule ? "Saving…" : "Save Schedule"} disabled={isSavingSchedule} onClick={handleSaveSchedule} />
             </div>
           </div>
         )}
       </Modal>
 
       {/* Assign Panelist Modal */}
-      <Modal open={!!assigningCandidate} onClose={() => setAssigningCandidate(null)} maxWidth={440}>
-        <ModalHeader title="Assign Panelists" onClose={() => setAssigningCandidate(null)} />
+      <Modal open={!!assigningCandidate} onClose={handleCloseAssignModal} maxWidth={440}>
+        <ModalHeader title="Assign Panelists" onClose={handleCloseAssignModal} />
         {assigningCandidate && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ background: T.canvas, borderRadius: 10, padding: 12, border: `1px solid ${T.border}`, marginBottom: 4 }}>
@@ -2067,11 +2195,11 @@ export default function InterviewPanel({
             <FormField label="Available Panel Members">
               <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 240, overflowY: "auto", paddingRight: 4 }}>
                 {panelists.map((p) => {
-                  const isAssigned = (assigningCandidate.interview?.panel || []).includes(p.name);
+                  const isAssigned = tempPanelists.includes(p.name);
                   return (
                     <div
                       key={p.name}
-                      onClick={() => handleTogglePanelistForCandidate(p.name)}
+                      onClick={() => handleTogglePanelistTemp(p.name)}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -2111,8 +2239,9 @@ export default function InterviewPanel({
               </div>
             </FormField>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-              <Btn label="Save" onClick={() => setAssigningCandidate(null)} />
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
+              <Btn label="Cancel" variant="ghost" disabled={isSavingPanelists} onClick={handleCloseAssignModal} />
+              <Btn label={isSavingPanelists ? "Saving..." : "Save"} disabled={isSavingPanelists} onClick={handleSavePanelists} />
             </div>
           </div>
         )}
@@ -2164,93 +2293,362 @@ export default function InterviewPanel({
             </div>
 
             {/* Rounds History Log */}
-            <div style={{ marginTop: 20, borderTop: `1.5px solid ${T.border}`, paddingTop: 16 }}>
-              <h3 style={{ fontSize: 13, fontWeight: 800, color: T.ink, marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <div style={{ marginTop: 24, borderTop: `1.5px solid ${T.border}`, paddingTop: 20 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 800, color: T.ink, marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 Interview Rounds History
               </h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {Array.from({ length: selectedAppDetail.activeRound || 1 }, (_, i) => i + 1).map((r) => {
-                  if (r > selectedAppDetail.activeRound) return null;
-
-                  const roundInv = interviews.find(
-                    (i) => i.candidate === selectedAppDetail.name && i.role === selectedAppDetail.role && i.round === r
-                  );
-                  if (!roundInv) {
-                    return (
-                      <div
-                        key={r}
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          padding: "10px 14px",
-                          background: T.canvas,
-                          borderRadius: 8,
-                          border: `1.5px dashed ${T.border}`,
-                        }}
-                      >
-                        <span style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{getRoundOrdinal(r)}</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: T.amber, background: T.amberLight, padding: "3px 10px", borderRadius: 99 }}>Pending Schedule</span>
-                      </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                {(() => {
+                  const activeRnd = selectedAppDetail.activeRound || 1;
+                  const roundsToRender = Array.from({ length: activeRnd }, (_, i) => i + 1).filter((r) => {
+                    const hasInv = interviews.some(
+                      (i) => i.candidate === selectedAppDetail.name && i.role === selectedAppDetail.role && i.round === r
                     );
+                    return r === activeRnd || hasInv;
+                  });
+
+                  return roundsToRender.map((r, idx, arr) => {
+                    const roundInv = interviews.find(
+                      (i) => i.candidate === selectedAppDetail.name && i.role === selectedAppDetail.role && i.round === r
+                    );
+
+                  const isCompleted = roundInv?.status === "Completed";
+                  const isScheduled = roundInv?.status === "Scheduled";
+                  const hasInv = !!roundInv;
+
+                  let nodeBg = "#E2E8F0";
+                  let nodeBorder = "#CBD5E1";
+                  if (hasInv) {
+                    if (isCompleted) {
+                      nodeBg = T.green;
+                      nodeBorder = T.greenLight;
+                    } else if (isScheduled) {
+                      nodeBg = T.primary;
+                      nodeBorder = T.primaryLight;
+                    } else {
+                      nodeBg = T.amber;
+                      nodeBorder = T.amberLight;
+                    }
                   }
+
                   return (
-                    <div
-                      key={r}
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 6,
-                        padding: 12,
-                        background: T.primaryPale,
-                        borderRadius: 8,
-                        border: `1px solid ${T.border}`,
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: 12, fontWeight: 800, color: T.primary }}>{getRoundOrdinal(r)}</span>
-                        <Badge label={roundInv.status} variant={statusVariant(roundInv.status)} />
+                    <div key={r} style={{ display: "flex", gap: 16 }}>
+                      {/* Timeline Indicator Column */}
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 20, flexShrink: 0 }}>
+                        {/* Top line segment */}
+                        <div style={{ width: 2, flex: idx === 0 ? "0 0 12px" : 1, background: idx === 0 ? "transparent" : T.border }} />
+                        {/* Node */}
+                        <div style={{
+                          width: 12,
+                          height: 12,
+                          borderRadius: "50%",
+                          background: nodeBg,
+                          border: `3px solid ${nodeBorder}`,
+                          boxShadow: hasInv && !isCompleted ? `0 0 0 3px ${nodeBg}22` : "none",
+                          flexShrink: 0,
+                          zIndex: 2,
+                          transition: "all 0.2s"
+                        }} />
+                        {/* Bottom line segment */}
+                        <div style={{ width: 2, flex: idx === arr.length - 1 ? "0 0 12px" : 1, background: idx === arr.length - 1 ? "transparent" : T.border }} />
                       </div>
-                      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 8, fontSize: 11, color: T.inkMid }}>
-                        <div><strong>Date &amp; Time:</strong> {roundInv.date ? formatDateAndTime(roundInv.date, roundInv.time) : "Not Scheduled"}</div>
-                        <div><strong>Mode:</strong> {roundInv.mode || "In-Person"}</div>
-                        <div><strong>Panel:</strong> {roundInv.panel?.join(", ") || "None"}</div>
-                        <div><strong>Score / Rec:</strong> {roundInv.score !== null ? `${roundInv.score}/100 (${roundInv.rec})` : "Not Evaluated"}</div>
+
+                      {/* Right Column: Card Content */}
+                      <div style={{ flex: 1, paddingBottom: idx < arr.length - 1 ? 20 : 0 }}>
+                        {!roundInv ? (
+                          <div style={{
+                            padding: "12px 16px",
+                            background: "#F8FAFC",
+                            borderRadius: 12,
+                            border: `1.5px dashed ${T.border}`,
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center"
+                          }}>
+                            <div>
+                              <span style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{getRoundOrdinal(r)}</span>
+                              <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 2 }}>Round has not been scheduled yet</div>
+                            </div>
+                            <span style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              color: T.amber,
+                              background: T.amberLight,
+                              border: `1px solid ${T.amber}33`,
+                              padding: "3px 10px",
+                              borderRadius: 99
+                            }}>
+                              Pending Schedule
+                            </span>
+                          </div>
+                        ) : (
+                          <div style={{
+                            padding: "16px 20px",
+                            background: isCompleted ? "#F0FDF4" : isScheduled ? "#F0F9FF" : "#FFFBEB",
+                            borderRadius: 14,
+                            border: `1.5px solid ${isCompleted ? "#DCFCE7" : isScheduled ? "#E0F2FE" : "#FEF3C7"}`,
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.01)"
+                          }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                              <span style={{ fontSize: 13.5, fontWeight: 850, color: isCompleted ? "#166534" : isScheduled ? "#075985" : "#92400E" }}>
+                                {getRoundOrdinal(r)}
+                              </span>
+                              <Badge label={roundInv.status} variant={statusVariant(roundInv.status)} />
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "10px 16px", fontSize: 11.5, color: T.inkMid }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 14 }}>📅</span>
+                                <div>
+                                  <div style={{ fontSize: 9.5, color: T.inkFaint, textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>Date &amp; Time</div>
+                                  <div style={{ fontWeight: 600, color: T.ink }}>{roundInv.date ? formatDateAndTime(roundInv.date, roundInv.time) : "Not Scheduled"}</div>
+                                </div>
+                              </div>
+
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 14 }}>🏢</span>
+                                <div>
+                                  <div style={{ fontSize: 9.5, color: T.inkFaint, textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>Mode</div>
+                                  <div style={{ fontWeight: 600, color: T.ink }}>{roundInv.mode || "In-Person"}</div>
+                                </div>
+                              </div>
+
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 14 }}>👥</span>
+                                <div>
+                                  <div style={{ fontSize: 9.5, color: T.inkFaint, textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>Panelists</div>
+                                  <div style={{ fontWeight: 600, color: T.ink }}>{roundInv.panel?.join(", ") || "None"}</div>
+                                </div>
+                              </div>
+
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 14 }}>📊</span>
+                                <div>
+                                  <div style={{ fontSize: 9.5, color: T.inkFaint, textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>Evaluation Status</div>
+                                  <div style={{ fontWeight: 600, color: T.ink }}>
+                                    {(() => {
+                                      const evals = roundInv.evaluations || [];
+                                      const summary = roundInv.evaluationSummary;
+                                      if (evals.length > 0) {
+                                        const avgScore = summary?.average_score ?? Math.round(evals.reduce((sum, e) => sum + (e.overallScore || 0), 0) / evals.length);
+                                        return (
+                                          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                            <strong style={{ color: avgScore >= 80 ? T.green : avgScore >= 60 ? T.accentDark : T.red }}>{avgScore}/100</strong>
+                                            <span style={{ fontSize: 10, background: "rgba(0,0,0,0.06)", padding: "1px 6px", borderRadius: 4, fontWeight: 700 }}>
+                                              {summary?.submitted_count ?? evals.length}/{summary?.assigned_count ?? (roundInv.panel?.length || "?")} evaluated
+                                            </span>
+                                          </span>
+                                        );
+                                      }
+                                      return <span style={{ color: T.inkFaint, fontStyle: "italic" }}>Not Evaluated</span>;
+                                    })()}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Per-Panelist Evaluation Scorecards */}
+                            {r === (selectedAppDetail.displayRound || selectedAppDetail.activeRound) && (roundInv.evaluations || []).length > 0 && (
+                              <div style={{ marginTop: 20, borderTop: "1.5px solid rgba(0,0,0,0.06)", paddingTop: 18 }}>
+                                <div style={{ 
+                                  fontSize: 10, 
+                                  fontWeight: 800, 
+                                  color: T.inkLight, 
+                                  textTransform: "uppercase", 
+                                  letterSpacing: "0.08em", 
+                                  marginBottom: 14,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 6
+                                }}>
+                                  <span>📋</span> Panelist Evaluations ({roundInv.evaluations.length})
+                                </div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                                  {roundInv.evaluations.map((ev, evIdx) => {
+                                    const pName = ev.panelistId != null
+                                      ? (panelists.find((p) => p.backendId === ev.panelistId)?.name || `Panelist #${ev.panelistId}`)
+                                      : `Panelist ${evIdx + 1}`;
+                                    const criteriaEntries = Object.entries(ev.criteria || {});
+                                    const evScore = ev.overallScore ?? (criteriaEntries.length > 0 ? Math.round((criteriaEntries.reduce((s, [, v]) => s + v, 0) / criteriaEntries.length) * 20) : null);
+
+                                    const REC_COLORS = {
+                                      "Strong Hire": { bg: "#ECFDF5", color: "#059669" },
+                                      "Hire": { bg: "#F0FDF4", color: "#16A34A" },
+                                      "Hold": { bg: "#FFFBEB", color: "#D97706" },
+                                      "Reject": { bg: "#FEF2F2", color: "#DC2626" },
+                                      "Selected": { bg: "#ECFDF5", color: "#059669" },
+                                      "Rejected": { bg: "#FEF2F2", color: "#DC2626" },
+                                      "On Hold": { bg: "#FFFBEB", color: "#D97706" },
+                                      "Next Round": { bg: "#F0F9FF", color: "#0284C7" },
+                                    };
+                                    const recStyle = REC_COLORS[ev.rec] || { bg: "#F8FAFC", color: T.inkLight };
+
+                                    return (
+                                      <div 
+                                        key={evIdx} 
+                                        style={{ 
+                                          background: "#ffffff", 
+                                          borderRadius: 16, 
+                                          border: "1px solid #ECE7E1", 
+                                          borderLeft: `5px solid ${recStyle.color}`,
+                                          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.02)",
+                                          overflow: "hidden",
+                                          padding: "16px 20px"
+                                        }}
+                                      >
+                                        {/* Panelist Header */}
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+                                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                            <div style={{ 
+                                              width: 36, 
+                                              height: 36, 
+                                              borderRadius: "50%", 
+                                              background: `linear-gradient(135deg, ${T.primary} 0%, ${T.primaryDark} 100%)`, 
+                                              color: "#ffffff", 
+                                              display: "flex", 
+                                              alignItems: "center", 
+                                              justifyContent: "center", 
+                                              fontWeight: 800, 
+                                              fontSize: 12, 
+                                              flexShrink: 0,
+                                              boxShadow: "0 3px 8px rgba(114, 16, 42, 0.15)"
+                                            }}>
+                                              {pName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                                            </div>
+                                            <div>
+                                              <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink, letterSpacing: "-0.01em" }}>{pName}</div>
+                                              {ev.submittedAt && (
+                                                <div style={{ fontSize: 10, color: T.inkFaint, marginTop: 1, display: "flex", alignItems: "center", gap: 4 }}>
+                                                  <span>📅</span>
+                                                  {new Date(ev.submittedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                          
+                                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                            {ev.rec && ev.rec !== "—" && (
+                                              <span style={{ 
+                                                fontSize: 10.5, 
+                                                fontWeight: 700, 
+                                                borderRadius: 100, 
+                                                padding: "4px 12px", 
+                                                background: recStyle.bg, 
+                                                color: recStyle.color, 
+                                                border: `1px solid ${recStyle.color}1A`,
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: 5
+                                              }}>
+                                                <span style={{ width: 6, height: 6, borderRadius: "50%", background: recStyle.color }} />
+                                                {ev.rec}
+                                              </span>
+                                            )}
+                                            {evScore !== null && (
+                                              <div style={{ 
+                                                background: "linear-gradient(135deg, #1A1A1A 0%, #4A4A4A 100%)", 
+                                                color: "#ffffff", 
+                                                borderRadius: 100, 
+                                                padding: "4px 12px", 
+                                                display: "inline-flex", 
+                                                alignItems: "center", 
+                                                gap: 5,
+                                                boxShadow: "0 4px 10px rgba(0, 0, 0, 0.08)"
+                                              }}>
+                                                <span style={{ fontSize: 9.5, color: "rgba(255, 255, 255, 0.7)", fontWeight: 700, letterSpacing: "0.03em" }}>SCORE</span>
+                                                <span style={{ 
+                                                  fontSize: 12, 
+                                                  fontWeight: 900, 
+                                                  color: evScore >= 80 ? "#4ADE80" : evScore >= 60 ? "#FBBF24" : "#F87171" 
+                                                }}>{evScore}</span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        {/* Criteria Grid */}
+                                        {criteriaEntries.length > 0 && (
+                                          <div>
+                                            <div style={{ 
+                                              display: "grid", 
+                                              gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", 
+                                              gap: "8px 24px",
+                                              background: "#FAF9F6",
+                                              borderRadius: 12,
+                                              border: "1px solid #E8E2D9",
+                                              padding: "12px 16px"
+                                            }}>
+                                              {criteriaEntries.map(([field, val]) => (
+                                                <div key={field} style={{ 
+                                                  display: "flex", 
+                                                  justifyContent: "space-between", 
+                                                  alignItems: "center", 
+                                                  gap: 8, 
+                                                  padding: "6px 0", 
+                                                  borderBottom: "1px dashed rgba(232, 226, 217, 0.6)" 
+                                                }}>
+                                                  <span style={{ fontSize: 11.5, color: T.inkMid, fontWeight: 600 }}>{field}</span>
+                                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                                    <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+                                                      {Array.from({ length: 5 }).map((_, di) => (
+                                                        <div 
+                                                          key={di} 
+                                                          style={{ 
+                                                            width: 14, 
+                                                            height: 5, 
+                                                            borderRadius: 2.5, 
+                                                            background: di < val ? recStyle.color : "#E2E8F0", 
+                                                            transition: "background 0.2s" 
+                                                          }} 
+                                                        />
+                                                      ))}
+                                                    </div>
+                                                    <span style={{ fontSize: 10.5, fontWeight: 800, color: T.ink, minWidth: 20, textAlign: "right" }}>{val}/5</span>
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+
+                                            {/* Feedback Notes */}
+                                            {ev.notes && (
+                                              <div style={{ 
+                                                marginTop: 12, 
+                                                padding: "12px 16px", 
+                                                background: "#ffffff", 
+                                                borderRadius: 12, 
+                                                border: "1px solid #E8E2D9",
+                                                borderLeft: `4px solid ${recStyle.color}`,
+                                                position: "relative",
+                                                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.01)"
+                                              }}>
+                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                                                  <span style={{ fontSize: 9.5, fontWeight: 800, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                                                    Feedback Remarks
+                                                  </span>
+                                                  <span style={{ fontSize: 18, fontWeight: 900, color: `${recStyle.color}2A`, fontFamily: "Georgia, serif", lineHeight: 1 }}>“</span>
+                                                </div>
+                                                <span style={{ fontStyle: "italic", fontSize: 12, color: T.inkMid, lineHeight: 1.6, display: "block" }}>
+                                                  "{ev.notes}"
+                                                </span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+
+                          </div>
+                        )}
                       </div>
-                      {roundInv.remarks && (
-                        <div style={{ fontSize: 11, color: T.inkLight, background: "#fff", padding: 6, borderRadius: 4, border: `1px solid ${T.border}` }}>
-                          <strong>Remarks:</strong> {roundInv.remarks}
-                        </div>
-                      )}
-                      {roundInv.meetingLink && (
-                        <div style={{ fontSize: 11, marginTop: 2 }}>
-                          <strong>Link:</strong>{" "}
-                          <a
-                            href={roundInv.meetingLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ color: T.primary, textDecoration: "none", fontWeight: 600 }}
-                          >
-                            {roundInv.meetingLink}
-                          </a>
-                        </div>
-                      )}
                     </div>
                   );
-                })}
-              </div>
+                });
+              })()}
             </div>
-
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
-              <Btn
-                label="Give Offer"
-                variant="success"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleGiveOffer(selectedAppDetail);
-                  setSelectedAppDetail(null);
-                }}
-              />
             </div>
           </>
         )}
@@ -2348,8 +2746,8 @@ export default function InterviewPanel({
             </FormField>
 
             <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-              <Btn label="Submit Evaluation" onClick={submitEvaluation} />
-              <Btn label="Cancel" variant="ghost" onClick={() => setEvalInterview(null)} />
+              <Btn label={isSubmittingEval ? "Submitting…" : "Submit Evaluation"} disabled={isSubmittingEval} onClick={submitEvaluation} />
+              <Btn label="Cancel" variant="ghost" disabled={isSubmittingEval} onClick={() => setEvalInterview(null)} />
             </div>
           </>
         )}
@@ -2494,22 +2892,28 @@ export default function InterviewPanel({
                 <button
                   type="button"
                   onClick={closeAddPanelistModal}
+                  disabled={isSubmittingPanelist}
                   style={{
                     flex: 1, padding: "12px", borderRadius: 10, border: `1.5px solid ${T.border}`,
-                    background: T.canvas, color: T.inkMid, fontSize: 14, fontWeight: 700, cursor: "pointer",
+                    background: T.canvas, color: T.inkMid, fontSize: 14, fontWeight: 700,
+                    cursor: isSubmittingPanelist ? "not-allowed" : "pointer",
+                    opacity: isSubmittingPanelist ? 0.6 : 1,
                   }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
+                  disabled={isSubmittingPanelist}
                   style={{
                     flex: 2, padding: "12px", borderRadius: 10, border: "none",
-                    background: T.primary, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer",
+                    background: T.primary, color: "#fff", fontSize: 14, fontWeight: 700,
+                    cursor: isSubmittingPanelist ? "not-allowed" : "pointer",
+                    opacity: isSubmittingPanelist ? 0.7 : 1,
                     boxShadow: `0 4px 14px ${T.primary}44`,
                   }}
                 >
-                  ＋ Add Panelist
+                  {isSubmittingPanelist ? "Registering…" : "＋ Add Panelist"}
                 </button>
               </div>
             </form>
@@ -2622,10 +3026,18 @@ export default function InterviewPanel({
           )}
 
           <button
-            onClick={() => {
-              // Write reminderSentAt into the matching interview record
-              if (setInterviews && reminderCandidate) {
-                const sentAt = new Date().toISOString();
+            onClick={async () => {
+              // Persist reminder_sent_at on the interview record (API + local state).
+              const inv = reminderCandidate?.interview;
+              const sentAt = new Date().toISOString();
+              if (inv?.backendId != null) {
+                try {
+                  const norm = await updateInterview(inv.backendId, buildInterviewPayload({ reminderSentAt: sentAt }));
+                  upsertInterview(norm);
+                } catch (err) {
+                  console.error("Failed to record reminder:", err);
+                }
+              } else if (setInterviews && reminderCandidate) {
                 setInterviews((prev) =>
                   prev.map((i) =>
                     i.candidate === reminderCandidate.name && i.role === reminderCandidate.role

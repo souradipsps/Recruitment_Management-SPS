@@ -1,9 +1,8 @@
 // Job Requests API client.
-// Uses the access token from .env (no login flow yet).
+// Auth token comes from the login flow via authApi (read dynamically per request).
+import { authHeaders, authFetch, getAccessToken, API_BASE_URL } from "./authApi";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const API_URL = `${API_BASE_URL}/job-requests/`;
-const ACCESS_TOKEN = import.meta.env.VITE_API_ACCESS_TOKEN;
 
 // Backend returns skills as a comma- or newline-separated string; the UI wants an array.
 const toSkillsArray = (val) => {
@@ -39,11 +38,8 @@ export const normalizeJobRequest = (r) => ({
 
 // GET /api/job-requests/ -> normalized array.
 export async function fetchJobRequests() {
-  const res = await fetch(API_URL, {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${ACCESS_TOKEN}`,
-    },
+  const res = await authFetch(API_URL, {
+    headers: authHeaders(),
   });
 
   if (!res.ok) {
@@ -73,18 +69,15 @@ const buildJobRequestPayload = (formData) => ({
 
 // POST /api/job-requests/
 export async function createJobRequest(formData, submittedBy) {
-  if (!ACCESS_TOKEN) {
-    throw new Error("Missing VITE_API_ACCESS_TOKEN in .env");
+  if (!getAccessToken()) {
+    throw new Error("Not authenticated — please log in.");
   }
 
   const payload = { ...buildJobRequestPayload(formData), submitted_by: submittedBy };
 
-  const res = await fetch(API_URL, {
+  const res = await authFetch(API_URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${ACCESS_TOKEN}`,
-    },
+    headers: authHeaders(),
     body: JSON.stringify(payload),
   });
 
@@ -99,16 +92,13 @@ export async function createJobRequest(formData, submittedBy) {
 
 // PATCH /api/job-requests/{backendId}/
 export async function updateJobRequestStatus(backendId, status) {
-  if (!ACCESS_TOKEN) {
-    throw new Error("Missing VITE_API_ACCESS_TOKEN in .env");
+  if (!getAccessToken()) {
+    throw new Error("Not authenticated — please log in.");
   }
 
-  const res = await fetch(`${API_URL}${backendId}/`, {
+  const res = await authFetch(`${API_URL}${backendId}/`, {
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${ACCESS_TOKEN}`,
-    },
+    headers: authHeaders(),
     body: JSON.stringify({ status }),
   });
 
@@ -125,16 +115,13 @@ export async function updateJobRequestStatus(backendId, status) {
 // salary, etc). `takeApprovalAction` only sends the action verb + note, so field
 // edits made in the Approval Requests modal must be saved here separately.
 export async function updateJobRequestFields(backendId, formData) {
-  if (!ACCESS_TOKEN) {
-    throw new Error("Missing VITE_API_ACCESS_TOKEN in .env");
+  if (!getAccessToken()) {
+    throw new Error("Not authenticated — please log in.");
   }
 
-  const res = await fetch(`${API_URL}${backendId}/`, {
+  const res = await authFetch(`${API_URL}${backendId}/`, {
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${ACCESS_TOKEN}`,
-    },
+    headers: authHeaders(),
     body: JSON.stringify(buildJobRequestPayload(formData)),
   });
 

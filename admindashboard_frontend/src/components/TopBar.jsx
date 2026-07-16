@@ -94,24 +94,26 @@ export default function TopBar({
             {pendingCount} Pending
           </button>
         )}
-        <button
-          onClick={onBackToModules}
-          className="btn-hover"
-          style={{
-            background: "rgba(255,255,255,0.08)",
-            border: "1.5px solid rgba(255,255,255,0.25)",
-            borderRadius: radius.md,
-            padding: "6px 14px",
-            cursor: "pointer",
-            color: "#fff",
-            fontWeight: 700,
-            fontSize: 12,
-            transition: transition.fast,
-            fontFamily: font.body,
-          }}
-        >
-          Back to Modules
-        </button>
+        {onBackToModules && (
+          <button
+            onClick={onBackToModules}
+            className="btn-hover"
+            style={{
+              background: "rgba(255,255,255,0.08)",
+              border: "1.5px solid rgba(255,255,255,0.25)",
+              borderRadius: radius.md,
+              padding: "6px 14px",
+              cursor: "pointer",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 12,
+              transition: transition.fast,
+              fontFamily: font.body,
+            }}
+          >
+            Back to Modules
+          </button>
+        )}
       </div>
     </div>
   );

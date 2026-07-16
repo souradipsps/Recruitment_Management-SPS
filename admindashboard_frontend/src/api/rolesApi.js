@@ -1,14 +1,8 @@
 // Existing Roles API client.
-// Uses the access token from .env (no login flow yet), mirroring jobRequestsApi.js.
+// Auth token comes from the login flow via authApi (read dynamically per request).
+import { authHeaders, authFetch, API_BASE_URL } from "./authApi";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const API_URL = `${API_BASE_URL}/roles/`;
-const ACCESS_TOKEN = import.meta.env.VITE_API_ACCESS_TOKEN;
-
-const authHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${ACCESS_TOKEN}`,
-});
 
 // Map one API record -> the shape the ExistingRoles screen expects.
 export const normalizeRole = (r) => ({
@@ -29,7 +23,7 @@ export const normalizeRole = (r) => ({
 
 // GET /api/roles/ -> normalized array.
 export async function fetchRoles() {
-  const res = await fetch(API_URL, { headers: authHeaders() });
+  const res = await authFetch(API_URL, { headers: authHeaders() });
 
   if (!res.ok) {
     throw new Error(`Failed to load roles (${res.status} ${res.statusText})`);
@@ -42,7 +36,7 @@ export async function fetchRoles() {
 
 // PATCH /api/roles/{backendId}/ — partial update (e.g. status toggle).
 export async function patchRole(backendId, payload) {
-  const res = await fetch(`${API_URL}${backendId}/`, {
+  const res = await authFetch(`${API_URL}${backendId}/`, {
     method: "PATCH",
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -58,7 +52,7 @@ export async function patchRole(backendId, payload) {
 
 // DELETE /api/roles/{backendId}/
 export async function deleteRole(backendId) {
-  const res = await fetch(`${API_URL}${backendId}/`, {
+  const res = await authFetch(`${API_URL}${backendId}/`, {
     method: "DELETE",
     headers: authHeaders(),
   });

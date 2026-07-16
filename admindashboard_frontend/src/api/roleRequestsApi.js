@@ -1,14 +1,8 @@
 // Role Requests API client.
-// Uses the access token from .env (no login flow yet), mirroring jobRequestsApi.js.
+// Auth token comes from the login flow via authApi (read dynamically per request).
+import { authHeaders, authFetch, API_BASE_URL } from "./authApi";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const API_URL = `${API_BASE_URL}/role-requests/`;
-const ACCESS_TOKEN = import.meta.env.VITE_API_ACCESS_TOKEN;
-
-const authHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${ACCESS_TOKEN}`,
-});
 
 // Map one API record -> the shape the RoleRequests screen expects.
 export const normalizeRoleRequest = (r) => ({
@@ -45,7 +39,7 @@ const parseErrorResponse = async (res) => {
 
 // GET /api/role-requests/ -> normalized array.
 export async function fetchRoleRequests() {
-  const res = await fetch(API_URL, { headers: authHeaders() });
+  const res = await authFetch(API_URL, { headers: authHeaders() });
 
   if (!res.ok) {
     throw new Error(`Failed to load role requests (${res.status} ${res.statusText})`);
@@ -68,7 +62,7 @@ export async function createRoleRequest(formData, submittedBy) {
     submitted_by: submittedBy,
   };
 
-  const res = await fetch(API_URL, {
+  const res = await authFetch(API_URL, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -84,7 +78,7 @@ export async function createRoleRequest(formData, submittedBy) {
 
 // PATCH /api/role-requests/{backendId}/ — partial update (edit fields and/or status).
 export async function updateRoleRequest(backendId, payload) {
-  const res = await fetch(`${API_URL}${backendId}/`, {
+  const res = await authFetch(`${API_URL}${backendId}/`, {
     method: "PATCH",
     headers: authHeaders(),
     body: JSON.stringify(payload),

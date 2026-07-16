@@ -13,6 +13,7 @@ venv/
 
 # Node / frontend dependencies
 node_modules/
+dist/
 
 # Python cache
 .pytest_cache/

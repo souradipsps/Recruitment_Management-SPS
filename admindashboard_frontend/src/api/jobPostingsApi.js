@@ -1,14 +1,8 @@
 // Job Postings API client.
-// Uses the access token from .env (no login flow yet), mirroring jobRequestsApi.js.
+// Auth token comes from the login flow via authApi (read dynamically per request).
+import { authHeaders, authFetch, API_BASE_URL } from "./authApi";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const API_URL = `${API_BASE_URL}/job-postings/`;
-const ACCESS_TOKEN = import.meta.env.VITE_API_ACCESS_TOKEN;
-
-const authHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${ACCESS_TOKEN}`,
-});
 
 // Map one API record -> the shape the JobPostings screen expects.
 export const normalizeJobPosting = (p) => ({
@@ -33,7 +27,7 @@ export const normalizeJobPosting = (p) => ({
 
 // GET /api/job-postings/ -> normalized array (admin: published + unpublished).
 export async function fetchJobPostings() {
-  const res = await fetch(API_URL, { headers: authHeaders() });
+  const res = await authFetch(API_URL, { headers: authHeaders() });
 
   if (!res.ok) {
     throw new Error(`Failed to load job postings (${res.status} ${res.statusText})`);
@@ -46,7 +40,7 @@ export async function fetchJobPostings() {
 
 // POST /api/job-postings/{backendId}/publish/
 export async function publishJobPosting(backendId) {
-  const res = await fetch(`${API_URL}${backendId}/publish/`, {
+  const res = await authFetch(`${API_URL}${backendId}/publish/`, {
     method: "POST",
     headers: authHeaders(),
   });
@@ -62,7 +56,7 @@ export async function publishJobPosting(backendId) {
 
 // POST /api/job-postings/{backendId}/unpublish/
 export async function unpublishJobPosting(backendId) {
-  const res = await fetch(`${API_URL}${backendId}/unpublish/`, {
+  const res = await authFetch(`${API_URL}${backendId}/unpublish/`, {
     method: "POST",
     headers: authHeaders(),
   });
@@ -78,7 +72,7 @@ export async function unpublishJobPosting(backendId) {
 
 // DELETE /api/job-postings/{backendId}/
 export async function deleteJobPosting(backendId) {
-  const res = await fetch(`${API_URL}${backendId}/`, {
+  const res = await authFetch(`${API_URL}${backendId}/`, {
     method: "DELETE",
     headers: authHeaders(),
   });

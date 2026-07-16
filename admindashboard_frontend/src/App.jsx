@@ -1,26 +1,24 @@
 import { useState, useEffect } from "react";
 import { T, font } from "./theme";
 import { useBreakpoint, usePersistentState, useSessionState } from "./hooks";
-import { NAV, OFFERS } from "./data";
+import { NAV } from "./data";
 import { fetchJobRequests } from "./api/jobRequestsApi";
 import { fetchApprovals } from "./api/approvalsApi";
 import { fetchRoles } from "./api/rolesApi";
 import { fetchJobPostings } from "./api/jobPostingsApi";
 import { fetchRoleRequests } from "./api/roleRequestsApi";
-import { fetchApplications, fetchGeneralApplications, fetchInterviews } from "./api/applicationsApi";
+import { fetchApplications, fetchGeneralApplications } from "./api/applicationsApi";
+import { fetchPanelists } from "./api/panelistsApi";
+import { fetchInterviews } from "./api/interviewsApi";
+import { fetchOffers, createOffer } from "./api/offersApi";
+import { logout, AUTH_EXPIRED_EVENT } from "./api/authApi";
+import { isAdmin } from "./authRules";
 
 import Auth from "./screens/Auth";
 import ModuleSelector from "./screens/ModuleSelector";
 import Sidebar from "./components/Sidebar";
 import TopBar from "./components/TopBar";
 import ScreenRouter from "./components/ScreenRouter";
-
-const defaultPanelists = () =>
-  ["Dr. Roy", "Mr. Patel", "Ms. Nisha", "Mr. Kumar", "Mr. Rajan", "Dr. Ananya"].map((name) => ({
-    name,
-    email: `${name.toLowerCase().replace(". ", "_").replace(" ", "_")}@school.edu`,
-    phone: "9876543210",
-  }));
 
 export default function App() {
   const [active, setActive] = useState("applications");
@@ -35,10 +33,11 @@ export default function App() {
   const [jobPostings, setJobPostings] = useState([]);
   const [jobApplications, setJobApplications] = useState([]);
   const [generalApplications, setGeneralApplications] = useState([]);
+  const [interviews, setInterviews] = useState([]);
+  const [panelists, setPanelists] = useState([]);
+  const [offers, setOffers] = useState([]);
 
   // Persisted app data (each mirrors itself to localStorage).
-  const [offers, setOffers] = usePersistentState("offers", OFFERS);
-  const [panelists, setPanelists] = usePersistentState("panelists", defaultPanelists);
   const [selectedPanelists] = usePersistentState("selectedPanelists", ["Dr. Roy", "Mr. Patel", "Ms. Nisha"]);
 
   // Live-API-backed: interviews come straight from the database (no mock seed, no
@@ -49,67 +48,52 @@ export default function App() {
   const [currentUser, setCurrentUser] = useSessionState("currentUser", null);
   const [selectedModule, setSelectedModule] = useSessionState("selectedModule", null);
 
-  // Load job requests from the API on mount (uses the access token in .env; no login flow yet).
+  // Load all API-backed data once the user is authenticated. Gated on currentUser
+  // so the fetches run with a valid token from the login flow (and re-run on login,
+  // not before). The token itself is read dynamically per request via authApi.
   useEffect(() => {
+    if (!currentUser) return;
     let active = true;
-    fetchJobRequests()
-      .then((data) => { if (active) setJobRequests(data); })
-      .catch((err) => console.error("Failed to load job requests:", err));
-    return () => { active = false; };
-  }, [setJobRequests]);
+    const load = (fn, setter, label) =>
+      fn()
+        .then((data) => { if (active) setter(data); })
+        .catch((err) => console.error(`Failed to load ${label}:`, err));
 
-  // Load approval requests from the API on mount (backend auto-creates these on submission).
-  useEffect(() => {
-    let active = true;
-    fetchApprovals()
-      .then((data) => { if (active) setApprovalRequests(data); })
-      .catch((err) => console.error("Failed to load approvals:", err));
-    return () => { active = false; };
-  }, [setApprovalRequests]);
+    load(fetchJobRequests, setJobRequests, "job requests");
+    load(fetchApprovals, setApprovalRequests, "approvals");
+    load(fetchRoles, setExistingRoles, "roles");
+    load(fetchJobPostings, setJobPostings, "job postings");
+    load(fetchRoleRequests, setRoleRequests, "role requests");
+    load(fetchApplications, setJobApplications, "applications");
+    load(fetchGeneralApplications, setGeneralApplications, "general applications");
+    load(fetchPanelists, setPanelists, "panelists");
+    load(fetchInterviews, setInterviews, "interviews");
+    load(fetchOffers, setOffers, "offers");
 
-  // Load existing roles from the API on mount.
-  useEffect(() => {
-    let active = true;
-    fetchRoles()
-      .then((data) => { if (active) setExistingRoles(data); })
-      .catch((err) => console.error("Failed to load roles:", err));
     return () => { active = false; };
-  }, [setExistingRoles]);
+  }, [currentUser]);
 
-  // Load job postings from the API on mount.
+  // Panelists only ever have one destination (the Panelist screen) — skip the
+  // module picker entirely and drop them straight in, instead of making them
+  // click through a module list that's otherwise meaningless to them.
   useEffect(() => {
-    let active = true;
-    fetchJobPostings()
-      .then((data) => { if (active) setJobPostings(data); })
-      .catch((err) => console.error("Failed to load job postings:", err));
-    return () => { active = false; };
-  }, [setJobPostings]);
-  // Load role requests from the API on mount.
-  useEffect(() => {
-    let active = true;
-    fetchRoleRequests()
-      .then((data) => { if (active) setRoleRequests(data); })
-      .catch((err) => console.error("Failed to load role requests:", err));
-    return () => { active = false; };
-  }, [setRoleRequests]);
+    if (currentUser && !selectedModule && !isAdmin(currentUser)) {
+      setSelectedModule("Recruitment");
+      setActive("panelist");
+    }
+  }, [currentUser, selectedModule]);
 
-  // Load job-posting applications from the API on mount.
+  // If the access token expires and the refresh token can't recover it (authFetch
+  // already cleared the stored tokens), force back to the login screen instead of
+  // leaving every section silently empty until the user manually logs out.
   useEffect(() => {
-    let active = true;
-    fetchApplications()
-      .then((data) => { if (active) setJobApplications(data); })
-      .catch((err) => console.error("Failed to load applications:", err));
-    return () => { active = false; };
-  }, [setJobApplications]);
-
-  // Load general (profile) applications from the API on mount.
-  useEffect(() => {
-    let active = true;
-    fetchGeneralApplications()
-      .then((data) => { if (active) setGeneralApplications(data); })
-      .catch((err) => console.error("Failed to load general applications:", err));
-    return () => { active = false; };
-  }, [setGeneralApplications]);
+    const onAuthExpired = () => {
+      setCurrentUser(null);
+      setSelectedModule(null);
+    };
+    window.addEventListener(AUTH_EXPIRED_EVENT, onAuthExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onAuthExpired);
+  }, [setCurrentUser, setSelectedModule]);
 
   // Load interviews from the API on mount.
   useEffect(() => {
@@ -134,20 +118,33 @@ export default function App() {
   const pageLabel = NAV.find((n) => n.id === active)?.label || "";
 
   const handleLogout = () => {
+    logout();          // clear stored access/refresh tokens + cached user
     setCurrentUser(null);
     setSelectedModule(null);
   };
 
-  const handleGiveOffer = (candidate) => {
+  const [givingOffer, setGivingOffer] = useState(false);
+  const handleGiveOffer = async (candidate) => {
+    if (givingOffer) return; // guard against rapid double-clicks creating duplicate drafts
     const exists = offers.some((o) => o.candidate === candidate.name && o.role === candidate.role);
     if (!exists) {
-      setOffers((prev) => [...prev, {
-        id: `OFR-${Date.now()}`,
-        candidate: candidate.name,
-        role: candidate.role,
-        ctc: "", issued: "", expiry: "", joining: "",
-        status: "Draft",
-      }]);
+      setGivingOffer(true);
+      try {
+        const created = await createOffer({
+          candidate: candidate.name,
+          role: candidate.role,
+          candidateId: candidate.candidateId,
+          ctc: "", issued: "", expiry: "", joining: "",
+          status: "Draft",
+        });
+        setOffers((prev) => [...prev, created]);
+      } catch (err) {
+        console.error("Failed to create offer:", err);
+        alert("Failed to create offer. Please try again.");
+        return;
+      } finally {
+        setGivingOffer(false);
+      }
     }
     setActive("offer-management");
   };
@@ -157,12 +154,15 @@ export default function App() {
   }
 
   if (!selectedModule) {
+    // Non-admins are routed straight in by the effect above — nothing to render
+    // while that resolves (avoids flashing the module picker first).
+    if (!isAdmin(currentUser)) return null;
     return (
       <ModuleSelector
         currentUser={currentUser}
         onSelectModule={(mod) => {
           setSelectedModule(mod);
-          setActive(currentUser.role === "admin" ? "dashboard" : "panelist");
+          setActive("dashboard");
         }}
         onLogout={handleLogout}
       />
@@ -193,10 +193,10 @@ export default function App() {
         isMobile={isMobile}
         isCompact={isCompact}
         pageLabel={pageLabel}
-        pendingCount={pendingCount}
+        pendingCount={isAdmin(currentUser) ? pendingCount : 0}
         onOpenSidebar={() => setSidebarOpen(true)}
         onNavPending={() => handleNav("approval-requests")}
-        onBackToModules={() => setSelectedModule(null)}
+        onBackToModules={isAdmin(currentUser) ? () => setSelectedModule(null) : undefined}
       />
 
       {/* Main layout container (Sidebar + Screen Content) */}
