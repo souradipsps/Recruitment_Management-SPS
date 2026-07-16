@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { T, statusVariant } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
 import { Card, SectionTitle, Table, Mono, Badge, Input, Btn, Modal, ModalHeader, Select, FormField } from "../components/ui";
-import { updateApplicationStatus, updateGeneralApplicationStatus } from "../api/applicationsApi";
+import { updateApplicationStatus, updateGeneralApplicationStatus, createShortlistInterview, deleteInterview } from "../api/applicationsApi";
 
 const STATUS_OPTIONS = [
   { value: "Shortlisted", label: "Shortlisted" },
@@ -17,6 +17,8 @@ export default function Applications({
   setGeneralApplications,
   jobPostings = [],
   jobRequests = [],
+  interviews = [],
+  setInterviews,
   onNavigate,
 }) {
   const bp = useBreakpoint();
@@ -136,8 +138,44 @@ export default function Applications({
       setStatusModalApp(null);
       if (status === "Shortlisted") {
         setSelectedApp(null);
+
+        // Create the Round 1 interview record right away so the candidate shows up in
+        // Interview Panel as "Pending" immediately.
+        const role = isJob ? app.role : app.preferredRole;
+        const alreadyExists = interviews.some(
+          (i) => i.candidate === app.name && i.role === role && i.round === 1
+        );
+        if (!alreadyExists && setInterviews) {
+          try {
+            const created = await createShortlistInterview({
+              candidate: app.name,
+              role,
+              applicationId: isJob ? app.backendId : null,
+            });
+            setInterviews((prev) => [...prev, created]);
+          } catch (err) {
+            setStatusError(err.message || "Shortlisted, but failed to create the interview record.");
+          }
+        }
+
         if (onNavigate) {
           onNavigate("interview-panel");
+        }
+      } else if (status === "Rejected" && setInterviews) {
+        // Remove any interview record(s) tied to this candidate — they're no longer in the running.
+        const role = isJob ? app.role : app.preferredRole;
+        const toRemove = interviews.filter((i) => i.candidate === app.name && i.role === role);
+        for (const i of toRemove) {
+          if (i.backendId) {
+            try {
+              await deleteInterview(i.backendId);
+            } catch (err) {
+              setStatusError(err.message || "Rejected, but failed to remove the interview record.");
+            }
+          }
+        }
+        if (toRemove.length) {
+          setInterviews((prev) => prev.filter((i) => !(i.candidate === app.name && i.role === role)));
         }
       }
     } catch (err) {

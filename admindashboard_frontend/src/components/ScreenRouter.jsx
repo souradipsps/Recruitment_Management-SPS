@@ -78,6 +78,8 @@ export default function ScreenRouter({ active, s, navigate, onGiveOffer }) {
           setGeneralApplications={s.setGeneralApplications}
           jobPostings={s.jobPostings}
           jobRequests={s.jobRequests}
+          interviews={s.interviews}
+          setInterviews={s.setInterviews}
           onNavigate={navigate}
         />
       );

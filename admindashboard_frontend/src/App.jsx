@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { T, font } from "./theme";
 import { useBreakpoint, usePersistentState, useSessionState } from "./hooks";
-import { NAV, INTERVIEWS, OFFERS } from "./data";
+import { NAV, OFFERS } from "./data";
 import { fetchJobRequests } from "./api/jobRequestsApi";
 import { fetchApprovals } from "./api/approvalsApi";
 import { fetchRoles } from "./api/rolesApi";
 import { fetchJobPostings } from "./api/jobPostingsApi";
 import { fetchRoleRequests } from "./api/roleRequestsApi";
-import { fetchApplications, fetchGeneralApplications } from "./api/applicationsApi";
+import { fetchApplications, fetchGeneralApplications, fetchInterviews } from "./api/applicationsApi";
 
 import Auth from "./screens/Auth";
 import ModuleSelector from "./screens/ModuleSelector";
@@ -38,9 +38,12 @@ export default function App() {
 
   // Persisted app data (each mirrors itself to localStorage).
   const [offers, setOffers] = usePersistentState("offers", OFFERS);
-  const [interviews, setInterviews] = usePersistentState("interviews", INTERVIEWS);
   const [panelists, setPanelists] = usePersistentState("panelists", defaultPanelists);
   const [selectedPanelists] = usePersistentState("selectedPanelists", ["Dr. Roy", "Mr. Patel", "Ms. Nisha"]);
+
+  // Live-API-backed: interviews come straight from the database (no mock seed, no
+  // localStorage) so shortlisting/rejecting a candidate is immediately reflected here.
+  const [interviews, setInterviews] = useState([]);
 
   // Session-scoped auth/module selection.
   const [currentUser, setCurrentUser] = useSessionState("currentUser", null);
@@ -107,6 +110,15 @@ export default function App() {
       .catch((err) => console.error("Failed to load general applications:", err));
     return () => { active = false; };
   }, [setGeneralApplications]);
+
+  // Load interviews from the API on mount.
+  useEffect(() => {
+    let active = true;
+    fetchInterviews()
+      .then((data) => { if (active) setInterviews(data); })
+      .catch((err) => console.error("Failed to load interviews:", err));
+    return () => { active = false; };
+  }, [setInterviews]);
 
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";

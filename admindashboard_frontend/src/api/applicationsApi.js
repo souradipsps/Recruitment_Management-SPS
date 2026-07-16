@@ -6,6 +6,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const API_URL = `${API_BASE_URL}/applications/`;
 const GENERAL_API_URL = `${API_BASE_URL}/general-applications/`;
+const INTERVIEWS_URL = `${API_BASE_URL}/interviews/`;
 const ACCESS_TOKEN = import.meta.env.VITE_API_ACCESS_TOKEN;
 
 const authHeaders = () => ({
@@ -60,6 +61,92 @@ export async function updateApplicationStatus(backendId, status, adminNote = "")
   }
 
   return res.json();
+}
+
+// Backend TimeField ("HH:MM:SS") -> the label format InterviewPanel's TIME_OPTIONS uses ("9:00 AM").
+const toFrontendTime = (val) => {
+  if (!val) return "";
+  const [hStr, mStr] = val.split(":");
+  let h = parseInt(hStr, 10);
+  const m = mStr || "00";
+  const suffix = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${h}:${m} ${suffix}`;
+};
+
+// Backend MODE_CHOICES ("Online"/"Offline") -> InterviewPanel's MODE_OPTIONS ("Online"/"In-Person").
+const toFrontendMode = (mode) => (mode === "Online" ? "Online" : "In-Person");
+
+// Map one API interview record -> the shape InterviewPanel.jsx expects (same shape as the
+// old local INTERVIEWS mock: candidate, role, date, time, panel, score, rec, status, mode,
+// meetingLink, round).
+export const normalizeInterview = (r) => ({
+  id: r.interview_id || String(r.id),
+  backendId: r.id,
+  applicationId: r.application ?? null,
+  candidate: r.candidate_name || "",
+  role: r.role || "",
+  date: r.date || "",
+  time: toFrontendTime(r.time),
+  panel: (r.panel_details || []).map((p) => p.name),
+  score: r.score ?? null,
+  rec: r.recommendation || "—",
+  status: r.status || "Pending",
+  mode: toFrontendMode(r.mode),
+  meetingLink: r.meeting_link || "",
+  round: r.round || 1,
+});
+
+// GET /api/interviews/ -> normalized array. Interview Panel loads its list from here so it
+// always reflects the real database instead of local/mock state.
+export async function fetchInterviews() {
+  const res = await fetch(INTERVIEWS_URL, { headers: authHeaders() });
+
+  if (!res.ok) {
+    throw new Error(`Failed to load interviews (${res.status} ${res.statusText})`);
+  }
+
+  const data = await res.json();
+  const list = Array.isArray(data) ? data : data.results || []; // handle DRF pagination
+  return list.map(normalizeInterview);
+}
+
+// POST /api/interviews/ — create the Round 1 interview record when a candidate is
+// shortlisted, so Interview Panel shows them as "Pending" right away.
+// applicationId is only set for job-posting applications (general applications have
+// no JobApplication row to link against).
+export async function createShortlistInterview({ candidate, role, applicationId = null }) {
+  const res = await fetch(INTERVIEWS_URL, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({
+      candidate_name: candidate,
+      role,
+      round: 1,
+      application: applicationId,
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Failed to create interview record (${res.status}): ${errText}`);
+  }
+
+  return normalizeInterview(await res.json());
+}
+
+// DELETE /api/interviews/{backendId}/ — remove the interview record when a candidate
+// is rejected.
+export async function deleteInterview(backendId) {
+  const res = await fetch(`${INTERVIEWS_URL}${backendId}/`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+
+  if (!res.ok && res.status !== 204) {
+    const errText = await res.text();
+    throw new Error(`Failed to remove interview record (${res.status}): ${errText}`);
+  }
 }
 
 // Map one general-application API record -> the shape the Applications screen expects.
