@@ -1276,7 +1276,7 @@ export default function InterviewPanel({
                           <input
                             type="checkbox"
                             checked={selectedCandidateKeys.includes(candidateKey(c))}
-                            disabled={isPreviousRound}
+                            disabled={isPreviousRound || !!existingOffer}
                             onChange={(e) => {
                               e.stopPropagation();
                               toggleSelectCandidate(c);
@@ -1284,7 +1284,7 @@ export default function InterviewPanel({
                             onClick={(e) => e.stopPropagation()}
                             style={{
                               width: 18, height: 18,
-                              cursor: isPreviousRound ? "not-allowed" : "pointer",
+                              cursor: (isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
                               flexShrink: 0,
                             }}
                           />
@@ -1319,12 +1319,12 @@ export default function InterviewPanel({
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleDecrementCandidateRound(c, rnd); }}
-                                disabled={rnd <= 1 || isPreviousRound}
+                                disabled={rnd <= 1 || isPreviousRound || !!existingOffer}
                                 style={{
                                   width: 24, height: 24, borderRadius: 6, border: "none",
-                                  background: (rnd <= 1 || isPreviousRound) ? "rgba(255,255,255,0.05)" : "#fff",
-                                  color: (rnd <= 1 || isPreviousRound) ? "rgba(255,255,255,0.3)" : "#72102a",
-                                  cursor: (rnd <= 1 || isPreviousRound) ? "not-allowed" : "pointer",
+                                  background: (rnd <= 1 || isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.05)" : "#fff",
+                                  color: (rnd <= 1 || isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.3)" : "#72102a",
+                                  cursor: (rnd <= 1 || isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
                                   display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: "bold",
                                 }}
                               >−</button>
@@ -1337,12 +1337,12 @@ export default function InterviewPanel({
                               </span>
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleIncrementCandidateRound(c, rnd); }}
-                                disabled={rnd >= 10 || isPreviousRound}
+                                disabled={rnd >= 10 || isPreviousRound || !!existingOffer}
                                 style={{
                                   width: 24, height: 24, borderRadius: 6, border: "none",
-                                  background: (rnd >= 10 || isPreviousRound) ? "rgba(255,255,255,0.05)" : "#fff",
-                                  color: (rnd >= 10 || isPreviousRound) ? "rgba(255,255,255,0.3)" : "#72102a",
-                                  cursor: (rnd >= 10 || isPreviousRound) ? "not-allowed" : "pointer",
+                                  background: (rnd >= 10 || isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.05)" : "#fff",
+                                  color: (rnd >= 10 || isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.3)" : "#72102a",
+                                  cursor: (rnd >= 10 || isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
                                   display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: "bold",
                                 }}
                               >+</button>
@@ -1431,53 +1431,53 @@ export default function InterviewPanel({
                         {!isScheduled ? (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleOpenSchedule(c); }}
-                            disabled={isPreviousRound}
+                            disabled={isPreviousRound || !!existingOffer}
                             style={{
                               flex: 1, padding: "10px 0", borderRadius: 10,
-                              background: isPreviousRound ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.15)",
-                              color: isPreviousRound ? "rgba(255,255,255,0.3)" : "#fff",
-                              border: isPreviousRound ? "none" : "1px solid rgba(255,255,255,0.25)",
-                              fontSize: 13, fontWeight: 700, cursor: isPreviousRound ? "not-allowed" : "pointer",
-                              opacity: isPreviousRound ? 0.6 : 1,
+                              background: (isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.15)",
+                              color: (isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.3)" : "#fff",
+                              border: (isPreviousRound || !!existingOffer) ? "none" : "1px solid rgba(255,255,255,0.25)",
+                              fontSize: 13, fontWeight: 700, cursor: (isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
+                              opacity: (isPreviousRound || !!existingOffer) ? 0.6 : 1,
                             }}
                           >📅 Schedule</button>
                         ) : (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleOpenSchedule(c); }}
-                            disabled={isPreviousRound}
+                            disabled={isPreviousRound || !!existingOffer}
                             style={{
                               flex: 1, padding: "10px 0", borderRadius: 10,
-                              background: isPreviousRound ? "rgba(255,255,255,0.05)" : "rgba(245, 158, 11, 0.2)",
-                              color: isPreviousRound ? "rgba(255,255,255,0.3)" : "#FBBF24",
-                              border: isPreviousRound ? "none" : "1px solid rgba(245, 158, 11, 0.3)",
-                              fontSize: 13, fontWeight: 700, cursor: isPreviousRound ? "not-allowed" : "pointer",
-                              opacity: isPreviousRound ? 0.6 : 1,
+                              background: (isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.05)" : "rgba(245, 158, 11, 0.2)",
+                              color: (isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.3)" : "#FBBF24",
+                              border: (isPreviousRound || !!existingOffer) ? "none" : "1px solid rgba(245, 158, 11, 0.3)",
+                              fontSize: 13, fontWeight: 700, cursor: (isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
+                              opacity: (isPreviousRound || !!existingOffer) ? 0.6 : 1,
                             }}
                           >🔄 Reschedule</button>
                         )}
                         <button
                           onClick={(e) => { e.stopPropagation(); setAssigningCandidate(c); }}
-                          disabled={isPreviousRound || !isScheduled}
+                          disabled={isPreviousRound || !isScheduled || !!existingOffer}
                           style={{
                             flex: 1, padding: "10px 0", borderRadius: 10,
-                            background: (isPreviousRound || !isScheduled) ? "rgba(255,255,255,0.05)" : "rgba(255, 215, 0, 0.15)",
-                            color: (isPreviousRound || !isScheduled) ? "rgba(255,255,255,0.3)" : "#FBBF24",
-                            border: (isPreviousRound || !isScheduled) ? "none" : "1px solid rgba(255, 215, 0, 0.25)",
-                            fontSize: 13, fontWeight: 700, cursor: (isPreviousRound || !isScheduled) ? "not-allowed" : "pointer",
-                            opacity: (isPreviousRound || !isScheduled) ? 0.6 : 1,
+                            background: (isPreviousRound || !isScheduled || !!existingOffer) ? "rgba(255,255,255,0.05)" : "rgba(255, 215, 0, 0.15)",
+                            color: (isPreviousRound || !isScheduled || !!existingOffer) ? "rgba(255,255,255,0.3)" : "#FBBF24",
+                            border: (isPreviousRound || !isScheduled || !!existingOffer) ? "none" : "1px solid rgba(255, 215, 0, 0.25)",
+                            fontSize: 13, fontWeight: 700, cursor: (isPreviousRound || !isScheduled || !!existingOffer) ? "not-allowed" : "pointer",
+                            opacity: (isPreviousRound || !isScheduled || !!existingOffer) ? 0.6 : 1,
                           }}
                         >{i.panel && i.panel.length > 0 ? "👥 Edit Panelist" : "👥 Panelist"}</button>
                         {isScheduled && i.panel && i.panel.length > 0 && (
                           <button
                             onClick={(e) => { e.stopPropagation(); setReminderCandidate(c); }}
-                            disabled={isPreviousRound}
+                            disabled={isPreviousRound || !!existingOffer}
                             style={{
                               flex: 1, padding: "10px 0", borderRadius: 10,
-                              background: isPreviousRound ? "rgba(255,255,255,0.05)" : "rgba(167, 139, 250, 0.2)",
-                              color: isPreviousRound ? "rgba(255,255,255,0.3)" : "#C084FC",
-                              border: isPreviousRound ? "none" : "1px solid rgba(167, 139, 250, 0.3)",
-                              fontSize: 13, fontWeight: 700, cursor: isPreviousRound ? "not-allowed" : "pointer",
-                              opacity: isPreviousRound ? 0.6 : 1,
+                              background: (isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.05)" : "rgba(167, 139, 250, 0.2)",
+                              color: (isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.3)" : "#C084FC",
+                              border: (isPreviousRound || !!existingOffer) ? "none" : "1px solid rgba(167, 139, 250, 0.3)",
+                              fontSize: 13, fontWeight: 700, cursor: (isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
+                              opacity: (isPreviousRound || !!existingOffer) ? 0.6 : 1,
                             }}
                           >🔔 Reminder</button>
                         )}
@@ -1655,11 +1655,11 @@ export default function InterviewPanel({
                             <input
                               type="checkbox"
                               checked={isChecked}
-                              disabled={isPreviousRound}
+                              disabled={isPreviousRound || !!existingOffer}
                               onChange={() => {
                                 toggleSelectCandidate(c);
                               }}
-                              style={{ width: 16, height: 16, cursor: isPreviousRound ? "not-allowed" : "pointer" }}
+                              style={{ width: 16, height: 16, cursor: (isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer" }}
                             />
                           </div>
                         </td>
@@ -1707,13 +1707,13 @@ export default function InterviewPanel({
                           <div style={{ display: "inline-flex", alignItems: "center", gap: 4, background: T.canvas, border: `1px solid ${T.border}`, borderRadius: 8, padding: "2px 4px" }}>
                             <button
                               onClick={() => handleDecrementCandidateRound(c, rnd)}
-                              disabled={rnd <= 1 || isPreviousRound}
+                              disabled={rnd <= 1 || isPreviousRound || !!existingOffer}
                               style={{
                                 width: 20, height: 20, borderRadius: 5, border: "none",
-                                background: (rnd <= 1 || isPreviousRound) ? "transparent" : T.primaryLight,
-                                color: (rnd <= 1 || isPreviousRound) ? T.inkFaint : T.primary,
+                                background: (rnd <= 1 || isPreviousRound || !!existingOffer) ? "transparent" : T.primaryLight,
+                                color: (rnd <= 1 || isPreviousRound || !!existingOffer) ? T.inkFaint : T.primary,
                                 fontWeight: "bold",
-                                cursor: (rnd <= 1 || isPreviousRound) ? "not-allowed" : "pointer",
+                                cursor: (rnd <= 1 || isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
                                 display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11,
                                 transition: "all 0.15s"
                               }}
@@ -1725,13 +1725,13 @@ export default function InterviewPanel({
                             </span>
                             <button
                               onClick={() => handleIncrementCandidateRound(c, rnd)}
-                              disabled={rnd >= 10 || isPreviousRound}
+                              disabled={rnd >= 10 || isPreviousRound || !!existingOffer}
                               style={{
                                 width: 20, height: 20, borderRadius: 5, border: "none",
-                                background: (rnd >= 10 || isPreviousRound) ? "transparent" : T.primaryLight,
-                                color: (rnd >= 10 || isPreviousRound) ? T.inkFaint : T.primary,
+                                background: (rnd >= 10 || isPreviousRound || !!existingOffer) ? "transparent" : T.primaryLight,
+                                color: (rnd >= 10 || isPreviousRound || !!existingOffer) ? T.inkFaint : T.primary,
                                 fontWeight: "bold",
-                                cursor: (rnd >= 10 || isPreviousRound) ? "not-allowed" : "pointer",
+                                cursor: (rnd >= 10 || isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
                                 display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11,
                                 transition: "all 0.15s"
                               }}
@@ -1820,18 +1820,18 @@ export default function InterviewPanel({
                             {!i.date ? (
                               <button
                                 onClick={() => handleOpenSchedule(c)}
-                                disabled={isPreviousRound}
-                                style={{ ...actionBtnStyle("primary", isPreviousRound), width: "100%", textAlign: "center" }}
-                                className={isPreviousRound ? "" : "btn-action-hover"}
+                                disabled={isPreviousRound || !!existingOffer}
+                                style={{ ...actionBtnStyle("primary", isPreviousRound || !!existingOffer), width: "100%", textAlign: "center" }}
+                                className={isPreviousRound || !!existingOffer ? "" : "btn-action-hover"}
                               >
                                 📅 Schedule
                               </button>
                             ) : (
                               <button
                                 onClick={() => handleOpenSchedule(c)}
-                                disabled={isPreviousRound}
-                                style={{ ...actionBtnStyle("reschedule", isPreviousRound), width: "100%", textAlign: "center" }}
-                                className={isPreviousRound ? "" : "btn-action-hover"}
+                                disabled={isPreviousRound || !!existingOffer}
+                                style={{ ...actionBtnStyle("reschedule", isPreviousRound || !!existingOffer), width: "100%", textAlign: "center" }}
+                                className={isPreviousRound || !!existingOffer ? "" : "btn-action-hover"}
                                 title={`Currently: ${formatDateAndTime(i.date, i.time)}`}
                               >
                                 🔄 Reschedule
@@ -1839,18 +1839,18 @@ export default function InterviewPanel({
                             )}
                             <button
                               onClick={() => setAssigningCandidate(c)}
-                              disabled={isPreviousRound || !i.date}
-                              style={{ ...actionBtnStyle("amber", isPreviousRound || !i.date), width: "100%", textAlign: "center" }}
-                              className={isPreviousRound || !i.date ? "" : "btn-action-hover"}
+                              disabled={isPreviousRound || !i.date || !!existingOffer}
+                              style={{ ...actionBtnStyle("amber", isPreviousRound || !i.date || !!existingOffer), width: "100%", textAlign: "center" }}
+                              className={isPreviousRound || !i.date || !!existingOffer ? "" : "btn-action-hover"}
                             >
                               {i.panel && i.panel.length > 0 ? "Edit Panelist" : "Panelist"}
                             </button>
                             {i.date && i.panel && i.panel.length > 0 ? (
                               <button
                                 onClick={() => setReminderCandidate(c)}
-                                disabled={isPreviousRound}
-                                style={{ ...actionBtnStyle("secondary", isPreviousRound), width: "100%", textAlign: "center" }}
-                                className={isPreviousRound ? "" : "btn-action-hover"}
+                                disabled={isPreviousRound || !!existingOffer}
+                                style={{ ...actionBtnStyle("secondary", isPreviousRound || !!existingOffer), width: "100%", textAlign: "center" }}
+                                className={isPreviousRound || !!existingOffer ? "" : "btn-action-hover"}
                               >
                                 🔔 Reminder
                               </button>
@@ -2649,18 +2649,6 @@ export default function InterviewPanel({
                 });
               })()}
             </div>
-            </div>
-
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
-              <Btn
-                label="Give Offer"
-                variant="success"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleGiveOffer(selectedAppDetail);
-                  setSelectedAppDetail(null);
-                }}
-              />
             </div>
           </>
         )}
