@@ -3,7 +3,119 @@ import { T } from "../theme";
 import { statusVariant } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
 import { Card, SectionTitle, Mono, Badge, Btn, Modal, ModalHeader } from "../components/ui";
-import { ONBOARDING, JOB_APPLICATIONS, GENERAL_APPLICATIONS, OFFERS } from "../data";
+import { JOB_APPLICATIONS, GENERAL_APPLICATIONS, OFFERS } from "../data";
+
+// Onboarding API client — GET /api/onboarding/, PATCH /api/onboarding/{id}/tasks/.
+// Uses the access token from .env, mirroring applicationsApi.js.
+const ONBOARDING_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const ONBOARDING_URL = `${ONBOARDING_API_BASE_URL}/onboarding/`;
+const ONBOARDING_ACCESS_TOKEN = import.meta.env.VITE_API_ACCESS_TOKEN;
+
+const onboardingAuthHeaders = () => ({
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${ONBOARDING_ACCESS_TOKEN}`,
+});
+
+// verified_docs / rejected_docs are stored on the backend as a JSON-encoded string
+// (e.g. '["aadhar","pan"]'), not a real JSON field — parse defensively.
+const parseDocList = (raw) => {
+  try {
+    const parsed = JSON.parse(raw || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+// Map one API record -> the shape this screen expects. The backend only tracks each
+// task as done/not-done (task_profile ... task_checkin booleans) — there is no
+// persisted "Rejected" state, so Reject just clears a task back to "Pending".
+const normalizeOnboardingRecord = (r) => ({
+  id: r.record_id || String(r.id),
+  backendId: r.id,
+  name: r.employee_name || "",
+  role: r.role || "",
+  joining: r.joining_date || "—",
+  empId: r.employee_id || "—",
+  status: r.status || "Documents Pending",
+  tasks: {
+    profile: r.task_profile ? "Verified" : "Pending",
+    offer: r.task_offer ? "Verified" : "Pending",
+    docsUpload: r.task_docs_upload ? "Verified" : "Pending",
+    docsVerify: r.task_docs_verify ? "Verified" : "Pending",
+    bgc: r.task_bgc ? "Verified" : "Pending",
+    checkin: !!r.task_checkin,
+  },
+  aadharNumber: r.aadhar_number || "",
+  aadharCard: r.aadhar_card || "",
+  panNumber: r.pan_number || "",
+  panCard: r.pan_card || "",
+  bankHolderName: r.bank_holder_name || "",
+  bankAccountNumber: r.bank_account_number || "",
+  bankIfsc: r.bank_ifsc || "",
+  bankName: r.bank_name || "",
+  bankPassbook: r.bank_passbook || "",
+  passportPhoto: r.passport_photo || "",
+  verifiedDocs: parseDocList(r.verified_docs),
+  rejectedDocs: parseDocList(r.rejected_docs),
+});
+
+// GET /api/onboarding/ -> normalized array (live from the database).
+async function fetchOnboardingRecords() {
+  const res = await fetch(ONBOARDING_URL, { headers: onboardingAuthHeaders() });
+
+  if (!res.ok) {
+    throw new Error(`Failed to load onboarding records (${res.status} ${res.statusText})`);
+  }
+
+  const data = await res.json();
+  const list = Array.isArray(data) ? data : data.results || []; // handle DRF pagination
+  return list.map(normalizeOnboardingRecord);
+}
+
+// PATCH /api/onboarding/{backendId}/tasks/ — partial update of task_* booleans.
+async function updateOnboardingTasks(backendId, fields) {
+  const res = await fetch(`${ONBOARDING_URL}${backendId}/tasks/`, {
+    method: "PATCH",
+    headers: onboardingAuthHeaders(),
+    body: JSON.stringify(fields),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Failed to update onboarding task (${res.status}): ${errText}`);
+  }
+
+  return normalizeOnboardingRecord(await res.json());
+}
+
+// PATCH /api/onboarding/{backendId}/ — the main detail endpoint, used for fields the
+// /tasks/ action doesn't expose (verified_docs / rejected_docs).
+async function updateOnboardingDocs(backendId, fields) {
+  const res = await fetch(`${ONBOARDING_URL}${backendId}/`, {
+    method: "PATCH",
+    headers: onboardingAuthHeaders(),
+    body: JSON.stringify(fields),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Failed to update document verification (${res.status}): ${errText}`);
+  }
+
+  return normalizeOnboardingRecord(await res.json());
+}
+
+// The 4 KYC documents a candidate can submit, and the record fields that back them.
+const DOC_DEFS = [
+  { key: "aadhar", label: "Aadhaar Card", fileField: "aadharCard", numberField: "aadharNumber", numberLabel: "Aadhaar Number" },
+  { key: "pan", label: "PAN Card", fileField: "panCard", numberField: "panNumber", numberLabel: "PAN Number" },
+  {
+    key: "bank_details", label: "Bank Passbook / Cheque", fileField: "bankPassbook",
+    detailFn: (r) => `Bank: ${r.bankName || "—"} | A/C: ${r.bankAccountNumber || "—"} | IFSC: ${r.bankIfsc || "—"} | Holder: ${r.bankHolderName || "—"}`,
+  },
+  { key: "photo", label: "Passport Photo", fileField: "passportPhoto" },
+];
 
 const TASK_KEYS = ["profile", "offer", "docsUpload", "docsVerify", "bgc", "checkin"];
 const TASK_LABELS = [
@@ -15,7 +127,7 @@ const TASK_LABELS = [
   "Check In"
 ];
 
-export default function Onboarding({ jobPostings = [], offers = [] }) {
+export default function Onboarding({ jobPostings = [] }) {
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
   const hScroll = useHorizontalScroll();
@@ -30,76 +142,20 @@ export default function Onboarding({ jobPostings = [], offers = [] }) {
   const [previewDoc, setPreviewDoc] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null);
 
-  const [records, setRecords] = useState(() => {
-    const saved = localStorage.getItem("onboardingRecords");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return parsed.map((r) => {
-        const migratedTasks = { ...r.tasks };
-        ["profile", "offer", "docsUpload", "docsVerify", "bgc"].forEach((k) => {
-          if (typeof migratedTasks[k] === "boolean") {
-            migratedTasks[k] = migratedTasks[k] ? "Verified" : "Pending";
-          }
-        });
-        migratedTasks.docsUpload = "Verified";
-        migratedTasks.docsVerify = "Pending";
-        migratedTasks.bgc = "Pending";
-        return { ...r, tasks: migratedTasks };
-      });
-    }
-    return ONBOARDING.map((o) => ({
-      ...o,
-      tasks: {
-        profile: "Verified",
-        offer: "Verified",
-        docsUpload: "Verified",
-        docsVerify: "Pending",
-        bgc: "Pending",
-        checkin: o.tasks?.checkin || false,
-      },
-      status: o.status === "Completed" ? "Completed" : "Documents Pending",
-    }));
-  });
+  // Live-API-backed: records come straight from the database on mount (no mock seed,
+  // no localStorage) so this always reflects real onboarding data.
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    localStorage.setItem("onboardingRecords", JSON.stringify(records));
-  }, [records]);
-
-  useEffect(() => {
-    if (!offers || offers.length === 0) return;
-    const acceptedOffers = offers.filter((o) => o.status === "Accepted");
-    if (acceptedOffers.length === 0) return;
-
-    setRecords((prev) => {
-      let updated = [...prev];
-      let changed = false;
-      for (const o of acceptedOffers) {
-        const alreadyExists = updated.some(
-          (r) => r.name?.toLowerCase() === o.candidate?.toLowerCase() && r.role?.toLowerCase() === o.role?.toLowerCase()
-        );
-        if (!alreadyExists) {
-          changed = true;
-          updated.push({
-            id: `ONB-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-            name: o.candidate,
-            role: o.role,
-            joining: o.joining || "—",
-            empId: "—",
-            status: "Documents Pending",
-            tasks: {
-              profile: "Verified",
-              offer: "Verified",
-              docsUpload: "Verified",
-              docsVerify: "Pending",
-              bgc: "Pending",
-              checkin: false,
-            },
-          });
-        }
-      }
-      return changed ? updated : prev;
-    });
-  }, [offers]);
+    let active = true;
+    fetchOnboardingRecords()
+      .then((data) => { if (active) { setRecords(data); setLoadError(""); } })
+      .catch((err) => { if (active) setLoadError(err.message || "Failed to load onboarding records."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   const ALL_APPS = [...JOB_APPLICATIONS, ...GENERAL_APPLICATIONS.map((a) => ({ ...a, role: a.preferredRole }))];
 
@@ -120,28 +176,66 @@ export default function Onboarding({ jobPostings = [], offers = [] }) {
     return val === "Verified";
   };
 
-  const toggleTask = (id, taskKey) => {
-    setRecords((prev) =>
-      prev.map((r) => {
-        if (r.id !== id) return r;
-        const updatedTasks = { ...r.tasks, [taskKey]: !r.tasks[taskKey] };
-        const done = TASK_KEYS.filter((k) => isTaskDone(k, updatedTasks[k])).length;
-        const newStatus = done === TASK_KEYS.length ? "Completed" : done === 0 ? "Initiated" : "Documents Pending";
-        return { ...r, tasks: updatedTasks, status: newStatus };
-      }),
-    );
+  // checkin is the only boolean-toggle task; it PATCHes task_checkin directly.
+  const toggleTask = async (id, taskKey) => {
+    if (taskKey !== "checkin") return;
+    const record = records.find((r) => r.id === id);
+    if (!record) return;
+    try {
+      const updated = await updateOnboardingTasks(record.backendId, { task_checkin: !record.tasks.checkin });
+      setRecords((prev) => prev.map((r) => (r.id === id ? updated : r)));
+    } catch (err) {
+      setLoadError(err.message || "Failed to update check-in status.");
+    }
   };
 
-  const setTaskStatus = (id, taskKey, newStatus) => {
-    setRecords((prev) =>
-      prev.map((r) => {
-        if (r.id !== id) return r;
-        const updatedTasks = { ...r.tasks, [taskKey]: newStatus };
-        const done = TASK_KEYS.filter((k) => isTaskDone(k, updatedTasks[k])).length;
-        const newStatusStr = done === TASK_KEYS.length ? "Completed" : done === 0 ? "Initiated" : "Documents Pending";
-        return { ...r, tasks: updatedTasks, status: newStatusStr };
-      }),
-    );
+  // docsVerify/bgc are the only Verify/Reject-able tasks. The backend only stores
+  // done/not-done, so "Reject" PATCHes the task back to false (shown as "Pending").
+  const setTaskStatus = async (id, taskKey, newStatus) => {
+    const record = records.find((r) => r.id === id);
+    if (!record) return;
+    const backendField = taskKey === "docsVerify" ? "task_docs_verify" : taskKey === "bgc" ? "task_bgc" : null;
+    if (!backendField) return;
+    try {
+      const updated = await updateOnboardingTasks(record.backendId, { [backendField]: newStatus === "Verified" });
+      setRecords((prev) => prev.map((r) => (r.id === id ? updated : r)));
+    } catch (err) {
+      setLoadError(err.message || "Failed to update task status.");
+    }
+  };
+
+  // Which of a record's KYC documents actually have an uploaded file.
+  const uploadedDocKeys = (record) => DOC_DEFS.filter((d) => record[d.fileField]).map((d) => d.key);
+
+  // The row-level "Document Verification" Verify action only unlocks once every
+  // uploaded document has been individually verified in the per-document modal.
+  const allDocsVerified = (record) => {
+    const required = uploadedDocKeys(record);
+    return required.length > 0 && required.every((k) => record.verifiedDocs.includes(k));
+  };
+
+  // Verify/Reject a single document -> PATCH verified_docs/rejected_docs (mutually exclusive).
+  const toggleDocVerification = async (id, docKey, action) => {
+    const record = records.find((r) => r.id === id);
+    if (!record) return;
+    const verified = new Set(record.verifiedDocs);
+    const rejected = new Set(record.rejectedDocs);
+    if (action === "Verified") {
+      verified.add(docKey);
+      rejected.delete(docKey);
+    } else {
+      rejected.add(docKey);
+      verified.delete(docKey);
+    }
+    try {
+      const updated = await updateOnboardingDocs(record.backendId, {
+        verified_docs: JSON.stringify([...verified]),
+        rejected_docs: JSON.stringify([...rejected]),
+      });
+      setRecords((prev) => prev.map((r) => (r.id === id ? updated : r)));
+    } catch (err) {
+      setLoadError(err.message || "Failed to update document verification.");
+    }
   };
 
   const enrichedPostings = jobPostings.map((p) => ({
@@ -230,26 +324,45 @@ export default function Onboarding({ jobPostings = [], offers = [] }) {
     </div>
   );
 
-  const renderDocsVerifyPreview = (_record) => (
-    <div style={{ fontSize: 13, color: T.inkMid }}>
-      <div style={{ marginBottom: 12 }}><strong>Verification Checks:</strong></div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {[
-          { check: "Identity Verification", status: "PASSED", note: "Aadhaar and PAN details matched with government database." },
-          { check: "Academic Verification", status: "PASSED", note: "M.Sc. & B.Ed. degrees verified with Guwahati University." },
-          { check: "Employment History Check", status: "PASSED", note: "Previous school experience verified with Principal's reference." },
-        ].map((item) => (
-          <div key={item.check} style={{ padding: 12, background: T.canvas, borderRadius: 8, border: `1px solid ${T.border}` }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <span style={{ fontWeight: 700, color: T.ink }}>{item.check}</span>
-              <span style={{ fontSize: 10, fontWeight: 800, color: T.green, background: T.greenLight, padding: "2px 8px", borderRadius: 4 }}>{item.status}</span>
-            </div>
-            <div style={{ fontSize: 11, color: T.inkLight }}>{item.note}</div>
-          </div>
-        ))}
+  const renderDocsVerifyPreview = (record) => {
+    const docs = DOC_DEFS.filter((d) => record[d.fileField]);
+    if (docs.length === 0) {
+      return <div style={{ fontSize: 13, color: T.inkFaint }}>No documents uploaded yet.</div>;
+    }
+    return (
+      <div style={{ fontSize: 13, color: T.inkMid }}>
+        <div style={{ marginBottom: 12 }}><strong>Verify Uploaded Files:</strong></div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {docs.map((d) => {
+            const isVerified = record.verifiedDocs.includes(d.key);
+            const isRejected = record.rejectedDocs.includes(d.key);
+            const detail = d.numberField ? `${d.numberLabel}: ${record[d.numberField] || "—"}` : d.detailFn ? d.detailFn(record) : "";
+            return (
+              <div key={d.key} style={{ padding: 12, background: T.canvas, borderRadius: 8, border: `1px solid ${isVerified ? "#A7F3D0" : isRejected ? "#FECACA" : T.border}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: detail ? 4 : 0 }}>
+                  <span style={{ fontWeight: 700, color: T.ink }}>{d.label}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <a href={record[d.fileField]} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 700, color: T.blue, textDecoration: "none" }}>View</a>
+                    <button
+                      onClick={() => toggleDocVerification(record.id, d.key, "Verified")}
+                      title="Verify"
+                      style={{ border: "none", background: isVerified ? T.green : T.greenLight, color: isVerified ? "#fff" : T.green, borderRadius: 99, width: 22, height: 22, fontSize: 12, fontWeight: 800, cursor: "pointer" }}
+                    >✓</button>
+                    <button
+                      onClick={() => toggleDocVerification(record.id, d.key, "Rejected")}
+                      title="Reject"
+                      style={{ border: "none", background: isRejected ? T.red : T.redLight, color: isRejected ? "#fff" : T.red, borderRadius: 99, width: 22, height: 22, fontSize: 12, fontWeight: 800, cursor: "pointer" }}
+                    >✗</button>
+                  </div>
+                </div>
+                {detail && <div style={{ fontSize: 11, color: T.inkLight }}>{detail}</div>}
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderBgcPreview = (_record) => (
     <div style={{ fontSize: 13, color: T.inkMid }}>
@@ -274,6 +387,12 @@ export default function Onboarding({ jobPostings = [], offers = [] }) {
   return (
     <div>
       <SectionTitle title="Onboarding" sub="Track every new joiner from offer acceptance to Day 1" />
+
+      {loadError && (
+        <div style={{ background: T.redLight, color: T.red, border: `1px solid ${T.red}33`, borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13, fontWeight: 600 }}>
+          {loadError}
+        </div>
+      )}
 
       {enrichedPostings.length > 0 && (
         <div style={{ marginBottom: 20 }}>
@@ -392,7 +511,9 @@ export default function Onboarding({ jobPostings = [], offers = [] }) {
       )}
 
       {filteredRecords.length === 0 ? (
-        <Card style={{ padding: 32, textAlign: "center", color: T.inkFaint }}>No onboarding candidates found for this role.</Card>
+        <Card style={{ padding: 32, textAlign: "center", color: T.inkFaint }}>
+          {loading ? "Loading onboarding records…" : "No onboarding candidates found for this role."}
+        </Card>
       ) : isMobile ? (
         <div style={{ marginBottom: 4 }}>
           <div style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, marginBottom: 8, textAlign: "center" }}>
@@ -654,23 +775,31 @@ export default function Onboarding({ jobPostings = [], offers = [] }) {
                           <div style={{ display: "flex", gap: 6, width: isMobile ? "100%" : "auto", justifyContent: isMobile ? "flex-end" : "flex-start" }}>
                             <button
                               onClick={() => {
-                                let title = "";
-                                let content = null;
-                                if (key === "profile") { title = "Candidate Profile"; content = renderProfilePreview(currentRecord, candDetails); }
-                                else if (key === "offer") { title = "Offer Letter Details"; content = renderOfferPreview(currentRecord, candDetails); }
-                                else if (key === "docsUpload") { title = "Uploaded Documents"; content = renderDocsUploadPreview(currentRecord); }
-                                else if (key === "docsVerify") { title = "Document Verification Checks"; content = renderDocsVerifyPreview(currentRecord); }
-                                else if (key === "bgc") { title = "Background Check Details"; content = renderBgcPreview(currentRecord); }
-                                setPreviewDoc({ type: key, title, content });
+                                const titles = {
+                                  profile: "Candidate Profile",
+                                  offer: "Offer Letter Details",
+                                  docsUpload: "Uploaded Documents",
+                                  docsVerify: "Document Verification Checks",
+                                  bgc: "Background Check Details",
+                                };
+                                setPreviewDoc({ type: key, title: titles[key], recordId: currentRecord.id });
                               }}
                               style={{ border: `1.5px solid ${T.border}`, background: T.surface, color: T.blue, borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
                             >View</button>
-                            {(key === "docsVerify" || key === "bgc") && val !== "Verified" && val !== "Rejected" && (
-                              <>
-                                <button onClick={() => setConfirmAction({ id: currentRecord.id, key, status: "Verified" })} style={{ border: "none", background: T.greenLight, color: T.green, borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Verify</button>
-                                <button onClick={() => setConfirmAction({ id: currentRecord.id, key, status: "Rejected" })} style={{ border: "none", background: T.redLight, color: T.red, borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Reject</button>
-                              </>
-                            )}
+                            {(key === "docsVerify" || key === "bgc") && val !== "Verified" && val !== "Rejected" && (() => {
+                              const verifyDisabled = key === "docsVerify" && !allDocsVerified(currentRecord);
+                              return (
+                                <>
+                                  <button
+                                    onClick={() => { if (!verifyDisabled) setConfirmAction({ id: currentRecord.id, key, status: "Verified" }); }}
+                                    disabled={verifyDisabled}
+                                    title={verifyDisabled ? "Verify every uploaded document first" : undefined}
+                                    style={{ border: "none", background: verifyDisabled ? T.canvas : T.greenLight, color: verifyDisabled ? T.inkFaint : T.green, borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: verifyDisabled ? "not-allowed" : "pointer" }}
+                                  >Verify</button>
+                                  <button onClick={() => setConfirmAction({ id: currentRecord.id, key, status: "Rejected" })} style={{ border: "none", background: T.redLight, color: T.red, borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Reject</button>
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                       );
@@ -694,15 +823,26 @@ export default function Onboarding({ jobPostings = [], offers = [] }) {
       </Modal>
 
       <Modal open={!!previewDoc} onClose={() => setPreviewDoc(null)} maxWidth={500}>
-        {previewDoc && (
-          <>
-            <ModalHeader title={previewDoc.title} onClose={() => setPreviewDoc(null)} />
-            <div style={{ padding: "12px 0" }}>{previewDoc.content}</div>
-            <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
-              <Btn label="Close" onClick={() => setPreviewDoc(null)} />
-            </div>
-          </>
-        )}
+        {previewDoc && (() => {
+          const liveRecord = records.find((r) => r.id === previewDoc.recordId);
+          if (!liveRecord) return null;
+          const details = getCandidateDetails(liveRecord.name);
+          let content = null;
+          if (previewDoc.type === "profile") content = renderProfilePreview(liveRecord, details);
+          else if (previewDoc.type === "offer") content = renderOfferPreview(liveRecord, details);
+          else if (previewDoc.type === "docsUpload") content = renderDocsUploadPreview(liveRecord);
+          else if (previewDoc.type === "docsVerify") content = renderDocsVerifyPreview(liveRecord);
+          else if (previewDoc.type === "bgc") content = renderBgcPreview(liveRecord);
+          return (
+            <>
+              <ModalHeader title={previewDoc.title} onClose={() => setPreviewDoc(null)} />
+              <div style={{ padding: "12px 0" }}>{content}</div>
+              <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
+                <Btn label="Close" onClick={() => setPreviewDoc(null)} />
+              </div>
+            </>
+          );
+        })()}
       </Modal>
 
       <Modal open={!!confirmAction} onClose={() => setConfirmAction(null)} maxWidth={400}>
