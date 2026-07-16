@@ -54,21 +54,18 @@ function inferPlatform(mode, link) {
 }
 
 // Map one raw API record onto the shape InterviewsSection already understands:
-// { id, role, date, time, mode, platform, link, interviewer, status }.
+// { id, role, round, date, time, mode, platform, link, status }.
 export function normalizeInterview(raw) {
   const mode = raw.mode === "Online" ? "Online" : "In-Person";
-  const panelNames = Array.isArray(raw.panel_details)
-    ? raw.panel_details.map((p) => p.name).filter(Boolean)
-    : [];
   return {
     id: raw.id,
     role: raw.role || "Interview",
+    round: raw.round || null,
     date: formatDate(raw.date),
     time: formatTime(raw.time),
     mode,
     platform: inferPlatform(mode, raw.meeting_link),
     link: raw.meeting_link || null,
-    interviewer: panelNames.length ? panelNames.join(", ") : "To be announced",
     // The API status for these is "Scheduled"; the UI badge reads "Upcoming".
     status: raw.status === "Scheduled" ? "Upcoming" : (raw.status || "Upcoming"),
   };
@@ -83,7 +80,7 @@ export function normalizeInterview(raw) {
 export async function fetchUpcomingInterviews() {
   const token = requireAuthToken();
 
-  const res = await fetch(`${BASE_URL}/interviews/upcoming/`, {
+  const res = await fetch(`${BASE_URL}/interviews/`, {
     headers: {
       "Authorization": `Bearer ${token}`,
       "Accept": "application/json",
@@ -96,5 +93,17 @@ export async function fetchUpcomingInterviews() {
   }
   // Endpoint returns a bare array; tolerate a paginated { results: [...] } too.
   const list = Array.isArray(data) ? data : data?.results ?? [];
-  return list.map(normalizeInterview);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const upcomingList = list.filter((raw) => {
+    const isScheduled = raw.status === "Scheduled";
+    if (!isScheduled) return false;
+    if (!raw.date) return false;
+    const interviewDate = new Date(`${raw.date}T00:00:00`);
+    return !isNaN(interviewDate.getTime()) && interviewDate >= today;
+  });
+
+  return upcomingList.map(normalizeInterview);
 }

@@ -5,6 +5,13 @@ import { MAROON } from "../../../../lib/constants";
 import { fetchUpcomingInterviews } from "../../../careerpage/services/interviewsService";
 import "../css/sections/InterviewsSection.css";
 
+const getRoundOrdinal = (round) => {
+  if (round === 1) return "1st Round";
+  if (round === 2) return "2nd Round";
+  if (round === 3) return "3rd Round";
+  return `${round}th Round`;
+};
+
 export function InterviewsSection() {
   const [interviews, setInterviews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -57,16 +64,12 @@ export function InterviewsSection() {
               <div className="is-card-top">
                 <div>
                   <div className="is-role">
-                    {iv.role}
+                    {iv.role} {iv.round && `(${getRoundOrdinal(iv.round)})`}
                   </div>
                   <div className="is-meta-row">
                     <span className="is-meta-item">
                       <Calendar size={12} color={MAROON} />
                       {iv.date} at {iv.time}
-                    </span>
-                    <span className="is-meta-item">
-                      <User size={12} color={MAROON} />
-                      {iv.interviewer}
                     </span>
                   </div>
                   <div className="is-mode-row">
