@@ -1,11 +1,12 @@
 import { T, font, radius, transition } from "../theme";
 import { NAV } from "../data";
+import { isAdmin } from "../authRules";
 
 // Sidebar navigation + user profile footer.
 // Rendered inside both the desktop rail and the mobile overlay in App.
 export default function Sidebar({ active, currentUser, pendingCount, onNav, onLogout }) {
   const items = NAV.filter((item) =>
-    currentUser?.role !== "admin" ? item.id === "panelist" : true,
+    isAdmin(currentUser) ? true : item.id === "panelist",
   );
 
   return (

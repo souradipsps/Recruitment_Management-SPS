@@ -1,12 +1,6 @@
 import { useState, useEffect } from "react";
 import { T, font, radius, shadow } from "../theme";
-
-const DEFAULT_USERS = [
-  { email: "admin@school.edu", password: "admin123", name: "Principal Admin", role: "admin" },
-  { email: "dr.roy@school.edu", password: "roy123", name: "Dr. Roy", role: "Dr. Roy" },
-  { email: "mr.patel@school.edu", password: "patel123", name: "Mr. Patel", role: "Mr. Patel" },
-  { email: "ms.nisha@school.edu", password: "nisha123", name: "Ms. Nisha", role: "Ms. Nisha" },
-];
+import { login as apiLogin } from "../api/authApi";
 
 function FormLabel({ text }) {
   return (
@@ -109,6 +103,7 @@ export default function Auth({ onLoginSuccess }) {
   const [success, setSuccess] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     try {
@@ -120,16 +115,7 @@ export default function Auth({ onLoginSuccess }) {
     } catch (e) {}
   }, []);
 
-  const getUsers = () => {
-    try {
-      const stored = localStorage.getItem("users");
-      if (stored) return JSON.parse(stored);
-    } catch (e) {}
-    localStorage.setItem("users", JSON.stringify(DEFAULT_USERS));
-    return DEFAULT_USERS;
-  };
-
-  const handleSignIn = (e) => {
+  const handleSignIn = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
@@ -139,85 +125,32 @@ export default function Auth({ onLoginSuccess }) {
       return;
     }
 
-    const users = getUsers();
-    let foundUser = users.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase().trim() && u.password === password
-    );
-
-    if (!foundUser) {
-      const existingUserWithEmail = users.find(
-        (u) => u.email.toLowerCase() === email.toLowerCase().trim()
-      );
-      if (existingUserWithEmail) {
-        foundUser = existingUserWithEmail;
-      } else {
-        const emailPrefix = email.split('@')[0];
-        const displayName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
-        foundUser = {
-          email: email.toLowerCase().trim(),
-          password: password,
-          name: displayName || "Admin User",
-          role: "admin",
-        };
-        const updatedUsers = [...users, foundUser];
-        localStorage.setItem("users", JSON.stringify(updatedUsers));
-      }
-    }
-
+    setLoading(true);
     try {
-      if (rememberMe) {
-        localStorage.setItem("remembered_email", email.trim());
-      } else {
-        localStorage.removeItem("remembered_email");
-      }
-    } catch (err) {}
+      const user = await apiLogin(email.trim(), password);
 
-    setSuccess("Login successful!");
-    setTimeout(() => {
-      onLoginSuccess(foundUser);
-    }, 500);
+      try {
+        if (rememberMe) {
+          localStorage.setItem("remembered_email", email.trim());
+        } else {
+          localStorage.removeItem("remembered_email");
+        }
+      } catch (err) {}
+
+      setSuccess("Login successful!");
+      setTimeout(() => onLoginSuccess(user), 400);
+    } catch (err) {
+      setError(err.message || "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // Account creation is handled by the backend; the signup tab just points to login.
   const handleSignUp = (e) => {
     e.preventDefault();
     setError("");
-    setSuccess("");
-
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      setError("Please fill in all fields.");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long.");
-      return;
-    }
-
-    const users = getUsers();
-    const exists = users.some((u) => u.email.toLowerCase() === email.toLowerCase().trim());
-    if (exists) {
-      setError("An account with this email already exists.");
-      return;
-    }
-
-    const newUser = {
-      name: name.trim(),
-      email: email.toLowerCase().trim(),
-      password: password,
-      role: "admin",
-    };
-
-    const updatedUsers = [...users, newUser];
-    localStorage.setItem("users", JSON.stringify(updatedUsers));
-
-    setSuccess("Account created successfully! You can now Log in.");
-    setTimeout(() => {
-      setTab("login");
-      setEmail(newUser.email);
-      setPassword("");
-      setError("");
-      setSuccess("");
-    }, 1500);
+    setSuccess("Please contact your administrator to create an account, then log in.");
   };
 
   return (
@@ -405,6 +338,7 @@ export default function Auth({ onLoginSuccess }) {
               <button
                 type="submit"
                 className="btn-hover"
+                disabled={loading}
                 style={{
                   background: `linear-gradient(135deg, ${T.primary} 0%, #4c0519 100%)`,
                   border: "none",
@@ -414,7 +348,8 @@ export default function Auth({ onLoginSuccess }) {
                   color: "#fff",
                   fontWeight: 700,
                   fontSize: 14,
-                  cursor: "pointer",
+                  cursor: loading ? "not-allowed" : "pointer",
+                  opacity: loading ? 0.7 : 1,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -428,7 +363,7 @@ export default function Auth({ onLoginSuccess }) {
                   <polyline points="10 17 15 12 10 7"></polyline>
                   <line x1="15" y1="12" x2="3" y2="12"></line>
                 </svg>
-                <span>Log in</span>
+                <span>{loading ? "Logging in…" : "Log in"}</span>
               </button>
             </form>
           ) : (

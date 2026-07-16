@@ -145,6 +145,10 @@ export const statusVariant = (s) => {
     Expired: "red",
     Terminate: "red",
 
+    Scheduled: "sky",
+    Rescheduled: "accent",
+    Cancelled: "red",
+
     Shortlisted: "primary",
     Applied: "sky",
     Sent: "teal",

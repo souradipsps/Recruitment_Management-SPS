@@ -1,9 +1,8 @@
 // Approvals API client.
-// Uses the access token from .env (no login flow yet), mirroring jobRequestsApi.js.
+// Auth token comes from the login flow via authApi (read dynamically per request).
+import { authHeaders, authFetch, API_BASE_URL } from "./authApi";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const API_URL = `${API_BASE_URL}/approvals/`;
-const ACCESS_TOKEN = import.meta.env.VITE_API_ACCESS_TOKEN;
 
 // UI status label -> backend action verb expected by POST /approvals/{id}/action/.
 const ACTION_VERB = {
@@ -54,14 +53,9 @@ export const normalizeApproval = (r) => ({
   history: toHistory(r.history),
 });
 
-const authHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${ACCESS_TOKEN}`,
-});
-
 // GET /api/approvals/ -> normalized array.
 export async function fetchApprovals() {
-  const res = await fetch(API_URL, { headers: authHeaders() });
+  const res = await authFetch(API_URL, { headers: authHeaders() });
 
   if (!res.ok) {
     throw new Error(`Failed to load approvals (${res.status} ${res.statusText})`);
@@ -79,7 +73,7 @@ export async function takeApprovalAction(backendId, status, note = "", actedBy =
     throw new Error(`Unsupported approval status: ${status}`);
   }
 
-  const res = await fetch(`${API_URL}${backendId}/action/`, {
+  const res = await authFetch(`${API_URL}${backendId}/action/`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify({ action, note, acted_by: actedBy }),

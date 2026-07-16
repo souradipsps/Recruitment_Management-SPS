@@ -1,11 +1,32 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { Video, Calendar, User, Link as LinkIcon } from "lucide-react";
 import { MAROON } from "../../../../lib/constants";
-import { interviews } from "../../../../mockData/dashboardMockData";
+import { fetchUpcomingInterviews } from "../../../careerpage/services/interviewsService";
 import "../css/sections/InterviewsSection.css";
 
+const getRoundOrdinal = (round) => {
+  if (round === 1) return "1st Round";
+  if (round === 2) return "2nd Round";
+  if (round === 3) return "3rd Round";
+  return `${round}th Round`;
+};
+
 export function InterviewsSection() {
+  const [interviews, setInterviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetchUpcomingInterviews()
+      .then((data) => { if (!cancelled) { setInterviews(data); setError(""); } })
+      .catch((err) => { if (!cancelled) setError(err.message || "Could not load your interviews."); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -19,7 +40,17 @@ export function InterviewsSection() {
       </p>
 
       <div className="is-list">
-        {interviews.length === 0 ? (
+        {loading ? (
+          <div className="is-empty">
+            <Video size={32} className="is-empty-icon" />
+            <div className="is-empty-title">Loading your interviews…</div>
+          </div>
+        ) : error ? (
+          <div className="is-empty">
+            <Video size={32} className="is-empty-icon" />
+            <div className="is-empty-title">{error}</div>
+          </div>
+        ) : interviews.length === 0 ? (
           <div className="is-empty">
             <Video size={32} className="is-empty-icon" />
             <div className="is-empty-title">No interviews scheduled yet.</div>
@@ -33,16 +64,12 @@ export function InterviewsSection() {
               <div className="is-card-top">
                 <div>
                   <div className="is-role">
-                    {iv.role}
+                    {iv.role} {iv.round && `(${getRoundOrdinal(iv.round)})`}
                   </div>
                   <div className="is-meta-row">
                     <span className="is-meta-item">
                       <Calendar size={12} color={MAROON} />
                       {iv.date} at {iv.time}
-                    </span>
-                    <span className="is-meta-item">
-                      <User size={12} color={MAROON} />
-                      {iv.interviewer}
                     </span>
                   </div>
                   <div className="is-mode-row">

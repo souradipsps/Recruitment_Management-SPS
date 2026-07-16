@@ -9,6 +9,7 @@ import { MAROON, GOLD } from "../../lib/constants";
 import { routes } from "../../routes";
 import { updateUserProfile, fetchMyJobApplications } from "../careerpage/services/applicationsService";
 import { fetchPublicJobs } from "../careerpage/services/jobsService";
+import { fetchMyOffers, acceptOffer, declineOffer } from "../careerpage/services/offersService";
 
 // Mock data & configurations
 import { notifications } from "../../mockData/dashboardMockData";
@@ -183,6 +184,13 @@ export function CandidateDashboard({
   const [offerAccepted, setOfferAccepted] = useState(false);
   const [offerRejected, setOfferRejected] = useState(false);
   const [showOfferConfirm, setShowOfferConfirm] = useState(null);
+
+  // Live offer letter (GET /api/offers/ — candidate sees only their own). The
+  // accepted/rejected booleans above are derived from the offer's status so the
+  // rest of the onboarding flow (doc upload, progress steps) keeps working.
+  const [offer, setOffer] = useState(null);
+  const [offerLoading, setOfferLoading] = useState(true);
+  const [offerActionLoading, setOfferActionLoading] = useState(false);
   const [docs, setDocs] = useState({});
   const [docUrls, setDocUrls] = useState({});
   const [docsSubmitted, setDocsSubmitted] = useState(false);
@@ -222,6 +230,58 @@ export function CandidateDashboard({
       });
     return () => { cancelled = true; };
   }, []);
+
+  // Load the candidate's offer letter and seed the accepted/rejected flags from
+  // its status (so a returning candidate sees the correct onboarding state).
+  useEffect(() => {
+    let cancelled = false;
+    setOfferLoading(true);
+    fetchMyOffers()
+      .then((offers) => {
+        if (cancelled) return;
+        const active = offers[0] ?? null; // newest first (see offersService)
+        setOffer(active);
+        if (active?.status === "Accepted") setOfferAccepted(true);
+        if (active?.status === "Rejected") setOfferRejected(true);
+      })
+      .catch((err) => {
+        if (!cancelled) toast.error(err.message || "Could not load your offer.");
+      })
+      .finally(() => { if (!cancelled) setOfferLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleAcceptOffer = async () => {
+    if (!offer?.backendId) { setOfferAccepted(true); setShowOfferConfirm(null); return; }
+    setOfferActionLoading(true);
+    try {
+      const updated = await acceptOffer(offer.backendId);
+      setOffer(updated);
+      setOfferAccepted(true);
+      setShowOfferConfirm(null);
+      toast.success("Offer accepted! You can now upload your documents.");
+    } catch (err) {
+      toast.error(err.message || "Could not accept the offer. Please try again.");
+    } finally {
+      setOfferActionLoading(false);
+    }
+  };
+
+  const handleDeclineOffer = async () => {
+    if (!offer?.backendId) { setOfferRejected(true); setShowOfferConfirm(null); return; }
+    setOfferActionLoading(true);
+    try {
+      const updated = await declineOffer(offer.backendId);
+      setOffer(updated);
+      setOfferRejected(true);
+      setShowOfferConfirm(null);
+      toast.success("Offer declined.");
+    } catch (err) {
+      toast.error(err.message || "Could not decline the offer. Please try again.");
+    } finally {
+      setOfferActionLoading(false);
+    }
+  };
 
   // Dynamic applications based on the candidate's real submitted applications.
   const dynamicApplications = useMemo(() => {
@@ -1265,10 +1325,13 @@ export function CandidateDashboard({
               {/* Onboarding Tab */}
               {activeTab === "onboarding" && (
                 <OnboardingSection
+                  offer={offer}
+                  offerLoading={offerLoading}
+                  offerActionLoading={offerActionLoading}
+                  onAcceptOffer={handleAcceptOffer}
+                  onDeclineOffer={handleDeclineOffer}
                   offerAccepted={offerAccepted}
-                  setOfferAccepted={setOfferAccepted}
                   offerRejected={offerRejected}
-                  setOfferRejected={setOfferRejected}
                   showOfferConfirm={showOfferConfirm}
                   setShowOfferConfirm={setShowOfferConfirm}
                   docs={docs}

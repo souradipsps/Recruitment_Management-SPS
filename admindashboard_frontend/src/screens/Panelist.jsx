@@ -1,6 +1,8 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { T, font } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
+import { submitPanelistEvaluation, updateInterview, fetchUpcomingInterviews } from "../api/interviewsApi";
 
 const MAROON = T.primary;
 
@@ -54,7 +56,30 @@ function ScoreDots({ value, max = 5 }) {
   );
 }
 
-export default function Panelist({ interviews = [], setInterviews, jobPostings = [], currentUser = "admin" }) {
+function ScoreCapsules({ value, max = 5, isMobileCard = false }) {
+  return (
+    <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+      {Array.from({ length: max }).map((_, i) => {
+        const active = i < value;
+        return (
+          <div
+            key={i}
+            style={{
+              width: 14,
+              height: 5,
+              borderRadius: 2.5,
+              background: active ? (isMobileCard ? "#fff" : MAROON) : (isMobileCard ? "rgba(255, 255, 255, 0.2)" : T.border),
+              transition: "background 0.15s"
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+
+export default function Panelist({ interviews = [], setInterviews, jobPostings = [], panelists = [], currentUser = "admin" }) {
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
   const hScroll = useHorizontalScroll();
@@ -71,36 +96,85 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
   const [expandedCards, setExpandedCards] = useState({});
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [filterActiveIndex, setFilterActiveIndex] = useState(0);
+  const [isSubmittingEval, setIsSubmittingEval] = useState(false);
+  const [confirmData, setConfirmData] = useState(null);
+  const [upcomingInterviews, setUpcomingInterviews] = useState([]);
   const scrollRef = useRef(null);
+
+  // Upcoming interviews come from the dedicated GET /api/interviews/upcoming/
+  // endpoint (status "Scheduled" AND date >= today) rather than being derived
+  // from the full interviews list — a single source of truth for "upcoming".
+  useEffect(() => {
+    let cancelled = false;
+    fetchUpcomingInterviews()
+      .then((data) => { if (!cancelled) setUpcomingInterviews(data); })
+      .catch((err) => console.error("Failed to load upcoming interviews:", err));
+    return () => { cancelled = true; };
+  }, []);
+
+  // The interviews API stores each evaluation against a panelist ID, but this
+  // screen (and its mock local-auth) works with panelist display NAMES —
+  // resolve between the two via the panelists list (has real backend ids).
+  const getPanelistId = (name) => panelists.find((p) => p.name === name)?.backendId;
+  const getPanelistName = (id) => panelists.find((p) => p.backendId === id)?.name || `Panelist #${id}`;
+
+  // Adapt an interview's API-shaped evaluations (panelistId/criteria/rec) into the
+  // { panelist, scores, recommendation, notes, submittedAt } shape this screen renders.
+  const getDisplayEvaluations = (interview) =>
+    (interview.evaluations || []).map((e) => ({
+      panelist: e.panelistId != null ? getPanelistName(e.panelistId) : e.panelist,
+      scores: e.criteria || e.scores || {},
+      recommendation: e.rec || e.recommendation,
+      notes: e.notes || "",
+      submittedAt: e.submittedAt,
+    }));
 
   const canEvaluate = (interview) => {
     const isAdmin = currentUser === "admin";
     const isAssignedPanelist = interview.panel?.includes(currentUser);
     if (!isAdmin && !isAssignedPanelist) return { allowed: false, reason: "You are not authorized to evaluate candidates" };
-    const alreadyEvaluated = interview.evaluations?.some((e) => e.panelist === currentUser);
+    const alreadyEvaluated = getDisplayEvaluations(interview).some((e) => e.panelist === currentUser);
     if (alreadyEvaluated && !isAdmin) return { allowed: false, reason: "You have already evaluated this candidate" };
     return { allowed: true };
   };
 
-  const enrichedPostings = jobPostings.map((p) => ({
-    ...p,
-    count: interviews.filter((i) => i.role === p.role && i.date && i.status !== "Completed").length,
-  }));
+  // A non-admin panelist only ever sees interviews (and, below, job cards) they're
+  // actually assigned to — `currentUser` is their own name once resolved via email
+  // (see ScreenRouter/authRules.resolvePanelistName), matched against `interview.panel`.
+  const myInterviews = currentUser === "admin"
+    ? interviews
+    : interviews.filter((i) => i.panel?.includes(currentUser));
+
+  // Scope the API's upcoming list the same way as myInterviews: admin sees all,
+  // a panelist only their own. (The /upcoming/ endpoint returns every upcoming
+  // interview for non-candidate users, so the panel filter is applied here.)
+  const myUpcoming = currentUser === "admin"
+    ? upcomingInterviews
+    : upcomingInterviews.filter((i) => i.panel?.includes(currentUser));
+
+  const enrichedPostings = jobPostings
+    .map((p) => ({
+      ...p,
+      count: myUpcoming.filter((i) => i.role === p.role).length,
+    }))
+    .filter((p) => currentUser === "admin" || myInterviews.some((i) => i.role === p.role));
 
   const selectedRole = enrichedPostings.find((p) => p.id === selectedJobId)?.role ?? null;
-  const scheduledInterviews = interviews.filter((i) => i.date);
+  const scheduledInterviews = myInterviews.filter((i) => i.date);
 
   const statusFilteredInterviews = statusFilter === "All"
     ? scheduledInterviews
     : statusFilter === "Pending"
-      ? scheduledInterviews.filter((i) => i.status !== "Completed")
-      : scheduledInterviews.filter((i) => i.status === "Completed");
+      ? scheduledInterviews.filter((i) => i.status !== "Completed" && i.status !== "Cancelled")
+      : statusFilter === "Completed"
+        ? scheduledInterviews.filter((i) => i.status === "Completed")
+        : scheduledInterviews.filter((i) => i.status === "Cancelled");
 
   const filteredInterviews = selectedRole
     ? statusFilteredInterviews.filter((i) => i.role === selectedRole)
     : statusFilteredInterviews;
 
-  const upcomingCount = scheduledInterviews.filter((i) => i.status !== "Completed").length;
+  const upcomingCount = myUpcoming.length;
   const evaluatedCount = scheduledInterviews.filter((i) => i.evaluations?.length > 0).length;
 
   const selectJob = (id) => setSelectedJobId(id);
@@ -108,13 +182,11 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
   const scrollCarousel = (dir) =>
     hScroll.ref.current?.scrollBy({ left: dir === "left" ? -300 : 300, behavior: "smooth" });
 
-  const openEval = (interview) => {
-    setSelectedInterview(interview);
-    setEvaluatorName(currentUser);
-    const existingEval = interview.evaluations?.find((e) => e.panelist === currentUser);
+  const loadEvaluatorState = (interview, panelistName) => {
+    const existingEval = getDisplayEvaluations(interview).find((e) => e.panelist === panelistName);
     if (existingEval) {
       setScores(existingEval.scores || {});
-      setCustomFields(existingEval.customFields || []);
+      setCustomFields(Object.keys(existingEval.scores || {}).filter((f) => !DEFAULT_FIELDS.includes(f)));
       setNotes(existingEval.notes || "");
       setRecommendation(existingEval.recommendation || "Strong Hire");
     } else {
@@ -123,23 +195,21 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
       setNotes("");
       setRecommendation("Strong Hire");
     }
+  };
+
+  const openEval = (interview) => {
+    setSelectedInterview(interview);
+    // Admin isn't a real panelist and can't submit under its own name — default
+    // to the first assigned panelist instead. A logged-in panelist evaluates as themselves.
+    const initialEvaluator = currentUser === "admin" ? (interview.panel || [])[0] || "" : currentUser;
+    setEvaluatorName(initialEvaluator);
+    loadEvaluatorState(interview, initialEvaluator);
     setNewField("");
   };
 
   const handleEvaluatorChange = (interview, panelistName) => {
     setEvaluatorName(panelistName);
-    const existingEval = interview.evaluations?.find((e) => e.panelist === panelistName);
-    if (existingEval) {
-      setScores(existingEval.scores || {});
-      setCustomFields(existingEval.customFields || []);
-      setNotes(existingEval.notes || "");
-      setRecommendation(existingEval.recommendation || "Strong Hire");
-    } else {
-      setScores({});
-      setCustomFields([]);
-      setNotes("");
-      setRecommendation("Strong Hire");
-    }
+    loadEvaluatorState(interview, panelistName);
   };
 
   const updateScore = (field, value) => setScores((prev) => ({ ...prev, [field]: value }));
@@ -150,53 +220,64 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
     setNewField("");
   };
 
-  const markAttendance = (interview, status) => {
-    if (!setInterviews) return;
-    setInterviews((prev) =>
-      prev.map((i) =>
-        i.candidate === interview.candidate && i.role === interview.role && i.round === interview.round
-          ? { ...i, attendance: status }
-          : i
-      )
-    );
+  const markAttendance = (interview, isPresent) => {
+    setConfirmData({ interview, isPresent });
   };
 
-  const handleSubmit = () => {
+  const executeMarkAttendance = async (interview, isPresent) => {
+    if (!setInterviews) return;
+    if (interview.backendId == null) {
+      alert("This interview hasn't been saved yet — please contact an admin.");
+      return;
+    }
+    try {
+      const updated = await updateInterview(interview.backendId, { candidate_present: isPresent });
+      setInterviews((prev) =>
+        prev.map((i) => (i.backendId === updated.backendId ? updated : i))
+      );
+    } catch (err) {
+      console.error("Failed to mark attendance:", err);
+      alert("Could not update candidate attendance. Please try again.");
+    }
+  };
+
+  const handleSubmit = async () => {
     if (!evaluatorName.trim()) { alert("Please enter your name before submitting."); return; }
     if (!setInterviews || !selectedInterview) return;
+    if (Object.keys(scores).length === 0) { alert("Please rate at least one criterion before submitting."); return; }
 
-    const newEval = {
-      panelist: evaluatorName.trim(),
-      scores,
-      customFields,
-      recommendation,
-      notes,
-      submittedAt: new Date().toISOString(),
-    };
+    const panelistId = getPanelistId(evaluatorName.trim());
+    if (panelistId == null) {
+      alert(`"${evaluatorName}" is not a registered panelist, so this evaluation can't be saved. Ask an admin to register you as a panelist first.`);
+      return;
+    }
+    if (selectedInterview.backendId == null) {
+      alert("This interview hasn't been saved yet — please contact an admin.");
+      return;
+    }
 
-    setInterviews((prev) =>
-      prev.map((i) => {
-        if (i.candidate !== selectedInterview.candidate || i.role !== selectedInterview.role || i.round !== selectedInterview.round) return i;
-        const isAdmin = currentUser === "admin";
-        let updatedEvals = [...(i.evaluations || [])];
-        if (isAdmin && evaluatorName !== currentUser) {
-          const existingIdx = updatedEvals.findIndex((e) => e.panelist === evaluatorName.trim());
-          if (existingIdx >= 0) updatedEvals[existingIdx] = newEval;
-          else updatedEvals = [...updatedEvals, newEval];
-        } else {
-          const existingIdx = updatedEvals.findIndex((e) => e.panelist === evaluatorName.trim());
-          if (existingIdx >= 0) updatedEvals[existingIdx] = newEval;
-          else updatedEvals = [...updatedEvals, newEval];
-        }
-        const allScores = updatedEvals.map((e) => computeScore(e.scores)).filter((s) => s !== null);
-        const avgScore = allScores.length ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length) : i.score;
-        return { ...i, evaluations: updatedEvals, score: avgScore, rec: recommendation, status: "Completed" };
-      })
-    );
+    setIsSubmittingEval(true);
+    try {
+      const updated = await submitPanelistEvaluation(selectedInterview.backendId, {
+        panelistId,
+        criteria: scores, // core + custom criteria in one flat object; the API client splits them
+        rec: recommendation,
+        notes,
+      });
 
-    const key = `${selectedInterview.candidate}-${selectedInterview.role}-${selectedInterview.round}`;
-    setExpandedCards((prev) => ({ ...prev, [key]: true }));
-    setSelectedInterview(null);
+      setInterviews((prev) =>
+        prev.map((i) => (i.backendId === updated.backendId ? updated : i))
+      );
+
+      const key = `${selectedInterview.candidate}-${selectedInterview.role}-${selectedInterview.round}`;
+      setExpandedCards((prev) => ({ ...prev, [key]: true }));
+      setSelectedInterview(null);
+    } catch (err) {
+      console.error("Failed to submit evaluation:", err);
+      alert("Could not submit the evaluation. Please try again.");
+    } finally {
+      setIsSubmittingEval(false);
+    }
   };
 
   const toggleExpand = (key) => setExpandedCards((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -222,8 +303,8 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
           <div style={{ padding: 12, background: isMobileCard ? "rgba(255,255,255,0.05)" : "#fff", borderRadius: 8, border: `1px solid ${isMobileCard ? "rgba(255,255,255,0.15)" : T.border}` }}>
             <label style={{ display: "block", fontWeight: 700, marginBottom: 6, fontSize: 9, color: isMobileCard ? "rgba(255,255,255,0.5)" : T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em" }}>Evaluating as</label>
             <select value={evaluatorName} onChange={(e) => handleEvaluatorChange(interview, e.target.value)} style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${isMobileCard ? "rgba(255,255,255,0.2)" : T.border}`, fontSize: 12, fontWeight: 600, color: isMobileCard ? "#fff" : T.inkMid, background: isMobileCard ? "#3a0010" : "#fff", cursor: "pointer", outline: "none" }}>
-              <option value={currentUser}>{currentUser}</option>
-              {(interview.panel || []).filter((name) => name !== currentUser).map((name) => (
+              {(interview.panel || []).length === 0 && <option value="">No panelists assigned</option>}
+              {(interview.panel || []).map((name) => (
                 <option key={name} value={name}>{name}</option>
               ))}
             </select>
@@ -296,7 +377,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
 
         <div style={{ padding: "16px 0 0", borderTop: `1px solid ${isMobileCard ? "rgba(255,255,255,0.15)" : T.border}`, display: "flex", justifyContent: "flex-end", gap: 10, background: isMobileCard ? "transparent" : T.canvas }}>
           <button onClick={() => setSelectedInterview(null)} style={{ padding: "8px 16px", borderRadius: 8, border: `1.5px solid ${isMobileCard ? "rgba(255,255,255,0.25)" : T.border}`, cursor: "pointer", fontWeight: 600, background: isMobileCard ? "rgba(255,255,255,0.1)" : "#fff", color: isMobileCard ? "#fff" : T.inkMid, fontSize: 12 }}>Cancel</button>
-          <button onClick={handleSubmit} style={{ background: isMobileCard ? T.accent : MAROON, color: isMobileCard ? "#3a0010" : "#fff", border: "none", padding: "8px 20px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 13, boxShadow: `0 4px 12px ${isMobileCard ? T.accent : MAROON}33` }}>Submit Evaluation</button>
+          <button disabled={isSubmittingEval} onClick={handleSubmit} style={{ background: isMobileCard ? T.accent : MAROON, color: isMobileCard ? "#3a0010" : "#fff", border: "none", padding: "8px 20px", borderRadius: 8, cursor: isSubmittingEval ? "not-allowed" : "pointer", opacity: isSubmittingEval ? 0.7 : 1, fontWeight: 700, fontSize: 13, boxShadow: `0 4px 12px ${isMobileCard ? T.accent : MAROON}33` }}>{isSubmittingEval ? "Submitting…" : "Submit Evaluation"}</button>
         </div>
       </div>
     );
@@ -306,6 +387,8 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
     <div>
       <style>{`
         @keyframes pulse-reminder { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .pan-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1); outline: none; position: relative; user-select: none; }
         .pan-btn-present { background: #DCFCE7; color: #15803D; border: 2px solid #16A34A; }
         .pan-btn-present:hover { background: #16A34A; color: #fff; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(22,163,74,0.35); }
@@ -443,7 +526,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: T.ink }}>
-          {statusFilter === "All" ? "All Interviews" : statusFilter === "Pending" ? "Pending Interviews" : "Completed Interviews"}
+          {statusFilter === "All" ? "All Interviews" : statusFilter === "Pending" ? "Pending Interviews" : statusFilter === "Completed" ? "Completed Interviews" : "Cancelled Interviews"}
           <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, marginLeft: 8 }}>({filteredInterviews.length})</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -466,6 +549,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
             <option value="All">All</option>
             <option value="Pending">Pending</option>
             <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
           </select>
         </div>
       </div>
@@ -480,7 +564,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
           <div ref={scrollRef} onScroll={(e) => { if (isMobile) { const scrollLeft = e.currentTarget.scrollLeft; const cardWidth = e.currentTarget.clientWidth; const newIndex = Math.round(scrollLeft / cardWidth); setCurrentCardIndex(newIndex); } }} className="carousel-scroll" style={{ display: "flex", flexDirection: isMobile ? "row" : "column", alignItems: isMobile ? "flex-start" : undefined, gap: 20, overflowX: isMobile ? "auto" : undefined, overflowY: isMobile ? "hidden" : undefined, scrollSnapType: isMobile ? "x mandatory" : undefined, WebkitOverflowScrolling: isMobile ? "touch" : undefined, paddingBottom: isMobile ? 20 : undefined, marginBottom: isMobile ? 10 : undefined, paddingLeft: isMobile ? 12 : undefined, paddingRight: isMobile ? 12 : undefined, margin: isMobile ? "0 -12px" : undefined }}>
             {filteredInterviews.map((interview, idx) => {
               const cardKey = `${interview.candidate}-${interview.role}-${interview.round}`;
-              const evaluations = interview.evaluations || [];
+              const evaluations = getDisplayEvaluations(interview);
               const totalScore = computeTotalScore(evaluations);
               const isCompleted = interview.status === "Completed";
               const isExpanded = expandedCards[cardKey] ?? evaluations.length > 0;
@@ -512,6 +596,19 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
                             <span style={{ background: "rgba(255,255,255,0.15)", color: "#fff", borderRadius: 999, fontWeight: 700, fontSize: 10, padding: "4px 10px" }}>Round {interview.round || 1}</span>
                             <span style={{ background: interview.mode === "Online" ? "rgba(56, 189, 248, 0.2)" : "rgba(20, 184, 166, 0.2)", color: interview.mode === "Online" ? "#38BDF8" : "#2DD4BF", borderRadius: 999, fontWeight: 700, fontSize: 10, padding: "4px 10px" }}>{interview.mode === "Online" ? "💻 Online" : "🏢 In-Person"}</span>
+                            {interview.candidatePresent !== null && interview.candidatePresent !== undefined && (
+                              <span style={{
+                                background: interview.candidatePresent ? "rgba(52, 211, 153, 0.25)" : "rgba(239, 68, 68, 0.25)",
+                                color: interview.candidatePresent ? "#34D399" : "#FCA5A5",
+                                borderRadius: 999,
+                                fontWeight: 700,
+                                fontSize: 10,
+                                padding: "4px 10px",
+                                border: `1px solid ${interview.candidatePresent ? "rgba(52, 211, 153, 0.4)" : "rgba(239, 68, 68, 0.4)"}`
+                              }}>
+                                {interview.candidatePresent ? "✓ Present" : "✕ Absent"}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -536,11 +633,20 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
                         <span style={{ fontSize: 16, flexShrink: 0 }}>⚙️</span>
                         <div style={{ flex: 1, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>Status</span>
-                          {interview.attendance ? (
-                            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", background: interview.attendance === "Present" ? "rgba(16, 185, 129, 0.25)" : "rgba(239, 68, 68, 0.25)", color: interview.attendance === "Present" ? "#34D399" : "#FCA5A5", padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 700, border: `1px solid ${interview.attendance === "Present" ? "rgba(16, 185, 129, 0.4)" : "rgba(239, 68, 68, 0.4)"}` }}>{interview.attendance === "Present" ? "✓ Present" : "✕ Absent"}</span>
-                          ) : (
-                            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", background: isCompleted ? "rgba(16, 185, 129, 0.25)" : "rgba(245, 158, 11, 0.25)", color: isCompleted ? "#34D399" : "#FBBF24", padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 700, border: `1px solid ${isCompleted ? "rgba(16, 185, 129, 0.4)" : "rgba(245, 158, 11, 0.4)"}` }}>{isCompleted ? "✓ Completed" : "● Upcoming"}</span>
-                          )}
+                          <span style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            background: interview.status === "Completed" ? "rgba(16, 185, 129, 0.25)" : interview.status === "Cancelled" ? "rgba(239, 68, 68, 0.25)" : "rgba(245, 158, 11, 0.25)",
+                            color: interview.status === "Completed" ? "#34D399" : interview.status === "Cancelled" ? "#FCA5A5" : "#FBBF24",
+                            padding: "3px 10px",
+                            borderRadius: 999,
+                            fontSize: 10,
+                            fontWeight: 700,
+                            border: `1px solid ${interview.status === "Completed" ? "rgba(16, 185, 129, 0.4)" : interview.status === "Cancelled" ? "rgba(239, 68, 68, 0.4)" : "rgba(245, 158, 11, 0.4)"}`
+                          }}>
+                            {interview.status === "Completed" ? "✓ Completed" : interview.status === "Cancelled" ? "✕ Cancelled" : `● ${interview.status}`}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -562,28 +668,40 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
                           <span style={{ fontSize: 12, transition: "transform 0.2s", display: "inline-block", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
                         </button>
                         {isExpanded && (
-                          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10, maxHeight: 180, overflowY: "auto", paddingRight: 4 }} className="carousel-scroll">
+                          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12, maxHeight: 220, overflowY: "auto", paddingRight: 4 }} className="carousel-scroll">
                             {evaluations.map((ev, index) => {
                               const evScore = computeScore(ev.scores);
-                              const recStyle = REC_COLORS[ev.recommendation] || { bg: "rgba(255,255,255,0.1)", color: "#fff" };
+                              const recStyle = REC_COLORS[ev.recommendation] || { bg: "rgba(255,255,255,0.15)", color: "#fff" };
                               return (
-                                <div key={index} style={{ background: "rgba(255,255,255,0.06)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", padding: 10 }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                                    <span style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{ev.panelist}</span>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                      <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 99, padding: "1px 6px", background: recStyle.bg, color: recStyle.color }}>{ev.recommendation}</span>
-                                      {evScore !== null && <span style={{ fontSize: 10, fontWeight: 800, color: evScore >= 80 ? T.green : evScore >= 60 ? T.accentDark : T.red, background: evScore >= 80 ? T.greenLight : evScore >= 60 ? T.accentLight : T.redLight, borderRadius: 99, padding: "1px 6px" }}>{evScore}</span>}
+                                <div key={index} style={{ background: "rgba(255,255,255,0.06)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)", padding: 12 }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 6 }}>
+                                    <span style={{ fontSize: 12.5, fontWeight: 800, color: "#fff" }}>{ev.panelist}</span>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                      <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 99, padding: "2px 8px", background: recStyle.bg, color: recStyle.color }}>{ev.recommendation}</span>
+                                      {evScore !== null && (
+                                        <span style={{ fontSize: 10.5, fontWeight: 800, color: "#fff", background: "rgba(255,255,255,0.15)", borderRadius: 99, padding: "2px 8px" }}>
+                                          Score {evScore}
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
-                                  <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 4, marginBottom: ev.notes ? 6 : 0 }}>
+                                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                                     {Object.entries(ev.scores).map(([f, v]) => (
-                                      <div key={f} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "rgba(255,255,255,0.7)" }}>
+                                      <div key={f} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11.5, color: "rgba(255,255,255,0.85)" }}>
                                         <span>{f}</span>
-                                        <span>{v}/5</span>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                          <ScoreCapsules value={v} isMobileCard={true} />
+                                          <span style={{ fontWeight: 700 }}>{v}/5</span>
+                                        </div>
                                       </div>
                                     ))}
                                   </div>
-                                  {ev.notes && <div style={{ fontSize: 11, fontStyle: "italic", color: "rgba(255,255,255,0.8)", borderTop: "1px dashed rgba(255,255,255,0.1)", paddingTop: 4, marginTop: 4 }}>"{ev.notes}"</div>}
+                                  {ev.notes && (
+                                    <div style={{ marginTop: 8, padding: "8px 12px", background: "rgba(255,255,255,0.04)", borderRadius: 8, borderLeft: "3px solid rgba(255,255,255,0.4)", fontSize: 11, lineHeight: 1.5 }}>
+                                      <div style={{ fontSize: 8, fontWeight: 800, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Feedback</div>
+                                      <span style={{ fontStyle: "italic", color: "rgba(255,255,255,0.9)" }}>"{ev.notes}"</span>
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}
@@ -596,11 +714,49 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
                       {interview.meetingLink && (
                         <a href={interview.meetingLink} target="_blank" rel="noreferrer" style={{ justifyContent: "center", width: "100%", background: "rgba(255,255,255,0.15)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 8, padding: "10px 0", fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", textDecoration: "none" }}>🔗 Join Interview</a>
                       )}
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                        <button onClick={() => markAttendance(interview, "Present")} style={{ justifyContent: "center", width: "100%", background: interview.attendance === "Present" ? "rgba(16, 185, 129, 0.25)" : "rgba(255,255,255,0.08)", color: interview.attendance === "Present" ? "#34D399" : "rgba(255,255,255,0.8)", border: `1px solid ${interview.attendance === "Present" ? "rgba(16, 185, 129, 0.4)" : "rgba(255,255,255,0.15)"}`, borderRadius: 8, padding: "10px 0", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>✓ Present</button>
-                        <button onClick={() => markAttendance(interview, "Absent")} style={{ justifyContent: "center", width: "100%", background: interview.attendance === "Absent" ? "rgba(239, 68, 68, 0.25)" : "rgba(255,255,255,0.08)", color: interview.attendance === "Absent" ? "#FCA5A5" : "rgba(255,255,255,0.8)", border: `1px solid ${interview.attendance === "Absent" ? "rgba(239, 68, 68, 0.4)" : "rgba(255,255,255,0.15)"}`, borderRadius: 8, padding: "10px 0", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>✕ Absent</button>
+                      <div style={{ display: "grid", gridTemplateColumns: interview.candidatePresent !== null ? "1fr" : "1fr 1fr", gap: 10 }}>
+                        {(interview.candidatePresent === null || interview.candidatePresent === true) && (
+                          <button
+                            onClick={() => interview.candidatePresent === null && markAttendance(interview, true)}
+                            disabled={interview.candidatePresent !== null}
+                            style={{
+                              justifyContent: "center",
+                              width: "100%",
+                              background: interview.candidatePresent === true ? "rgba(16, 185, 129, 0.25)" : "rgba(255,255,255,0.08)",
+                              color: interview.candidatePresent === true ? "#34D399" : "rgba(255,255,255,0.8)",
+                              border: `1px solid ${interview.candidatePresent === true ? "rgba(16, 185, 129, 0.4)" : "rgba(255,255,255,0.15)"}`,
+                              borderRadius: 8,
+                              padding: "10px 0",
+                              fontWeight: 700,
+                              fontSize: 13,
+                              cursor: interview.candidatePresent !== null ? "default" : "pointer"
+                            }}
+                          >
+                            ✓ Present
+                          </button>
+                        )}
+                        {(interview.candidatePresent === null || interview.candidatePresent === false) && (
+                          <button
+                            onClick={() => interview.candidatePresent === null && markAttendance(interview, false)}
+                            disabled={interview.candidatePresent !== null}
+                            style={{
+                              justifyContent: "center",
+                              width: "100%",
+                              background: interview.candidatePresent === false ? "rgba(239, 68, 68, 0.25)" : "rgba(255,255,255,0.08)",
+                              color: interview.candidatePresent === false ? "#FCA5A5" : "rgba(255,255,255,0.8)",
+                              border: `1px solid ${interview.candidatePresent === false ? "rgba(239, 68, 68, 0.4)" : "rgba(255,255,255,0.15)"}`,
+                              borderRadius: 8,
+                              padding: "10px 0",
+                              fontWeight: 700,
+                              fontSize: 13,
+                              cursor: interview.candidatePresent !== null ? "default" : "pointer"
+                            }}
+                          >
+                            ✕ Absent
+                          </button>
+                        )}
                       </div>
-                      {interview.attendance === "Present" && (
+                      {interview.candidatePresent === true && (
                         <button onClick={() => { if (isBeingEvaluated) { setSelectedInterview(null); return; } const res = canEvaluate(interview); if (!res.allowed) { alert(res.reason); return; } openEval(interview); }} style={{ justifyContent: "center", width: "100%", background: isBeingEvaluated ? "rgba(239, 68, 68, 0.25)" : "rgba(52, 211, 153, 0.2)", color: isBeingEvaluated ? "#FCA5A5" : "#34D399", border: `1px solid ${isBeingEvaluated ? "rgba(239, 68, 68, 0.4)" : "rgba(52, 211, 153, 0.3)"}`, borderRadius: 8, padding: "10px 0", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{isBeingEvaluated ? "✕ Close Evaluation" : "⭐ Evaluate Candidate"}</button>
                       )}
                     </div>
@@ -622,11 +778,37 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
                               <span style={{ background: T.primaryLight, color: MAROON, borderRadius: 999, fontWeight: 700, fontSize: 10, padding: "6px 12px" }}>Round {interview.round || 1}</span>
                               <span style={{ background: interview.mode === "Online" ? T.skyLight : T.tealLight, color: interview.mode === "Online" ? T.sky : T.teal, borderRadius: 999, fontWeight: 700, fontSize: 10, padding: "6px 12px" }}>{interview.mode === "Online" ? "💻 Online" : "🏢 In-Person"}</span>
+                              {interview.candidatePresent !== null && interview.candidatePresent !== undefined && (
+                                <span style={{
+                                  background: interview.candidatePresent ? T.greenLight : T.redLight,
+                                  color: interview.candidatePresent ? T.green : T.red,
+                                  borderRadius: 999,
+                                  fontWeight: 700,
+                                  fontSize: 10,
+                                  padding: "6px 12px",
+                                  border: `1px solid ${interview.candidatePresent ? T.green + "22" : T.red + "22"}`
+                                }}>
+                                  {interview.candidatePresent ? "✓ Present" : "✕ Absent"}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10, minWidth: 130 }}>
-                          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", background: isCompleted ? T.greenLight : "#FEF3C7", color: isCompleted ? T.green : "#B45309", padding: "8px 18px", borderRadius: 999, fontSize: 11, fontWeight: 700, border: `1px solid ${isCompleted ? T.green + "44" : "#FDE68A"}` }}>{isCompleted ? "✓ Completed" : "● Upcoming"}</span>
+                          <span style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            background: interview.status === "Completed" ? T.greenLight : interview.status === "Cancelled" ? T.redLight : "#FEF3C7",
+                            color: interview.status === "Completed" ? T.green : interview.status === "Cancelled" ? T.red : "#B45309",
+                            padding: "8px 18px",
+                            borderRadius: 999,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            border: `1px solid ${interview.status === "Completed" ? T.green + "44" : interview.status === "Cancelled" ? T.red + "44" : "#FDE68A"}`
+                          }}>
+                            {interview.status === "Completed" ? "✓ Completed" : interview.status === "Cancelled" ? "✕ Cancelled" : `● ${interview.status}`}
+                          </span>
                           {totalScore !== null && (
                             <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: T.canvas, borderRadius: 999, padding: "10px 14px", border: `1px solid ${T.border}` }}>
                               <span style={{ fontSize: 11, color: T.inkFaint, fontWeight: 700 }}>Score</span>
@@ -637,7 +819,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
                       </div>
 
                       {interview.reminderSentAt && (
-                        <div onClick={(e) => { e.stopPropagation(); if (!setInterviews) return; setInterviews((prev) => prev.map((i) => i.candidate === interview.candidate && i.role === interview.role && i.round === interview.round ? { ...i, reminderSentAt: undefined } : i)); }} style={{ margin: "0 26px 0", background: "linear-gradient(135deg, #EDE7F6, #F3E5F5)", border: "1.5px solid #CE93D8", borderRadius: 10, padding: "10px 16px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", animation: "pulse-reminder 2s infinite" }} title="Click to dismiss reminder">
+                        <div onClick={(e) => { e.stopPropagation(); if (!setInterviews) return; setInterviews((prev) => prev.map((i) => i.candidate === interview.candidate && i.role === interview.role && i.round === interview.round ? { ...i, reminderSentAt: undefined } : i)); }} style={{ margin: "16px 0 0", background: "linear-gradient(135deg, #EDE7F6, #F3E5F5)", border: "1.5px solid #CE93D8", borderRadius: 10, padding: "10px 16px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", animation: "pulse-reminder 2s infinite" }} title="Click to dismiss reminder">
                           <span style={{ fontSize: 18 }}>🔔</span>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontSize: 12, fontWeight: 800, color: "#6A1B9A" }}>Reminder Sent</div>
@@ -667,7 +849,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                           {(interview.panel || []).length > 0 ? (
                             (interview.panel || []).map((panelistName) => {
-                              const hasEvaluated = interview.evaluations?.some((e) => e.panelist === panelistName);
+                              const hasEvaluated = evaluations.some((e) => e.panelist === panelistName);
                               return (
                                 <div key={panelistName} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 999, background: hasEvaluated ? T.greenLight : "#FEF3C7", color: hasEvaluated ? T.green : "#B45309", fontSize: 11, fontWeight: 700, border: `1px solid ${hasEvaluated ? T.green + "33" : "#FDE68A"}` }}>
                                   <span>{hasEvaluated ? "✓" : "○"}</span>
@@ -691,40 +873,52 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
                       )}
 
                       {isExpanded && evaluations.length > 0 && (
-                        <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
+                        <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
                           {evaluations.map((ev, idx) => {
                             const evScore = computeScore(ev.scores);
                             const recStyle = REC_COLORS[ev.recommendation] || { bg: T.canvas, color: T.inkMid };
                             return (
-                              <div key={idx} style={{ background: T.canvas, borderRadius: 12, border: `1px solid ${T.border}`, overflow: "hidden" }}>
-                                <div style={{ padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: T.primaryLight, borderBottom: `1px solid ${T.border}` }}>
-                                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: MAROON, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 12, flexShrink: 0 }}>
+                              <div key={idx} style={{ background: "#fff", borderRadius: 14, border: `1.5px solid ${T.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.02)", overflow: "hidden", transition: "all 0.2s ease" }}>
+                                <div style={{ padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "linear-gradient(to right, #F8FAFC, #FFFFFF)", borderBottom: `1.5px solid ${T.border}` }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: T.primaryLight, color: MAROON, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, border: `1px solid ${T.primary}22`, flexShrink: 0 }}>
                                       {ev.panelist.split(" ").map((n) => n[0]).join("")}
                                     </div>
                                     <div>
-                                      <div style={{ fontSize: 13, fontWeight: 800, color: MAROON }}>{ev.panelist}</div>
-                                      <div style={{ fontSize: 10, color: T.inkFaint }}>{new Date(ev.submittedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</div>
+                                      <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink }}>{ev.panelist}</div>
+                                      <div style={{ fontSize: 10.5, color: T.inkFaint, marginTop: 1 }}>
+                                        Evaluated on {new Date(ev.submittedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                                      </div>
                                     </div>
                                   </div>
                                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                    <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 99, padding: "3px 10px", background: recStyle.bg, color: recStyle.color, border: `1px solid ${recStyle.color}33` }}>{ev.recommendation}</span>
-                                    {evScore !== null && <ScoreCircle score={evScore} />}
+                                    <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 99, padding: "4px 12px", background: recStyle.bg, color: recStyle.color, border: `1px solid ${recStyle.color}22`, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>{ev.recommendation}</span>
+                                    {evScore !== null && (
+                                      <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: evScore >= 80 ? T.greenLight : evScore >= 60 ? T.accentLight : T.redLight, borderRadius: 999, padding: "4px 10px", border: `1px solid ${evScore >= 80 ? T.green : evScore >= 60 ? T.accentDark : T.red}33` }}>
+                                        <span style={{ fontSize: 10, color: T.inkFaint, fontWeight: 700 }}>Score</span>
+                                        <span style={{ fontSize: 12.5, fontWeight: 900, color: evScore >= 80 ? T.green : evScore >= 60 ? T.accentDark : T.red }}>{evScore}</span>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
-                                <div style={{ padding: "12px 16px" }}>
-                                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 20px", marginBottom: ev.notes ? 12 : 0 }}>
+                                <div style={{ padding: "16px 20px" }}>
+                                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px", marginBottom: ev.notes ? 16 : 0 }}>
                                     {Object.entries(ev.scores).map(([field, val]) => (
-                                      <div key={field} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                                        <span style={{ fontSize: 12, color: T.inkMid, fontWeight: 600, minWidth: 0, flex: 1 }}>{field}</span>
-                                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                          <ScoreDots value={val} />
-                                          <span style={{ fontSize: 11, fontWeight: 700, color: T.inkLight, minWidth: 14, textAlign: "right" }}>{val}/5</span>
+                                      <div key={field} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "6px 0", borderBottom: `1px dashed ${T.border}` }}>
+                                        <span style={{ fontSize: 12.5, color: T.inkMid, fontWeight: 600 }}>{field}</span>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                          <ScoreCapsules value={val} />
+                                          <span style={{ fontSize: 11, fontWeight: 800, color: T.ink, minWidth: 16, textAlign: "right" }}>{val}/5</span>
                                         </div>
                                       </div>
                                     ))}
                                   </div>
-                                  {ev.notes && <div style={{ marginTop: 8, padding: "8px 12px", background: "#fff", borderRadius: 8, border: `1px solid ${T.border}`, fontSize: 12, color: T.inkMid, fontStyle: "italic", lineHeight: 1.5 }}>"{ev.notes}"</div>}
+                                  {ev.notes && (
+                                    <div style={{ marginTop: 14, padding: "12px 16px", background: "#F8FAFC", borderRadius: 10, borderLeft: `4px solid ${MAROON}`, fontSize: 12.5, color: T.inkMid, lineHeight: 1.6 }}>
+                                      <div style={{ fontSize: 9, fontWeight: 800, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Feedback Notes</div>
+                                      <span style={{ fontStyle: "italic", color: T.ink }}>"{ev.notes}"</span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             );
@@ -747,9 +941,27 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
                       {interview.meetingLink && (
                         <a href={interview.meetingLink} target="_blank" rel="noreferrer" className="pan-btn pan-btn-join">🔗 Join Interview</a>
                       )}
-                      <button onClick={() => markAttendance(interview, "Present")} className={`pan-btn ${interview.attendance === "Present" ? "pan-btn-present-active" : "pan-btn-present"}`}>✓ Present</button>
-                      <button onClick={() => markAttendance(interview, "Absent")} className={`pan-btn ${interview.attendance === "Absent" ? "pan-btn-absent-active" : "pan-btn-absent"}`}>✕ Absent</button>
-                      {interview.attendance === "Present" && (
+                      {(interview.candidatePresent === null || interview.candidatePresent === true) && (
+                        <button
+                          onClick={() => interview.candidatePresent === null && markAttendance(interview, true)}
+                          disabled={interview.candidatePresent !== null}
+                          className={`pan-btn ${interview.candidatePresent === true ? "pan-btn-present-active" : "pan-btn-present"}`}
+                          style={{ cursor: interview.candidatePresent !== null ? "default" : "pointer" }}
+                        >
+                          ✓ Present
+                        </button>
+                      )}
+                      {(interview.candidatePresent === null || interview.candidatePresent === false) && (
+                        <button
+                          onClick={() => interview.candidatePresent === null && markAttendance(interview, false)}
+                          disabled={interview.candidatePresent !== null}
+                          className={`pan-btn ${interview.candidatePresent === false ? "pan-btn-absent-active" : "pan-btn-absent"}`}
+                          style={{ cursor: interview.candidatePresent !== null ? "default" : "pointer" }}
+                        >
+                          ✕ Absent
+                        </button>
+                      )}
+                      {interview.candidatePresent === true && (
                         <button onClick={() => { if (isBeingEvaluated) { setSelectedInterview(null); return; } const res = canEvaluate(interview); if (!res.allowed) { alert(res.reason); return; } openEval(interview); }} className={`pan-btn ${isBeingEvaluated ? "pan-btn-absent-active" : "pan-btn-evaluate"}`} style={{ background: isBeingEvaluated ? "rgba(239, 68, 68, 0.25)" : undefined, color: isBeingEvaluated ? "#EF4444" : undefined, border: isBeingEvaluated ? "1px solid rgba(239, 68, 68, 0.4)" : undefined }}>{isBeingEvaluated ? "✕ Close Evaluation" : "⭐ Evaluate Candidate"}</button>
                       )}
                     </div>
@@ -768,6 +980,115 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
             </div>
           )}
         </>
+      )}
+
+      {/* Sleek Custom Confirm Modal with Blur Backdrop outside Navbar/Sidebar */}
+      {confirmData && createPortal(
+        <div style={{
+          position: "fixed",
+          top: 60,
+          left: (bp === "mobile" || bp === "tablet") ? 0 : 240,
+          right: 0,
+          bottom: 0,
+          zIndex: 99,
+          background: "rgba(15, 23, 42, 0.4)",
+          backdropFilter: "blur(8px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24,
+          animation: "fadeIn 0.2s ease-out",
+        }}>
+          <div style={{
+            background: "#fff",
+            borderRadius: 20,
+            padding: "32px 28px",
+            maxWidth: 400,
+            width: "100%",
+            boxShadow: "0 25px 50px -12px rgba(114, 16, 42, 0.25), 0 10px 20px -5px rgba(0, 0, 0, 0.15)",
+            border: `1px solid ${T.border}`,
+            textAlign: "center",
+            animation: "scaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
+          }}>
+            <div style={{
+              width: 64,
+              height: 64,
+              borderRadius: "50%",
+              background: confirmData.isPresent ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
+              color: confirmData.isPresent ? T.green : T.red,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 28,
+              margin: "0 auto 20px",
+              fontWeight: 800,
+            }}>
+              {confirmData.isPresent ? "✓" : "✕"}
+            </div>
+
+            <h3 style={{
+              margin: "0 0 10px",
+              fontSize: 18,
+              fontWeight: 800,
+              color: T.ink,
+            }}>
+              Confirm Attendance
+            </h3>
+
+            <p style={{
+              margin: "0 0 28px",
+              fontSize: 14,
+              color: T.inkMid,
+              lineHeight: 1.5,
+            }}>
+              Are you sure you want to mark <strong style={{ color: T.ink }}>{confirmData.interview.candidate}</strong> as <strong style={{ color: confirmData.isPresent ? T.green : T.red }}>{confirmData.isPresent ? "Present" : "Absent"}</strong>?
+            </p>
+
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                onClick={() => setConfirmData(null)}
+                style={{
+                  flex: 1,
+                  padding: "12px 0",
+                  borderRadius: 12,
+                  border: `1.5px solid ${T.border}`,
+                  background: "#fff",
+                  color: T.inkMid,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                }}
+                className="btn-action-hover"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const data = confirmData;
+                  setConfirmData(null);
+                  executeMarkAttendance(data.interview, data.isPresent);
+                }}
+                style={{
+                  flex: 1,
+                  padding: "12px 0",
+                  borderRadius: 12,
+                  border: "none",
+                  background: confirmData.isPresent ? T.green : T.red,
+                  color: "#fff",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  boxShadow: `0 4px 14px ${confirmData.isPresent ? T.green : T.red}44`,
+                }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
