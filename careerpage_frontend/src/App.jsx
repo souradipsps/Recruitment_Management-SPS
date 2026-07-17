@@ -9,7 +9,7 @@ import { Loader } from "./components/common/Loader";
 import { LottieLoader } from "./components/common/LottieLoader";
 import { CareerPage } from "./features/careerpage/CareerPage";
 import AppModals from "./features/careerpage/AppModals";
-import { fetchUserProfile, mapUserResponseToSavedProfile } from "./features/careerpage/services/applicationsService";
+import { fetchUserProfile, mapUserResponseToSavedProfile, fetchMyJobApplications } from "./features/careerpage/services/applicationsService";
 import { fetchPublicJobs } from "./features/careerpage/services/jobsService";
 import { routes } from "./routes";
 
@@ -135,6 +135,16 @@ export default function App() {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
       });
+
+    // appliedJobIds only lived in memory, so a refresh forgot every job the
+    // candidate had already applied to and the button reverted to "Apply" —
+    // even though the application was correctly recorded on the backend (and
+    // showed up fine in the admin Applications screen). Rehydrate it here.
+    fetchMyJobApplications()
+      .then((apps) => {
+        setAppliedJobIds(apps.map((a) => a.posting).filter((id) => id != null));
+      })
+      .catch(() => {});
   }, []);
 
   // Guard the login-gated routes: a direct/bookmarked/stale link to any of
