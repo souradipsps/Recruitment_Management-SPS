@@ -17,12 +17,11 @@ const isActiveRole = (r) => (r.currentStatus || r.status) === "Active";
 export default function ApprovalModal({ sel, setSel, closeModal, isPending, comment, setComment, fieldErrors, setFieldErrors, takeAction, isMobile, existingRoles, currentUser }) {
   if (!sel) return null;
 
-  // The backend now returns the complete, correctly-ordered timeline on every
-  // ApprovalRequest row (each sibling created across resubmit cycles carries
-  // the full aggregated history). So use this row's own history directly -
-  // combining across siblings by sourceId here would just repeat every entry
-  // once per sibling. Only synthesize a leading "Submitted" if the backend
-  // history doesn't already include one (role requests may omit it).
+  const isExistingRole = sel.type === "Job Request" && (existingRoles || []).some(
+    (r) => r.role === sel.role && r.dept === sel.dept && (r.currentStatus || r.status) === "Active"
+  );
+
+  // Lock body scroll and page content scroll when modal is open
   const rawHistory = sel.history || [];
   const aggregatedHistory = rawHistory.some((h) => h.act === "Submitted")
     ? rawHistory
@@ -93,6 +92,35 @@ export default function ApprovalModal({ sel, setSel, closeModal, isPending, comm
             <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
               <Badge label={sel.type || "Request"} variant="blue" />
               <Badge label={sel.status} variant={statusVariant(sel.status)} />
+              {isPending && isExistingRole && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSel({
+                      ...sel,
+                      role: "",
+                      experience: "",
+                      salary: "",
+                      empType: "",
+                    });
+                  }}
+                  style={{
+                    border: "none",
+                    background: "#F3F4F6",
+                    color: "#4B5563",
+                    padding: "3px 8px",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    fontWeight: 700,
+                    fontSize: 11,
+                    transition: "background 0.2s",
+                  }}
+                  onMouseOver={(e) => e.target.style.background = "#E5E7EB"}
+                  onMouseOut={(e) => e.target.style.background = "#F3F4F6"}
+                >
+                  Clear Role
+                </button>
+              )}
             </div>
             <div style={{ fontSize: 17, fontWeight: 800, color: T.ink }}>
               {sel.type === "Role Request" ? "Role Request Details" : sel.role}
@@ -239,8 +267,22 @@ export default function ApprovalModal({ sel, setSel, closeModal, isPending, comm
                 <div>
                   <div style={labelCss}>Department</div>
                   {isPending ? (
-                    <select value={sel.dept || ""} onChange={(e) => handleDepartmentChange(e.target.value)}
-                      style={{ width: "100%", padding: "8px 10px", border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", background: T.surface, color: T.ink }}>
+                    <select
+                      value={sel.dept || ""}
+                      onChange={(e) => handleDepartmentChange(e.target.value)}
+                      disabled={isExistingRole}
+                      style={{
+                        width: "100%",
+                        padding: "8px 10px",
+                        border: `1px solid ${T.border}`,
+                        borderRadius: 8,
+                        fontSize: 13,
+                        outline: "none",
+                        background: isExistingRole ? T.canvas : T.surface,
+                        color: T.ink,
+                        cursor: isExistingRole ? "not-allowed" : "pointer"
+                      }}
+                    >
                       <option value="">Select department…</option>
                       {deptOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
@@ -254,8 +296,18 @@ export default function ApprovalModal({ sel, setSel, closeModal, isPending, comm
                     <select
                       value={sel.role || ""}
                       onChange={(e) => handleRoleChange(e.target.value)}
-                      disabled={!sel.dept}
-                      style={{ width: "100%", padding: "8px 10px", border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", background: sel.dept ? T.surface : T.canvas, color: T.ink, cursor: sel.dept ? "pointer" : "not-allowed" }}
+                      disabled={!sel.dept || isExistingRole}
+                      style={{
+                        width: "100%",
+                        padding: "8px 10px",
+                        border: `1px solid ${T.border}`,
+                        borderRadius: 8,
+                        fontSize: 13,
+                        outline: "none",
+                        background: (sel.dept && !isExistingRole) ? T.surface : T.canvas,
+                        color: T.ink,
+                        cursor: (sel.dept && !isExistingRole) ? "pointer" : "not-allowed"
+                      }}
                     >
                       <option value="">{sel.dept ? "Select role…" : "Select department first"}</option>
                       {getRoleOptionsForDept(sel.dept).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -300,8 +352,24 @@ export default function ApprovalModal({ sel, setSel, closeModal, isPending, comm
                 <div>
                   <div style={labelCss}>Experience</div>
                   {isPending ? (
-                    <input value={sel.experience || ""} onChange={(e) => setSel({ ...sel, experience: e.target.value })} placeholder="Enter experience"
-                      style={{ width: "100%", padding: 9, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }} />
+                    <input
+                      value={sel.experience || ""}
+                      onChange={(e) => setSel({ ...sel, experience: e.target.value })}
+                      placeholder="Enter experience"
+                      disabled={isExistingRole}
+                      style={{
+                        width: "100%",
+                        padding: 9,
+                        border: `1px solid ${T.border}`,
+                        borderRadius: 8,
+                        fontSize: 13,
+                        outline: "none",
+                        boxSizing: "border-box",
+                        background: isExistingRole ? T.canvas : T.surface,
+                        color: T.ink,
+                        cursor: isExistingRole ? "not-allowed" : "text"
+                      }}
+                    />
                   ) : (
                     <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{sel.experience || "—"}</div>
                   )}
@@ -321,8 +389,22 @@ export default function ApprovalModal({ sel, setSel, closeModal, isPending, comm
                 <div>
                   <div style={labelCss}>Employment Type</div>
                   {isPending ? (
-                    <select value={sel.empType || ""} onChange={(e) => setSel({ ...sel, empType: e.target.value })}
-                      style={{ width: "100%", padding: "8px 10px", border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", background: T.surface, color: T.ink }}>
+                    <select
+                      value={sel.empType || ""}
+                      onChange={(e) => setSel({ ...sel, empType: e.target.value })}
+                      disabled={isExistingRole}
+                      style={{
+                        width: "100%",
+                        padding: "8px 10px",
+                        border: `1px solid ${T.border}`,
+                        borderRadius: 8,
+                        fontSize: 13,
+                        outline: "none",
+                        background: isExistingRole ? T.canvas : T.surface,
+                        color: T.ink,
+                        cursor: isExistingRole ? "not-allowed" : "pointer"
+                      }}
+                    >
                       <option value="">Select…</option>
                       {TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
