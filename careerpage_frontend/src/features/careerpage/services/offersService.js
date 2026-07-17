@@ -143,9 +143,36 @@ function parseDocList(raw) {
   }
 }
 
+// Same doc-key <-> backend-file-field mapping used to build the upload FormData
+// in CandidateDashboard.jsx's handleSubmitDocs.
+const DOC_KEY_TO_BACKEND_FIELD = {
+  aadhar: "aadhar_card",
+  pan: "pan_card",
+  bank_details: "bank_passbook",
+  photo: "passport_photo",
+  driving_license: "driving_license",
+  class10: "class10_marksheet",
+  class12: "class12_marksheet",
+  degree: "degree_certificate",
+  experience_cert: "experience_certificate",
+  prof_cert: "professional_certificate",
+};
+
+// "https://.../onboarding/aadhar/2026/e-Aadhar_UORE6zD.pdf" -> "e-Aadhar_UORE6zD.pdf"
+function filenameFromUrl(url) {
+  try {
+    return decodeURIComponent(url.split("/").pop() || url);
+  } catch {
+    return url;
+  }
+}
+
 // Map one raw OnboardingRecord onto the bit the onboarding-documents UI needs.
 // This is read by both the document-upload form and the progress stepper, so
 // it stays in sync with whatever HR has actually verified in the admin dashboard.
+// Also carries the *actual* uploaded files/identity fields — the upload form
+// seeds its local state from these on load, instead of relying on whatever was
+// picked in the current browser session (which is empty after a page refresh).
 function normalizeOnboardingRecord(raw) {
   const verifiedDocs = parseDocList(raw.verified_docs);
   const rejectedDocs = parseDocList(raw.rejected_docs);
@@ -153,10 +180,14 @@ function normalizeOnboardingRecord(raw) {
   // admin dashboard can act on — the 4 compulsory ones plus the 6 optional
   // ones (same keys as RequiredDocumentsCard.jsx's COMPULSORY_DOCS/OPTIONAL_DOCS).
   const docStatus = {};
-  [
-    "aadhar", "pan", "bank_details", "photo",
-    "driving_license", "class10", "class12", "degree", "experience_cert", "prof_cert",
-  ].forEach((key) => {
+  const uploadedDocNames = {};
+  const uploadedDocUrls = {};
+  Object.entries(DOC_KEY_TO_BACKEND_FIELD).forEach(([key, field]) => {
+    const url = raw[field];
+    if (url) {
+      uploadedDocUrls[key] = absoluteUrl(url);
+      uploadedDocNames[key] = filenameFromUrl(url);
+    }
     if (verifiedDocs.includes(key)) docStatus[key] = "verified";
     else if (rejectedDocs.includes(key)) docStatus[key] = "rejected";
   });
@@ -169,6 +200,16 @@ function normalizeOnboardingRecord(raw) {
     checkedIn: !!raw.task_checkin,
     status: raw.status || "Documents Pending",
     docStatus,
+    uploadedDocNames,
+    uploadedDocUrls,
+    aadharNumber: raw.aadhar_number || "",
+    panNumber: raw.pan_number || "",
+    pfNumber: raw.pf_number || "",
+    esiNumber: raw.esi_number || "",
+    bankHolderName: raw.bank_holder_name || "",
+    bankAccountNumber: raw.bank_account_number || "",
+    bankIfsc: raw.bank_ifsc || "",
+    bankName: raw.bank_name || "",
   };
 }
 

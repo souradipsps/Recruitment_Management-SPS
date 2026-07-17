@@ -3,7 +3,6 @@ import { T } from "../theme";
 import { statusVariant } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
 import { Card, SectionTitle, Mono, Badge, Btn, Modal, ModalHeader } from "../components/ui";
-import { JOB_APPLICATIONS, GENERAL_APPLICATIONS, OFFERS } from "../data";
 import { authHeaders, authFetch, API_BASE_URL } from "../api/authApi";
 
 // Onboarding API client — GET /api/onboarding/, PATCH /api/onboarding/{id}/tasks/.
@@ -139,7 +138,7 @@ const TASK_LABELS = [
   "Check In"
 ];
 
-export default function Onboarding({ jobPostings = [] }) {
+export default function Onboarding({ jobPostings = [], jobApplications = [], generalApplications = [], offers = [] }) {
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
   const hScroll = useHorizontalScroll();
@@ -169,11 +168,15 @@ export default function Onboarding({ jobPostings = [] }) {
     return () => { active = false; };
   }, []);
 
-  const ALL_APPS = [...JOB_APPLICATIONS, ...GENERAL_APPLICATIONS.map((a) => ({ ...a, role: a.preferredRole }))];
+  // Real applications (GET /api/applications/, /api/general-applications/) and
+  // offers (GET /api/offers/) — same data the Applications and Offer Management
+  // screens use — matched by candidate name since OnboardingRecord doesn't carry
+  // a direct application reference.
+  const ALL_APPS = [...jobApplications, ...generalApplications.map((a) => ({ ...a, role: a.preferredRole }))];
 
   const getCandidateDetails = (name) => {
     const app = ALL_APPS.find((a) => a.name && a.name.toLowerCase() === name.toLowerCase());
-    const offer = OFFERS.find((o) => o.candidate && o.candidate.toLowerCase() === name.toLowerCase());
+    const offer = offers.find((o) => o.candidate && o.candidate.toLowerCase() === name.toLowerCase());
     return {
       email: app?.email || "—",
       phone: app?.phone || "—",
@@ -314,27 +317,32 @@ export default function Onboarding({ jobPostings = [] }) {
     </div>
   );
 
-  const renderDocsUploadPreview = (_record) => (
-    <div style={{ fontSize: 13, color: T.inkMid }}>
-      <div style={{ marginBottom: 12 }}><strong>Submitted Documents:</strong></div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {[
-          { name: "Government ID (Aadhaar).pdf", size: "1.2 MB", date: "2026-06-15" },
-          { name: "PAN Card.pdf", size: "840 KB", date: "2026-06-15" },
-          { name: "Degree Certificates.pdf", size: "4.5 MB", date: "2026-06-16" },
-          { name: "Relieving Letter.pdf", size: "1.1 MB", date: "2026-06-17" },
-        ].map((file) => (
-          <div key={file.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: T.canvas, borderRadius: 6, border: `1px solid ${T.border}` }}>
-            <div>
-              <div style={{ fontWeight: 600, color: T.ink }}>{file.name}</div>
-              <div style={{ fontSize: 11, color: T.inkFaint }}>{file.size} · Uploaded on {file.date}</div>
-            </div>
-            <button onClick={() => alert(`Opening ${file.name} in a new tab (mocked).`)} style={{ border: "none", background: "none", color: T.blue, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>Download</button>
-          </div>
-        ))}
+  const renderDocsUploadPreview = (record) => {
+    const docs = DOC_DEFS.filter((d) => record[d.fileField]);
+    if (docs.length === 0) {
+      return <div style={{ fontSize: 13, color: T.inkFaint }}>No documents uploaded yet.</div>;
+    }
+    return (
+      <div style={{ fontSize: 13, color: T.inkMid }}>
+        <div style={{ marginBottom: 12 }}><strong>Submitted Documents:</strong></div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {docs.map((d) => {
+            const url = record[d.fileField];
+            const filename = decodeURIComponent(url.split("/").pop() || d.label);
+            return (
+              <div key={d.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: T.canvas, borderRadius: 6, border: `1px solid ${T.border}` }}>
+                <div>
+                  <div style={{ fontWeight: 600, color: T.ink }}>{d.label}</div>
+                  <div style={{ fontSize: 11, color: T.inkFaint }}>{filename}</div>
+                </div>
+                <a href={url} target="_blank" rel="noreferrer" style={{ color: T.blue, fontWeight: 700, cursor: "pointer", fontSize: 12, textDecoration: "none" }}>View</a>
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderDocsVerifyPreview = (record) => {
     const docs = DOC_DEFS.filter((d) => record[d.fileField]);
@@ -355,16 +363,24 @@ export default function Onboarding({ jobPostings = [] }) {
                   <span style={{ fontWeight: 700, color: T.ink }}>{d.label}</span>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <a href={record[d.fileField]} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 700, color: T.blue, textDecoration: "none" }}>View</a>
-                    <button
-                      onClick={() => toggleDocVerification(record.id, d.key, "Verified")}
-                      title="Verify"
-                      style={{ border: "none", background: isVerified ? T.green : T.greenLight, color: isVerified ? "#fff" : T.green, borderRadius: 99, width: 22, height: 22, fontSize: 12, fontWeight: 800, cursor: "pointer" }}
-                    >✓</button>
-                    <button
-                      onClick={() => toggleDocVerification(record.id, d.key, "Rejected")}
-                      title="Reject"
-                      style={{ border: "none", background: isRejected ? T.red : T.redLight, color: isRejected ? "#fff" : T.red, borderRadius: 99, width: 22, height: 22, fontSize: 12, fontWeight: 800, cursor: "pointer" }}
-                    >✗</button>
+                    {isVerified ? (
+                      <span title="Verified" style={{ display: "flex", alignItems: "center", justifyContent: "center", background: T.green, color: "#fff", borderRadius: 99, width: 22, height: 22, fontSize: 12, fontWeight: 800 }}>✓</span>
+                    ) : isRejected ? (
+                      <span title="Rejected" style={{ display: "flex", alignItems: "center", justifyContent: "center", background: T.red, color: "#fff", borderRadius: 99, width: 22, height: 22, fontSize: 12, fontWeight: 800 }}>✗</span>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => toggleDocVerification(record.id, d.key, "Verified")}
+                          title="Verify"
+                          style={{ border: "none", background: T.greenLight, color: T.green, borderRadius: 99, width: 22, height: 22, fontSize: 12, fontWeight: 800, cursor: "pointer" }}
+                        >✓</button>
+                        <button
+                          onClick={() => toggleDocVerification(record.id, d.key, "Rejected")}
+                          title="Reject"
+                          style={{ border: "none", background: T.redLight, color: T.red, borderRadius: 99, width: 22, height: 22, fontSize: 12, fontWeight: 800, cursor: "pointer" }}
+                        >✗</button>
+                      </>
+                    )}
                   </div>
                 </div>
                 {detail && <div style={{ fontSize: 11, color: T.inkLight }}>{detail}</div>}

@@ -259,6 +259,30 @@ export function CandidateDashboard({
     return () => { cancelled = true; };
   }, []);
 
+  // Seed local form state from a fetched OnboardingRecord. This is what makes a
+  // page refresh (or any remount) show the candidate's *actual* submitted
+  // documents/details instead of "Missing document" — docs/docUrls otherwise
+  // only ever held whatever was picked in the current browser session, which is
+  // empty after a reload even though task_docs_upload (and the real files) are
+  // already true/saved on the backend.
+  const applyOnboardingRecord = (record) => {
+    setOnboardingRecord(record);
+    if (!record) return;
+    if (record.docsUploaded) setDocsSubmitted(true);
+    if (Object.keys(record.uploadedDocNames).length) {
+      setDocs((prev) => ({ ...prev, ...record.uploadedDocNames }));
+      setDocUrls((prev) => ({ ...prev, ...record.uploadedDocUrls }));
+    }
+    setAadharNumber((prev) => prev || record.aadharNumber);
+    setPanNumber((prev) => prev || record.panNumber);
+    setPfNumber((prev) => prev || record.pfNumber);
+    setEsiNumber((prev) => prev || record.esiNumber);
+    setBankHolder((prev) => prev || record.bankHolderName);
+    setBankAccount((prev) => prev || record.bankAccountNumber);
+    setBankIfsc((prev) => prev || record.bankIfsc);
+    setBankName((prev) => prev || record.bankName);
+  };
+
   // Load the candidate's onboarding record (auto-created server-side once the
   // offer is accepted) so document uploads have somewhere to PATCH to, and so a
   // returning candidate who already submitted doesn't see the form again.
@@ -268,8 +292,7 @@ export function CandidateDashboard({
     fetchMyOnboardingRecord()
       .then((record) => {
         if (cancelled) return;
-        setOnboardingRecord(record);
-        if (record?.docsUploaded) setDocsSubmitted(true);
+        applyOnboardingRecord(record);
       })
       .catch((err) => {
         if (!cancelled) toast.error(err.message || "Could not load your onboarding record.");
@@ -286,8 +309,7 @@ export function CandidateDashboard({
     fetchMyOnboardingRecord()
       .then((record) => {
         if (cancelled) return;
-        setOnboardingRecord(record);
-        if (record?.docsUploaded) setDocsSubmitted(true);
+        applyOnboardingRecord(record);
       })
       .catch(() => { /* silent — the on-accept fetch above already surfaced any real error */ });
     return () => { cancelled = true; };

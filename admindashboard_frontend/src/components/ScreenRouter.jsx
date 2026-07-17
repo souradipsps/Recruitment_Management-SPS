@@ -127,7 +127,14 @@ export default function ScreenRouter({ active, s, navigate, onGiveOffer }) {
     case "offer-management":
       return <OfferManagement offers={s.offers} setOffers={s.setOffers} jobPostings={s.jobPostings} interviews={s.interviews} panelists={s.panelists} />;
     case "onboarding":
-      return <Onboarding jobPostings={s.jobPostings} />;
+      return (
+        <Onboarding
+          jobPostings={s.jobPostings}
+          jobApplications={s.jobApplications}
+          generalApplications={s.generalApplications}
+          offers={s.offers}
+        />
+      );
     default:
       return <Dashboard approvalRequests={s.approvalRequests} />;
   }
