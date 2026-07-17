@@ -231,6 +231,10 @@ export default function App() {
     setShowLoader(true);
 
     setLoggedInUser("");
+    // Without this, logging in as a different account in the same browser
+    // session kept the previous account's applied jobs around, so job cards
+    // wrongly showed "Applied" for an account that never applied.
+    setAppliedJobIds([]);
     navigate(routes.home);
     setCameFromApply(false);
     setCameFromSection(undefined);
