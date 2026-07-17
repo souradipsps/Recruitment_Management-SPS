@@ -182,18 +182,6 @@ export default function ApprovalModal({ sel, setSel, closeModal, isPending, comm
               </div>
             )}
 
-            {sel.type === "Role Request" && (
-              <div>
-                <div style={labelCss}>Category</div>
-                {isPending ? (
-                  <Select value={sel.category || ""} onChange={(e) => setSel({ ...sel, category: e.target.value })} options={CATEGORY_OPTIONS} placeholder="Select Category" />
-                ) : (
-                  <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>
-                    {CATEGORY_OPTIONS.find((c) => c.value === sel.category)?.label || sel.category || "—"}
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Salary Range */}
             {(sel.salary || sel.type === "Role Request") && (
