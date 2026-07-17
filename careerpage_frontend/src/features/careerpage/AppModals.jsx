@@ -60,6 +60,7 @@ export default function AppModals({ app }) {
               setApplyAfterSignup(false);
             }}
             initialTab={loginTab}
+            onTabChange={(nextTab) => navigate(nextTab === "signup" ? routes.signup : routes.login, { replace: true })}
             onFormSubmit={() => setShowLoader(true)}
             onFormError={() => setShowLoader(false)}
             onLoginSuccess={(name, userData) => {

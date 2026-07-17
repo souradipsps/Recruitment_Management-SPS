@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import { useNavigate, useLocation, useMatch, useSearchParams } from "react-router-dom";
+import { useNavigate, useLocation, useMatch } from "react-router-dom";
 import { Toaster, toast } from "sonner";
 import { AnimatePresence } from "motion/react";
 import { useKeepAwake } from "./lib/keepAwake";
@@ -15,7 +15,7 @@ import { routes } from "./routes";
 
 // App shell: owns the cross-cutting auth / apply / dashboard state and wires
 // the public CareerPage together with the modals and candidate dashboard.
-// Which overlay is showing is driven by the URL (/login, /apply,
+// Which overlay is showing is driven by the URL (/login, /signup, /apply,
 // /jobs/:jobId/apply, /dashboard) so it's deep-linkable, refresh-safe and
 // works with the browser back/forward buttons.
 export default function App() {
@@ -25,13 +25,13 @@ export default function App() {
   const location = useLocation();
   const jobApplyMatch = useMatch(routes.jobApplyPattern);
   const dashboardMatch = useMatch(routes.dashboardTabPattern);
-  const [searchParams] = useSearchParams();
 
   const showLogin = location.pathname === routes.login;
+  const showSignup = location.pathname === routes.signup;
   const showApply = location.pathname === routes.apply;
   const showJobApplicationModal = !!jobApplyMatch;
   const showDashboard = !!dashboardMatch;
-  const loginTab = searchParams.get("tab") === "signup" ? "signup" : "login";
+  const loginTab = showSignup ? "signup" : "login";
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [logoutLoading, setLogoutLoading] = useState(false);
@@ -181,7 +181,7 @@ export default function App() {
       ? "jobApplication"
       : showApply
         ? "apply"
-        : showLogin
+        : showLogin || showSignup
           ? "login"
           : "career";
 
@@ -189,7 +189,7 @@ export default function App() {
 
   // Opens login/signup modal directly — no loader on navbar button click.
   const openModal = (tab) => {
-    navigate(tab === "signup" ? routes.loginSignup : routes.login);
+    navigate(tab === "signup" ? routes.signup : routes.login);
   };
 
   // Job apply: if not logged in show login modal directly.

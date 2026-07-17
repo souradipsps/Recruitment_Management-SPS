@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X } from "lucide-react";
 import logoImg from "../../../assets/logo.png";
@@ -11,8 +11,22 @@ import { ForgotPasswordForm } from "./login/ForgotPasswordForm";
 // Modal shell: renders the backdrop, header, tab bar and footer, and swaps
 // between the login / signup / forgot-password forms. Each form owns its own
 // state and talks to the backend through ../services/authService.
-export function LoginModal({ onClose, initialTab = "login", onLoginSuccess, onSignupSuccess, onFormSubmit, onFormError }) {
+//
+// `initialTab` tracks the /login vs /signup URL; `onTabChange` reports back
+// when the user switches tabs from inside the modal so the parent can keep
+// the URL in sync (browser back/forward, refresh, deep links). The
+// forgot-password tab has no route of its own, so it stays purely local.
+export function LoginModal({ onClose, initialTab = "login", onLoginSuccess, onSignupSuccess, onFormSubmit, onFormError, onTabChange }) {
   const [tab, setTab] = useState(initialTab);
+
+  useEffect(() => {
+    if (initialTab === "login" || initialTab === "signup") setTab(initialTab);
+  }, [initialTab]);
+
+  const handleSwitchTab = (next) => {
+    setTab(next);
+    if (next === "login" || next === "signup") onTabChange?.(next);
+  };
 
   return (
     <AnimatePresence>
@@ -44,27 +58,13 @@ export function LoginModal({ onClose, initialTab = "login", onLoginSuccess, onSi
             <div className="lm-header-motto">PURSUIT OF EXCELLENCE</div>
           </div>
 
-          {/* Tab bar */}
-          {tab !== "forgot" && (
-            <div className="lm-tabs">
-              {["login", "signup"].map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setTab(t)}
-                  className={`lm-tab-btn ${tab === t ? "lm-tab-btn--active" : "lm-tab-btn--inactive"}`}
-                >
-                  {t === "login" ? "Login" : "Sign Up"}
-                </button>
-              ))}
-            </div>
-          )}
 
           <div className="lm-content">
             {tab === "login" && (
               <LoginForm
                 onLoginSuccess={onLoginSuccess}
                 onClose={onClose}
-                onSwitchTab={setTab}
+                onSwitchTab={handleSwitchTab}
                 onForgotPassword={() => setTab("forgot")}
                 onFormSubmit={onFormSubmit}
                 onFormError={onFormError}
@@ -75,7 +75,7 @@ export function LoginModal({ onClose, initialTab = "login", onLoginSuccess, onSi
               <SignupForm
                 onSignupSuccess={onSignupSuccess}
                 onClose={onClose}
-                onSwitchTab={setTab}
+                onSwitchTab={handleSwitchTab}
                 onFormSubmit={onFormSubmit}
                 onFormError={onFormError}
               />
