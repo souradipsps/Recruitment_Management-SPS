@@ -22,7 +22,7 @@ export const normalizeJobRequest = (r) => ({
   location: r.location || "",
   vacancies: r.vacancies ?? "",
   exp: r.experience || "",
-  qual: r.educational_qualifications || r.qualification || "", // backend is educational_qualifications
+  qual: toSkillsArray(r.educational_qualifications || r.qualification || ""), // backend is a comma-separated educational_qualifications string
   type: r.type || "",
   salary: r.salary_range || "",
   status: r.status || "Pending",
@@ -58,7 +58,7 @@ const buildJobRequestPayload = (formData) => ({
   experience: formData.exp,
   salary_range: formData.salary,
   type: formData.type,
-  educational_qualifications: formData.qual, // Backend field name
+  educational_qualifications: (formData.qual || []).join(", "), // Backend field name — stored as a single comma-separated string
   department: formData.department,
   category: formData.category ? (formData.category.endsWith("Positions") ? formData.category : `${formData.category} Positions`) : "",
   location: formData.location,

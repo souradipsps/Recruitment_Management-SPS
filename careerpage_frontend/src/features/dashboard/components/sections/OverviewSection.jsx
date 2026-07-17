@@ -6,7 +6,7 @@ import { getStatusClass, getStatusIcon } from "../../utils/statusHelper";
 import "../css/sections/OverviewSection.css";
 import "../css/data/statusBadges.css";
 
-export function OverviewSection({ profile, dynamicApplications, setActiveTab }) {
+export function OverviewSection({ profile, dynamicApplications, interviewsCount = 0, setActiveTab }) {
   const stats = [
     {
       label: "Total Applied",
@@ -20,7 +20,7 @@ export function OverviewSection({ profile, dynamicApplications, setActiveTab }) 
     },
     {
       label: "Interviews",
-      value: dynamicApplications.filter((j) => j.status === "Interview Scheduled").length,
+      value: interviewsCount,
       color: "#1e40af",
     },
     {

@@ -42,7 +42,7 @@ export const normalizeApproval = (r) => ({
   salary: r.salary_range || "",
   experience: r.experience || "",
   vacancies: r.vacancies ?? "",
-  qual: r.educational_qualifications || "",
+  qual: toSkillsArray(r.educational_qualifications),
   empType: r.employment_type || "",
   location: r.location || "",
   category: (r.category || "").replace(/\s*Positions$/, ""),

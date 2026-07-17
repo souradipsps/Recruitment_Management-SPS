@@ -336,23 +336,6 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
       // "Pending" cards until the next hard refresh. Re-fetch instead so local
       // state always mirrors exactly which approval row is actually active.
       await refreshRoleRequestApprovals();
-      setApprovalRequests((prev) =>
-        prev.map((apr) =>
-          String(apr.sourceId) === String(selectedRequest.id)
-            ? {
-                ...apr,
-                dept: updated.dept,
-                role: updated.role,
-                type: updated.type,
-                empType: updated.type,
-                experience: updated.experience,
-                salary: updated.salaryRange ? `₹${updated.salaryRange}` : "",
-                just: updated.just,
-                status: updated.status,
-              }
-            : apr
-        )
-      );
 
       setShowViewModal(false);
       setSelectedRequest(null);

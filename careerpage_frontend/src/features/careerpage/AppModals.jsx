@@ -8,7 +8,7 @@ import {
   buildApplicationFormProfile,
   applyProfessionalData,
 } from "../../lib/profileData";
-import { fetchUserProfile, mapUserResponseToSavedProfile } from "./services/applicationsService";
+import { fetchUserProfile, mapUserResponseToSavedProfile, fetchMyJobApplications } from "./services/applicationsService";
 import { routes } from "../../routes";
 
 // Renders the four overlay views (login, dashboard, job application, apply)
@@ -60,6 +60,7 @@ export default function AppModals({ app }) {
               setApplyAfterSignup(false);
             }}
             initialTab={loginTab}
+            onTabChange={(nextTab) => navigate(nextTab === "signup" ? routes.signup : routes.login, { replace: true })}
             onFormSubmit={() => setShowLoader(true)}
             onFormError={() => setShowLoader(false)}
             onLoginSuccess={(name, userData) => {
@@ -83,6 +84,15 @@ export default function AppModals({ app }) {
                     const saved = mapUserResponseToSavedProfile(fetchedData);
                     if (saved) setSavedProfileData(saved);
                   }
+                })
+                .catch(() => {});
+
+              // Replace (not merge) — otherwise the previous account's
+              // applied jobs would carry over and show "Applied" on this
+              // account's job cards too.
+              fetchMyJobApplications()
+                .then((apps) => {
+                  setAppliedJobIds(apps.map((a) => a.posting).filter((id) => id != null));
                 })
                 .catch(() => {});
             }}

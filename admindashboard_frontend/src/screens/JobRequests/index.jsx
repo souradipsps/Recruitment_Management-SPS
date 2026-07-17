@@ -62,6 +62,7 @@ export default function JobRequests(props) {
           submitting={s.submitting}
           submitError={s.submitError}
           onCancel={s.cancelForm}
+          existingRoles={props.existingRoles}
         />
       )}
 
@@ -94,6 +95,7 @@ export default function JobRequests(props) {
           cancelJobRequest={s.cancelJobRequest}
           onClose={s.closeModal}
           currentUser={props.currentUser}
+          existingRoles={props.existingRoles}
         />
       )}
     </div>

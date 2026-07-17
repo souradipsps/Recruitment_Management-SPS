@@ -47,7 +47,7 @@ export default function RolesTable({
         onChange={(e) => onStatusChange(r.id, e.target.value)}
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: sc.bg, color: sc.color, border: `1.5px solid ${sc.border}`,
+          backgroundColor: sc.bg, color: sc.color, border: `1.5px solid ${sc.border}`,
           borderRadius: 99, padding: "3px 24px 3px 10px", fontSize: 11, fontWeight: 700,
           cursor: "pointer", outline: "none", appearance: "none",
           backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='${encodeURIComponent(sc.color)}' d='M5 7L1 3h8z'/%3E%3C/svg%3E")`,
@@ -205,7 +205,7 @@ export default function RolesTable({
                       value={r.currentStatus}
                       onChange={(e) => onStatusChange(r.id, e.target.value)}
                       style={{
-                        background: sc.bg, color: sc.color, border: `1.5px solid ${sc.border}`,
+                        backgroundColor: sc.bg, color: sc.color, border: `1.5px solid ${sc.border}`,
                         borderRadius: 99, padding: "3px 24px 3px 10px", fontSize: 11, fontWeight: 700,
                         cursor: "pointer", outline: "none", appearance: "none",
                         backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='${encodeURIComponent(sc.color)}' d='M5 7L1 3h8z'/%3E%3C/svg%3E")`,

@@ -189,7 +189,7 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
       selectedRequest.category !== originalRequest.category ||
       selectedRequest.vacancies !== originalRequest.vacancies ||
       selectedRequest.exp !== originalRequest.exp ||
-      selectedRequest.qual !== originalRequest.qual ||
+      JSON.stringify(selectedRequest.qual || []) !== JSON.stringify(originalRequest.qual || []) ||
       selectedRequest.type !== originalRequest.type ||
       selectedRequest.salary !== originalRequest.salary ||
       selectedRequest.description !== originalRequest.description ||
@@ -239,7 +239,7 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
           salary: selectedRequest.salary || "",
           vacancies: selectedRequest.vacancies || "",
           exp: selectedRequest.exp || "",
-          qual: selectedRequest.qual || "",
+          qual: (selectedRequest.qual || []).join(", "),
           type: selectedRequest.type || "",
           description: selectedRequest.description || "",
         },

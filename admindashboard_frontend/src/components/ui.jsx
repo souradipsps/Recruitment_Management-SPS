@@ -120,6 +120,7 @@ export const Input = ({
   placeholder,
   value,
   onChange,
+  disabled = false,
   style = {},
   type = "text",
 }) => (
@@ -128,6 +129,7 @@ export const Input = ({
     placeholder={placeholder}
     value={value}
     onChange={onChange}
+    disabled={disabled}
     className="input-focus"
     style={{
       border: `1.5px solid ${T.border}`,
@@ -136,12 +138,14 @@ export const Input = ({
       fontSize: font.base,
       fontFamily: font.body,
       color: T.ink,
-      background: "#fff",
+      background: disabled ? T.canvas : "#fff",
       outline: "none",
       width: "100%",
       boxSizing: "border-box",
+      cursor: disabled ? "not-allowed" : "pointer",
       transition: transition.fast,
       letterSpacing: "-0.01em",
+      opacity: disabled ? 0.8 : 1,
       ...style,
     }}
   />

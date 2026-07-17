@@ -2,7 +2,7 @@
 export const routes = {
   home: "/",
   login: "/login",
-  loginSignup: "/login?tab=signup",
+  signup: "/signup",
   apply: "/apply",
   jobApply: (jobId) => `/jobs/${jobId}/apply`,
   jobApplyPattern: "/jobs/:jobId/apply",

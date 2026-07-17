@@ -1,6 +1,7 @@
 import { takeApprovalAction } from "../../api/approvalsApi";
 import { updateJobRequestFields } from "../../api/jobRequestsApi";
 import { updateRoleRequest } from "../../api/roleRequestsApi";
+import { fetchJobPostings } from "../../api/jobPostingsApi";
 
 const parseSal = (v) => parseFloat((v || "").replace(/,/g, "")) || 0;
 
@@ -154,21 +155,16 @@ export function useApprovalActions({
     }
 
     if (action === "Approved" && r.type === "Job Request") {
-      setJobPostings((prev) => {
-        const exists = prev.some((p) => p.role === r.role);
-        if (exists) return prev;
-        return [...prev, {
-          id: `POST-${Date.now()}`, role: r.role, channel: "Career Page",
-          status: "Unpublished", posted: now, expiry: "30 Days", apps: 0,
-          location: r.location || "",
-          salary: r.salary || "",
-          vacancies: r.vacancies || "",
-          exp: r.experience || "",
-          qual: r.qual || "",
-          type: r.empType || "",
-          description: r.description || "",
-        }];
-      });
+      // The backend auto-creates the real JobPosting (with its own backendId)
+      // as part of approving the Job Request — refetch instead of fabricating
+      // a local placeholder, so Publish/Unpublish always has a backendId to
+      // act on rather than being silently local-only until the next reload.
+      try {
+        const postings = await fetchJobPostings();
+        setJobPostings(postings);
+      } catch (err) {
+        console.error("Failed to refresh job postings after approval:", err);
+      }
       if (onNavigateToApplications) setTimeout(() => { onNavigateToApplications(); }, 300);
     }
 

@@ -18,7 +18,6 @@ const FIELDS = [
   { key: "role", label: "Role", type: "select", placeholder: "Select role…", weight: 700 },
   { key: "vacancies", label: "Vacancies", type: "select", options: VACANCY_OPTIONS, placeholder: "Select count…", weight: 400 },
   { key: "exp", label: "Experience", type: "input", placeholder: "Enter experience", weight: 600 },
-  { key: "qual", label: "Educational Qualification", type: "select", options: QUAL_OPTIONS, placeholder: "Select qualification…", weight: 600 },
   { key: "type", label: "Employment Type", type: "select", options: TYPE_OPTIONS, placeholder: "Select type…", weight: 400 },
   { key: "location", label: "Location", type: "input", placeholder: "Enter job location", weight: 400 },
   { key: "category", label: "Category", type: "select", options: CATEGORY_OPTIONS, placeholder: "Select category…", weight: 600 },
@@ -43,9 +42,14 @@ export default function JobRequestDetailModal({
   cancelJobRequest,
   onClose,
   currentUser,
+  existingRoles = [],
 }) {
   const isEditable = selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back";
   const patch = (key, value) => setSelectedRequest({ ...selectedRequest, [key]: value });
+
+  const isExistingRole = (existingRoles || []).some(
+    (r) => r.role === selectedRequest.role && r.dept === selectedRequest.department && (r.currentStatus || r.status) === "Active"
+  );
 
   // Lock body scroll and page content scroll when modal is open
   useEffect(() => {
@@ -93,6 +97,35 @@ export default function JobRequestDetailModal({
             <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
               <Badge label="Job Request" variant="blue" />
               <Badge label={selectedRequest.status} variant={statusVariant(selectedRequest.status)} />
+              {isEditable && isExistingRole && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedRequest({
+                      ...selectedRequest,
+                      role: "",
+                      exp: "",
+                      salary: "",
+                      type: "",
+                    });
+                  }}
+                  style={{
+                    border: "none",
+                    background: "#F3F4F6",
+                    color: "#4B5563",
+                    padding: "3px 8px",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    fontWeight: 700,
+                    fontSize: 11,
+                    transition: "background 0.2s",
+                  }}
+                  onMouseOver={(e) => e.target.style.background = "#E5E7EB"}
+                  onMouseOut={(e) => e.target.style.background = "#F3F4F6"}
+                >
+                  Clear Role
+                </button>
+              )}
             </div>
             <div style={{ fontSize: 17, fontWeight: 800, color: T.ink }}>
               {selectedRequest.role || "Job Request Details"}
@@ -130,6 +163,8 @@ export default function JobRequestDetailModal({
                   ? getRoleOptionsForDept(selectedRequest.department)
                   : f.options;
                 const placeholder = f.placeholder;
+                const isFieldDisabled = isExistingRole && ["department", "role", "exp", "salary", "type"].includes(f.key);
+
                 return (
                   <div key={f.key} style={{ gridColumn: f.span2 && !isMobile ? "span 2" : "auto" }}>
                     <Label>{f.label}</Label>
@@ -140,9 +175,15 @@ export default function JobRequestDetailModal({
                           onChange={onChange}
                           options={options}
                           placeholder={placeholder}
+                          disabled={isFieldDisabled}
                         />
                       ) : (
-                        <Input value={value} onChange={onChange} placeholder={f.placeholder} />
+                        <Input
+                          value={value}
+                          onChange={onChange}
+                          placeholder={f.placeholder}
+                          disabled={isFieldDisabled}
+                        />
                       )
                     ) : (
                       <div style={{ fontSize: 13, fontWeight: f.weight, color: T.ink }}>{value || "—"}</div>
@@ -150,6 +191,21 @@ export default function JobRequestDetailModal({
                   </div>
                 );
               })}
+            </div>
+
+            {/* Educational Qualification */}
+            <div>
+              <Label>Educational Qualification</Label>
+              {isEditable ? (
+                <SkillsMultiSelect
+                  options={QUAL_OPTIONS.map((o) => o.value)}
+                  selected={selectedRequest.qual || []}
+                  onChange={(v) => patch("qual", v)}
+                  placeholder="Select qualification(s)…"
+                />
+              ) : (
+                <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{(selectedRequest.qual || []).join(", ") || "—"}</div>
+              )}
             </div>
 
             {/* Required Skills */}
