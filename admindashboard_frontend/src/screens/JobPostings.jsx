@@ -23,7 +23,7 @@ export default function JobPostings({ postings, setPostings, jobRequests, existi
     return {
       vacancies: posting.vacancies || jr?.vacancies || "—",
       exp: posting.exp || jr?.exp || er?.experience || "—",
-      qual: posting.qual || jr?.qual || "—",
+      qual: posting.qual || (Array.isArray(jr?.qual) ? jr.qual.join(", ") : jr?.qual) || "—",
       type: posting.type || jr?.type || er?.type || "—",
       salary: posting.salary || jr?.salary || er?.salaryRange || "—",
       location: posting.location || jr?.location || "—",

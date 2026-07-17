@@ -63,7 +63,7 @@ export default function Applications({
       ...p,
       exp: p.exp || jr?.exp || "—",
       type: p.type || jr?.type || "Full-time",
-      qual: p.qual || jr?.qual || "—",
+      qual: p.qual || (Array.isArray(jr?.qual) ? jr.qual.join(", ") : jr?.qual) || "—",
       sal: p.salary || jr?.sal || "—",
       jobAppCount,
       genAppCount,

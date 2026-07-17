@@ -365,13 +365,14 @@ export default function ApprovalModal({ sel, setSel, closeModal, isPending, comm
                 <div>
                   <div style={labelCss}>Educational Qualification</div>
                   {isPending ? (
-                    <select value={sel.qual || ""} onChange={(e) => setSel({ ...sel, qual: e.target.value })}
-                      style={{ width: "100%", padding: "8px 10px", border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", background: T.surface, color: T.ink }}>
-                      <option value="">Select…</option>
-                      {QUAL_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
+                    <SkillsMultiSelect
+                      options={QUAL_OPTIONS.map((o) => o.value)}
+                      selected={sel.qual || []}
+                      onChange={(v) => setSel({ ...sel, qual: v })}
+                      placeholder="Select qualification(s)…"
+                    />
                   ) : (
-                    <div style={{ fontSize: 13, color: T.ink }}>{sel.qual || "—"}</div>
+                    <div style={{ fontSize: 13, color: T.ink }}>{(sel.qual || []).join(", ") || "—"}</div>
                   )}
                 </div>
                 <div>

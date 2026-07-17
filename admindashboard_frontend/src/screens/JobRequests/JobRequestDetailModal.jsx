@@ -18,7 +18,6 @@ const FIELDS = [
   { key: "role", label: "Role", type: "select", placeholder: "Select role…", weight: 700 },
   { key: "vacancies", label: "Vacancies", type: "select", options: VACANCY_OPTIONS, placeholder: "Select count…", weight: 400 },
   { key: "exp", label: "Experience", type: "input", placeholder: "Enter experience", weight: 600 },
-  { key: "qual", label: "Educational Qualification", type: "select", options: QUAL_OPTIONS, placeholder: "Select qualification…", weight: 600 },
   { key: "type", label: "Employment Type", type: "select", options: TYPE_OPTIONS, placeholder: "Select type…", weight: 400 },
   { key: "location", label: "Location", type: "input", placeholder: "Enter job location", weight: 400 },
   { key: "category", label: "Category", type: "select", options: CATEGORY_OPTIONS, placeholder: "Select category…", weight: 600 },
@@ -192,6 +191,21 @@ export default function JobRequestDetailModal({
                   </div>
                 );
               })}
+            </div>
+
+            {/* Educational Qualification */}
+            <div>
+              <Label>Educational Qualification</Label>
+              {isEditable ? (
+                <SkillsMultiSelect
+                  options={QUAL_OPTIONS.map((o) => o.value)}
+                  selected={selectedRequest.qual || []}
+                  onChange={(v) => patch("qual", v)}
+                  placeholder="Select qualification(s)…"
+                />
+              ) : (
+                <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{(selectedRequest.qual || []).join(", ") || "—"}</div>
+              )}
             </div>
 
             {/* Required Skills */}

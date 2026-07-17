@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.core.cache import cache
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-from jobs.models import JobPosting, JobCategory, ApprovalRequest, JobRequest, RoleRequest
+from jobs.models import JobPosting, JobCategory, ApprovalRequest, JobRequest, RoleRequest, ApprovalHistory
 from jobs.tasks import check_expired_job_postings
 from notifications.tasks import create_notification_task
 from notifications.models import Notification
@@ -238,5 +238,113 @@ class CacheAndTaskTestCase(TestCase):
         
         existing.refresh_from_db()
         self.assertEqual(existing.headcount, 2)
+
+    def test_resubmitted_role_request_history_action_label(self):
+        """
+        Verify that resubmitting a Role Request logs 'Resubmitted' as the action
+        instead of 'Submitted' in the ApprovalHistory.
+        """
+        from jobs.serializers import ApprovalRequestSerializer
+
+        # 1. Create a RoleRequest with status Pending
+        role_request = RoleRequest.objects.create(
+            request_id="RR-TEST-RESUBMIT",
+            role="Music Teacher",
+            department="Arts",
+            status="Pending",
+            created_by=self.admin_user
+        )
+        
+        # Verify approval and history are created
+        approval = ApprovalRequest.objects.get(role_request=role_request)
+        self.assertEqual(approval.status, "Pending")
+        history = list(ApprovalHistory.objects.filter(approval=approval).order_by("id"))
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0].action, "Submitted")
+
+        # 2. Send Back the approval
+        client = APIClient()
+        client.force_authenticate(user=self.admin_user)
+        response = client.post(f"/api/approvals/{approval.id}/action/", {"action": "Send Back", "note": "Please edit details"})
+        self.assertEqual(response.status_code, 200)
+
+        # Refresh
+        role_request.refresh_from_db()
+        self.assertEqual(role_request.status, "Sent Back")
+
+        # 3. Resubmit: Update status back to Pending
+        role_request.status = "Pending"
+        role_request.save()
+
+        # There should now be two ApprovalRequests for this RoleRequest
+        approvals = list(ApprovalRequest.objects.filter(role_request=role_request).order_by("id"))
+        self.assertEqual(len(approvals), 2)
+        
+        # The first approval should be "Sent Back"
+        self.assertEqual(approvals[0].status, "Sent Back")
+        # The second approval should be "Pending"
+        self.assertEqual(approvals[1].status, "Pending")
+
+        # Check total history across both approvals
+        serializer = ApprovalRequestSerializer(approvals[1])
+        history_data = serializer.data["history"]
+        self.assertEqual(len(history_data), 3)
+        self.assertEqual(history_data[0]["action"], "Submitted")
+        self.assertEqual(history_data[1]["action"], "Send Back")
+        self.assertEqual(history_data[2]["action"], "Resubmitted")
+
+    def test_resubmitted_job_request_history_action_label(self):
+        """
+        Verify that resubmitting a Job Request logs 'Resubmitted' as the action
+        instead of 'Submitted' in the ApprovalHistory.
+        """
+        from jobs.serializers import ApprovalRequestSerializer
+
+        # 1. Create a JobRequest with status Pending
+        job_request = JobRequest.objects.create(
+            request_id="JR-TEST-RESUBMIT",
+            role="History Teacher",
+            department="Humanities",
+            status="Pending",
+            created_by=self.admin_user
+        )
+        
+        # Verify approval and history are created
+        approval = ApprovalRequest.objects.get(job_request=job_request)
+        self.assertEqual(approval.status, "Pending")
+        history = list(ApprovalHistory.objects.filter(approval=approval).order_by("id"))
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0].action, "Submitted")
+
+        # 2. Send Back the approval
+        client = APIClient()
+        client.force_authenticate(user=self.admin_user)
+        response = client.post(f"/api/approvals/{approval.id}/action/", {"action": "Send Back", "note": "Please edit details"})
+        self.assertEqual(response.status_code, 200)
+
+        # Refresh
+        job_request.refresh_from_db()
+        self.assertEqual(job_request.status, "Sent Back")
+
+        # 3. Resubmit: Update status back to Pending
+        job_request.status = "Pending"
+        job_request.save()
+
+        # There should now be two ApprovalRequests for this JobRequest
+        approvals = list(ApprovalRequest.objects.filter(job_request=job_request).order_by("id"))
+        self.assertEqual(len(approvals), 2)
+        
+        # The first approval should be "Sent Back"
+        self.assertEqual(approvals[0].status, "Sent Back")
+        # The second approval should be "Pending"
+        self.assertEqual(approvals[1].status, "Pending")
+
+        # Check total history across both approvals
+        serializer = ApprovalRequestSerializer(approvals[1])
+        history_data = serializer.data["history"]
+        self.assertEqual(len(history_data), 3)
+        self.assertEqual(history_data[0]["action"], "Submitted")
+        self.assertEqual(history_data[1]["action"], "Send Back")
+        self.assertEqual(history_data[2]["action"], "Resubmitted")
 
 

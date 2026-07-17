@@ -104,7 +104,12 @@ export default function JobRequestForm({
                 />
               </FormField>
               <FormField label="Educational Qualification" required>
-                <Select value={form.qual} onChange={(e) => updateForm(index, "qual", e.target.value)} options={QUAL_OPTIONS} placeholder="Select qualification…" />
+                <SkillsMultiSelect
+                  options={QUAL_OPTIONS.map((o) => o.value)}
+                  selected={form.qual || []}
+                  onChange={(v) => updateForm(index, "qual", v)}
+                  placeholder="Select qualification(s)…"
+                />
               </FormField>
               <FormField label="Vacancies" required>
                 <Select value={form.vacancies} onChange={(e) => updateForm(index, "vacancies", e.target.value)} options={VACANCY_OPTIONS} placeholder="Select count…" />

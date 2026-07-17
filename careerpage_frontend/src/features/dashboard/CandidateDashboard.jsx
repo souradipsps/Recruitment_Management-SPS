@@ -10,6 +10,7 @@ import { routes } from "../../routes";
 import { updateUserProfile, fetchMyJobApplications } from "../careerpage/services/applicationsService";
 import { fetchPublicJobs } from "../careerpage/services/jobsService";
 import { fetchMyOffers, acceptOffer, declineOffer } from "../careerpage/services/offersService";
+import { fetchUpcomingInterviews } from "../careerpage/services/interviewsService";
 
 // Mock data & configurations
 import { notifications } from "../../mockData/dashboardMockData";
@@ -216,6 +217,7 @@ export function CandidateDashboard({
   // full job listing.
   const [jobApplications, setJobApplications] = useState([]);
   const [liveJobs, setLiveJobs] = useState([]);
+  const [interviews, setInterviews] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -228,6 +230,19 @@ export function CandidateDashboard({
       .catch((err) => {
         if (!cancelled) toast.error(err.message || "Could not load your applications.");
       });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Real upcoming interviews (GET /api/interviews/, scoped to this candidate) —
+  // the Overview stat card used to count applications with status "Interview
+  // Scheduled", but that status string doesn't exist in the backend's
+  // JobApplication.STATUS_CHOICES, so it always read 0. Fetch the real
+  // interview records instead, same source InterviewsSection already uses.
+  useEffect(() => {
+    let cancelled = false;
+    fetchUpcomingInterviews()
+      .then((data) => { if (!cancelled) setInterviews(data); })
+      .catch(() => { /* Overview stat just falls back to 0; the Interviews tab surfaces the real error. */ });
     return () => { cancelled = true; };
   }, []);
 
@@ -1282,6 +1297,7 @@ export function CandidateDashboard({
                 <OverviewSection
                   profile={profile}
                   dynamicApplications={dynamicApplications}
+                  interviewsCount={interviews.length}
                   setActiveTab={setActiveTab}
                 />
               )}

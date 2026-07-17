@@ -16,7 +16,7 @@ export const emptyForm = () => ({
   role: "",
   vacancies: "",
   exp: "",
-  qual: "",
+  qual: [],
   type: "",
   salary: "",
   location: "",
