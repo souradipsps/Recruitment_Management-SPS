@@ -40,6 +40,7 @@ export function DocumentRow({
   setDocs,
   docUrls,
   setDocUrls,
+  setDocFiles,
   docStatus = {},
   docsSubmitted,
   startDocCamera,
@@ -88,6 +89,11 @@ export function DocumentRow({
                       delete copy[docKey];
                       return copy;
                     });
+                    setDocFiles?.((prev) => {
+                      const copy = { ...prev };
+                      delete copy[docKey];
+                      return copy;
+                    });
                   }}
                   className="dr-btn-remove"
                   title="Remove document"
@@ -112,6 +118,7 @@ export function DocumentRow({
                       const url = URL.createObjectURL(f);
                       setDocs((prev) => ({ ...prev, [docKey]: f.name }));
                       setDocUrls((prev) => ({ ...prev, [docKey]: url }));
+                      setDocFiles?.((prev) => ({ ...prev, [docKey]: f }));
                     }
                   }}
                 />

@@ -15,11 +15,12 @@ export function OnboardingSection({
   offerRejected,
   showOfferConfirm,
   setShowOfferConfirm,
+  onboardingRecord,
   docs,
   setDocs,
   docUrls,
   setDocUrls,
-  docStatus = {},
+  setDocFiles,
   aadharNumber,
   setAadharNumber,
   panNumber,
@@ -37,19 +38,24 @@ export function OnboardingSection({
   bankHolder,
   setBankHolder,
   docsSubmitted,
+  docsSubmitting,
   startDocCamera,
   handleSubmitDocs,
 }) {
-  const uploadedKeys = Object.keys(docs);
-  const anyUploadedAndVerified = uploadedKeys.some((k) => docStatus[k] === "verified");
+  // Per-document Verified/Rejected badges, straight from the same backend
+  // fields the admin dashboard reads and writes (verified_docs/rejected_docs).
+  const docStatus = onboardingRecord?.docStatus || {};
 
+  // Steps 4-6 mirror exactly what HR has done in the admin dashboard's
+  // Onboarding Checklist (task_docs_verify / task_bgc / task_checkin) — this
+  // is what keeps the two dashboards in sync.
   const steps = [
     { label: "Profile Submitted", done: true, desc: "Your basic profile has been received." },
     { label: "Offer Letter Accepted", done: offerAccepted, desc: "Accept your offer letter to proceed." },
     { label: "Documentation Upload", done: docsSubmitted, desc: "Upload all required documents after accepting the offer." },
-    { label: "Document Verification", done: anyUploadedAndVerified, desc: "HR will verify your submitted documents." },
-    { label: "Background Check", done: false, desc: "HR will initiate a background verification." },
-    { label: "Joining Confirmation", done: false, desc: "You will receive a final confirmation email." },
+    { label: "Document Verification", done: !!onboardingRecord?.docsVerified, desc: "HR will verify your submitted documents." },
+    { label: "Background Check", done: !!onboardingRecord?.backgroundCheckDone, desc: "HR will initiate a background verification." },
+    { label: "Joining Confirmation", done: !!onboardingRecord?.checkedIn, desc: "You will receive a final confirmation email." },
   ];
 
   return (
@@ -83,8 +89,10 @@ export function OnboardingSection({
           setDocs={setDocs}
           docUrls={docUrls}
           setDocUrls={setDocUrls}
+          setDocFiles={setDocFiles}
           docStatus={docStatus}
           docsSubmitted={docsSubmitted}
+          docsSubmitting={docsSubmitting}
           startDocCamera={startDocCamera}
           handleSubmitDocs={handleSubmitDocs}
           aadharNumber={aadharNumber}

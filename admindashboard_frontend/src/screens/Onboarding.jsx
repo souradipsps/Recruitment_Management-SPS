@@ -51,6 +51,13 @@ const normalizeOnboardingRecord = (r) => ({
   bankName: r.bank_name || "",
   bankPassbook: r.bank_passbook || "",
   passportPhoto: r.passport_photo || "",
+  // Optional documents — only ever present if the candidate chose to upload them.
+  drivingLicense: r.driving_license || "",
+  class10Marksheet: r.class10_marksheet || "",
+  class12Marksheet: r.class12_marksheet || "",
+  degreeCertificate: r.degree_certificate || "",
+  experienceCertificate: r.experience_certificate || "",
+  professionalCertificate: r.professional_certificate || "",
   verifiedDocs: parseDocList(r.verified_docs),
   rejectedDocs: parseDocList(r.rejected_docs),
 });
@@ -101,7 +108,11 @@ async function updateOnboardingDocs(backendId, fields) {
   return normalizeOnboardingRecord(await res.json());
 }
 
-// The 4 KYC documents a candidate can submit, and the record fields that back them.
+// The 4 compulsory KYC documents every candidate submits, plus 6 optional ones
+// they may choose to add — same keys as careerpage's RequiredDocumentsCard.jsx
+// (COMPULSORY_DOCS / OPTIONAL_DOCS) so verified_docs/rejected_docs line up on
+// both sides. Only docs the candidate actually uploaded (record[fileField] is
+// truthy) get rendered — see renderDocsVerifyPreview below.
 const DOC_DEFS = [
   { key: "aadhar", label: "Aadhaar Card", fileField: "aadharCard", numberField: "aadharNumber", numberLabel: "Aadhaar Number" },
   { key: "pan", label: "PAN Card", fileField: "panCard", numberField: "panNumber", numberLabel: "PAN Number" },
@@ -110,6 +121,12 @@ const DOC_DEFS = [
     detailFn: (r) => `Bank: ${r.bankName || "—"} | A/C: ${r.bankAccountNumber || "—"} | IFSC: ${r.bankIfsc || "—"} | Holder: ${r.bankHolderName || "—"}`,
   },
   { key: "photo", label: "Passport Photo", fileField: "passportPhoto" },
+  { key: "driving_license", label: "Driving License", fileField: "drivingLicense" },
+  { key: "class10", label: "Class 10 Marksheet", fileField: "class10Marksheet" },
+  { key: "class12", label: "Class 12 Marksheet", fileField: "class12Marksheet" },
+  { key: "degree", label: "Degree / Graduation Certificate", fileField: "degreeCertificate" },
+  { key: "experience_cert", label: "Experience Certificate", fileField: "experienceCertificate" },
+  { key: "prof_cert", label: "Professional Certificate", fileField: "professionalCertificate" },
 ];
 
 const TASK_KEYS = ["profile", "offer", "docsUpload", "docsVerify", "bgc", "checkin"];

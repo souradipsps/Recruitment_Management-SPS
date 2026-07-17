@@ -25,8 +25,10 @@ export function RequiredDocumentsCard({
   setDocs,
   docUrls,
   setDocUrls,
+  setDocFiles,
   docStatus = {},
   docsSubmitted,
+  docsSubmitting,
   startDocCamera,
   handleSubmitDocs,
   aadharNumber,
@@ -46,7 +48,7 @@ export function RequiredDocumentsCard({
   bankHolder,
   setBankHolder,
 }) {
-  const rowProps = { docs, setDocs, docUrls, setDocUrls, docStatus, docsSubmitted, startDocCamera };
+  const rowProps = { docs, setDocs, docUrls, setDocUrls, setDocFiles, docStatus, docsSubmitted, startDocCamera };
 
   const extraFor = (key) => {
     if (key === "aadhar") {
@@ -155,8 +157,9 @@ export function RequiredDocumentsCard({
             <button
               onClick={handleSubmitDocs}
               className="rd-btn-submit"
+              disabled={docsSubmitting}
             >
-              Submit Documents
+              {docsSubmitting ? "Submitting…" : "Submit Documents"}
             </button>
           </div>
         )}

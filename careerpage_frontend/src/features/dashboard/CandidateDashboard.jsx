@@ -9,7 +9,7 @@ import { MAROON, GOLD } from "../../lib/constants";
 import { routes } from "../../routes";
 import { updateUserProfile, fetchMyJobApplications } from "../careerpage/services/applicationsService";
 import { fetchPublicJobs } from "../careerpage/services/jobsService";
-import { fetchMyOffers, acceptOffer, declineOffer } from "../careerpage/services/offersService";
+import { fetchMyOffers, acceptOffer, declineOffer, fetchMyOnboardingRecord, submitOnboardingDocuments } from "../careerpage/services/offersService";
 
 // Mock data & configurations
 import { notifications } from "../../mockData/dashboardMockData";
@@ -193,7 +193,15 @@ export function CandidateDashboard({
   const [offerActionLoading, setOfferActionLoading] = useState(false);
   const [docs, setDocs] = useState({});
   const [docUrls, setDocUrls] = useState({});
+  // The actual File/Blob objects behind `docs` (which only holds display names) —
+  // this is what actually gets uploaded in handleSubmitDocs.
+  const [docFiles, setDocFiles] = useState({});
   const [docsSubmitted, setDocsSubmitted] = useState(false);
+  const [docsSubmitting, setDocsSubmitting] = useState(false);
+
+  // The candidate's own OnboardingRecord (auto-created server-side when they
+  // accept their offer) — its backendId is what document uploads PATCH to.
+  const [onboardingRecord, setOnboardingRecord] = useState(null);
 
   // Onboarding identity & bank form states
   const [aadharNumber, setAadharNumber] = useState("");
@@ -250,6 +258,40 @@ export function CandidateDashboard({
       .finally(() => { if (!cancelled) setOfferLoading(false); });
     return () => { cancelled = true; };
   }, []);
+
+  // Load the candidate's onboarding record (auto-created server-side once the
+  // offer is accepted) so document uploads have somewhere to PATCH to, and so a
+  // returning candidate who already submitted doesn't see the form again.
+  useEffect(() => {
+    if (!offerAccepted) return;
+    let cancelled = false;
+    fetchMyOnboardingRecord()
+      .then((record) => {
+        if (cancelled) return;
+        setOnboardingRecord(record);
+        if (record?.docsUploaded) setDocsSubmitted(true);
+      })
+      .catch((err) => {
+        if (!cancelled) toast.error(err.message || "Could not load your onboarding record.");
+      });
+    return () => { cancelled = true; };
+  }, [offerAccepted]);
+
+  // Re-fetch every time the candidate opens the Onboarding tab, so HR's
+  // verification actions (visible immediately in the admin dashboard) show up
+  // here too without needing a full page reload.
+  useEffect(() => {
+    if (activeTab !== "onboarding" || !offerAccepted) return;
+    let cancelled = false;
+    fetchMyOnboardingRecord()
+      .then((record) => {
+        if (cancelled) return;
+        setOnboardingRecord(record);
+        if (record?.docsUploaded) setDocsSubmitted(true);
+      })
+      .catch(() => { /* silent — the on-accept fetch above already surfaced any real error */ });
+    return () => { cancelled = true; };
+  }, [activeTab, offerAccepted]);
 
   const handleAcceptOffer = async () => {
     if (!offer?.backendId) { setOfferAccepted(true); setShowOfferConfirm(null); return; }
@@ -842,7 +884,22 @@ export function CandidateDashboard({
   };
 
   // Onboarding documents submission validation
-  const handleSubmitDocs = () => {
+  // Maps the onboarding UI's document keys onto the backend OnboardingRecord's
+  // file field names (see rms_backend/onboarding/models.py).
+  const DOC_KEY_TO_BACKEND_FIELD = {
+    aadhar: "aadhar_card",
+    pan: "pan_card",
+    bank_details: "bank_passbook",
+    photo: "passport_photo",
+    driving_license: "driving_license",
+    class10: "class10_marksheet",
+    class12: "class12_marksheet",
+    degree: "degree_certificate",
+    experience_cert: "experience_certificate",
+    prof_cert: "professional_certificate",
+  };
+
+  const handleSubmitDocs = async () => {
     const requiredKeys = ["aadhar", "pan", "bank_details", "photo"];
     const missing = requiredKeys.filter((k) => !docs[k]);
     if (missing.length > 0) {
@@ -876,8 +933,40 @@ export function CandidateDashboard({
       toast.error("Please fill all bank details (Account Number, IFSC, Bank Name, Holder Name)");
       return;
     }
-    setDocsSubmitted(true);
-    toast.success("Documents submitted successfully!");
+    if (!onboardingRecord?.backendId) {
+      toast.error("Your onboarding record isn't ready yet. Please refresh and try again.");
+      return;
+    }
+
+    const files = {};
+    Object.entries(DOC_KEY_TO_BACKEND_FIELD).forEach(([docKey, backendField]) => {
+      if (docFiles[docKey]) files[backendField] = docFiles[docKey];
+    });
+
+    setDocsSubmitting(true);
+    try {
+      const updated = await submitOnboardingDocuments(
+        onboardingRecord.backendId,
+        {
+          aadhar_number: aadharNumber.replace(/\s/g, ""),
+          pan_number: panNumber,
+          pf_number: pfNumber,
+          esi_number: esiNumber,
+          bank_holder_name: bankHolder,
+          bank_account_number: bankAccount,
+          bank_ifsc: bankIfsc,
+          bank_name: bankName,
+        },
+        files,
+      );
+      setOnboardingRecord(updated);
+      setDocsSubmitted(true);
+      toast.success("Documents submitted successfully!");
+    } catch (err) {
+      toast.error(err.message || "Could not submit your documents. Please try again.");
+    } finally {
+      setDocsSubmitting(false);
+    }
   };
 
   // Doc camera helper
@@ -886,11 +975,24 @@ export function CandidateDashboard({
     setCameraOpen(true);
   };
 
+  // "data:image/jpeg;base64,..." -> a real File object, so camera captures can
+  // be uploaded the same way as a picked file.
+  const dataUrlToFile = (dataUrl, filename) => {
+    const [header, base64] = dataUrl.split(",");
+    const mime = /:(.*?);/.exec(header)?.[1] || "image/jpeg";
+    const bytes = atob(base64);
+    const arr = new Uint8Array(bytes.length);
+    for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+    return new File([arr], filename, { type: mime });
+  };
+
   // Photo captured callback from CameraModal
   const handlePhotoCapture = (dataUrl, targetKey) => {
     if (targetKey) {
-      setDocs((prev) => ({ ...prev, [targetKey]: `Captured_${targetKey}.jpg` }));
+      const filename = `Captured_${targetKey}.jpg`;
+      setDocs((prev) => ({ ...prev, [targetKey]: filename }));
       setDocUrls((prev) => ({ ...prev, [targetKey]: dataUrl }));
+      setDocFiles((prev) => ({ ...prev, [targetKey]: dataUrlToFile(dataUrl, filename) }));
     } else {
       setProfilePic(dataUrl);
     }
@@ -1334,10 +1436,12 @@ export function CandidateDashboard({
                   offerRejected={offerRejected}
                   showOfferConfirm={showOfferConfirm}
                   setShowOfferConfirm={setShowOfferConfirm}
+                  onboardingRecord={onboardingRecord}
                   docs={docs}
                   setDocs={setDocs}
                   docUrls={docUrls}
                   setDocUrls={setDocUrls}
+                  setDocFiles={setDocFiles}
                   aadharNumber={aadharNumber}
                   setAadharNumber={setAadharNumber}
                   panNumber={panNumber}
@@ -1355,6 +1459,7 @@ export function CandidateDashboard({
                   bankHolder={bankHolder}
                   setBankHolder={setBankHolder}
                   docsSubmitted={docsSubmitted}
+                  docsSubmitting={docsSubmitting}
                   startDocCamera={startDocCamera}
                   handleSubmitDocs={handleSubmitDocs}
                 />

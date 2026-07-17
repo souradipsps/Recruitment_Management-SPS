@@ -1,8 +1,11 @@
-// Network layer for the candidate's own offer letter(s).
+// Network layer for the candidate's own offer letter(s) and the OnboardingRecord
+// that accepting one auto-creates.
 //
-// GET  /api/offers/                 -> candidate sees only their own offers
-// POST /api/offers/{id}/accept/     -> accept (auto-creates an OnboardingRecord)
-// POST /api/offers/{id}/decline/    -> decline
+// GET   /api/offers/                 -> candidate sees only their own offers
+// POST  /api/offers/{id}/accept/     -> accept (auto-creates an OnboardingRecord)
+// POST  /api/offers/{id}/decline/    -> decline
+// GET   /api/onboarding/             -> candidate sees only their own onboarding record(s)
+// PATCH /api/onboarding/{id}/        -> submit identity/bank details + document uploads
 //
 // The raw API shape does NOT match what OfferLetterCard renders, so it is
 // normalised here once — same approach as ./jobsService.js / ./interviewsService.js.
@@ -127,4 +130,103 @@ async function offerAction(id, action, fallbackMsg) {
     throw new Error(parseApiError(data, fallbackMsg));
   }
   return normalizeOffer(data);
+}
+
+// verified_docs / rejected_docs are stored on the backend as a JSON-encoded
+// string (e.g. '["aadhar","pan"]'), not a real JSON field — parse defensively.
+function parseDocList(raw) {
+  try {
+    const parsed = JSON.parse(raw || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+// Map one raw OnboardingRecord onto the bit the onboarding-documents UI needs.
+// This is read by both the document-upload form and the progress stepper, so
+// it stays in sync with whatever HR has actually verified in the admin dashboard.
+function normalizeOnboardingRecord(raw) {
+  const verifiedDocs = parseDocList(raw.verified_docs);
+  const rejectedDocs = parseDocList(raw.rejected_docs);
+  // Per-document badge ("verified" | "rejected") for every document key the
+  // admin dashboard can act on — the 4 compulsory ones plus the 6 optional
+  // ones (same keys as RequiredDocumentsCard.jsx's COMPULSORY_DOCS/OPTIONAL_DOCS).
+  const docStatus = {};
+  [
+    "aadhar", "pan", "bank_details", "photo",
+    "driving_license", "class10", "class12", "degree", "experience_cert", "prof_cert",
+  ].forEach((key) => {
+    if (verifiedDocs.includes(key)) docStatus[key] = "verified";
+    else if (rejectedDocs.includes(key)) docStatus[key] = "rejected";
+  });
+
+  return {
+    backendId: raw.id,
+    docsUploaded: !!raw.task_docs_upload,
+    docsVerified: !!raw.task_docs_verify,
+    backgroundCheckDone: !!raw.task_bgc,
+    checkedIn: !!raw.task_checkin,
+    status: raw.status || "Documents Pending",
+    docStatus,
+  };
+}
+
+/**
+ * Fetch the current candidate's own onboarding record (auto-created when they
+ * accept their offer). There is at most one per candidate today.
+ * GET /api/onboarding/
+ * @returns {Promise<object|null>} normalised record, or null if none exists yet
+ * @throws {Error} on network / non-2xx responses
+ */
+export async function fetchMyOnboardingRecord() {
+  const token = requireAuthToken();
+
+  const res = await fetch(`${BASE_URL}/onboarding/`, {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Accept": "application/json",
+    },
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseApiError(data, "Could not load your onboarding record."));
+  }
+  const list = Array.isArray(data) ? data : data?.results ?? [];
+  return list.length ? normalizeOnboardingRecord(list[0]) : null;
+}
+
+/**
+ * Submit the candidate's identity/bank details and uploaded KYC documents.
+ * PATCH /api/onboarding/{id}/ (multipart — some values are File objects)
+ * @param {number} id onboarding record backend id (from fetchMyOnboardingRecord)
+ * @param {object} fields text fields, e.g. { aadhar_number, pan_number, bank_holder_name, ... }
+ * @param {object} files file fields, e.g. { aadhar_card, pan_card, bank_passbook, passport_photo, ... } — File objects, falsy entries skipped
+ * @returns {Promise<object>} normalised record
+ * @throws {Error} on network / non-2xx responses
+ */
+export async function submitOnboardingDocuments(id, fields = {}, files = {}) {
+  const token = requireAuthToken();
+
+  const formData = new FormData();
+  Object.entries(fields).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") formData.append(key, value);
+  });
+  Object.entries(files).forEach(([key, file]) => {
+    if (file) formData.append(key, file);
+  });
+  formData.append("task_docs_upload", "true");
+
+  const res = await fetch(`${BASE_URL}/onboarding/${id}/`, {
+    method: "PATCH",
+    headers: { "Authorization": `Bearer ${token}` },
+    body: formData,
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseApiError(data, "Could not submit your documents. Please try again."));
+  }
+  return normalizeOnboardingRecord(data);
 }
