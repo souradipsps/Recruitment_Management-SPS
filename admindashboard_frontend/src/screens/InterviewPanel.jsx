@@ -4,7 +4,7 @@ import { statusVariant } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
 import { Card, SectionTitle, Badge, Btn, Modal, ModalHeader, FormField, Select, Input } from "../components/ui";
 import { createPanelist } from "../api/panelistsApi";
-import { createInterview, updateInterview, deleteInterview, buildInterviewPayload } from "../api/interviewsApi";
+import { createInterview, updateInterview, deleteInterview, buildInterviewPayload, triggerInterviewReminder } from "../api/interviewsApi";
 import { deleteOffer } from "../api/offersApi";
 
 const TIME_OPTIONS = [
@@ -152,6 +152,7 @@ export default function InterviewPanel({
       .filter((a) => a.status === "Shortlisted")
       .map((a) => ({
         id: a.id,
+        backendId: a.backendId,
         candidateId: a.candidateId ?? null,
         name: a.name,
         email: a.email,
@@ -167,6 +168,7 @@ export default function InterviewPanel({
       .filter((a) => a.status === "Shortlisted")
       .map((a) => ({
         id: a.id,
+        backendId: a.backendId,
         candidateId: a.candidateId ?? null,
         name: a.name,
         email: a.email,
@@ -196,22 +198,30 @@ export default function InterviewPanel({
   // Resolve interview details specifically for the candidate's active round
   const candidatesWithInterviews = shortlistedCandidates.map((c) => {
     const activeRound = getCandidateActiveRound(c.name, c.role);
-    const interview = interviews.find(
+    const foundInt = interviews.find(
       (i) => i.candidate === c.name && i.role === c.role && i.round === activeRound
-    ) || {
-      id: `INT-${c.id}-${activeRound}`,
-      candidate: c.name,
-      role: c.role,
-      date: "",
-      time: "",
-      panel: [],
-      score: null,
-      rec: "—",
-      status: "Pending",
-      mode: "In-Person",
-      meetingLink: "",
-      round: activeRound,
-    };
+    );
+    
+    const interview = foundInt
+      ? {
+          ...foundInt,
+          applicationId: foundInt.applicationId || (c.sourceType === "job" ? c.backendId : null),
+        }
+      : {
+          id: `INT-${c.id}-${activeRound}`,
+          applicationId: c.sourceType === "job" ? c.backendId : null,
+          candidate: c.name,
+          role: c.role,
+          date: "",
+          time: "",
+          panel: [],
+          score: null,
+          rec: "—",
+          status: "Pending",
+          mode: "In-Person",
+          meetingLink: "",
+          round: activeRound,
+        };
     return {
       ...c,
       activeRound,
@@ -519,6 +529,7 @@ export default function InterviewPanel({
       meetingLink: scheduleForm.mode === "Online" ? scheduleForm.meetingLink : "",
       round: schedulingCandidate.activeRound,
       status: "Scheduled",
+      applicationId: existing?.applicationId || (schedulingCandidate.sourceType === "job" ? schedulingCandidate.backendId : null),
       // Only send the panel when creating a fresh row. On reschedule (updating an
       // existing row) we omit it so the backend leaves the assigned panelists
       // untouched — re-sending name-resolved ids risks silently dropping any
@@ -3032,7 +3043,7 @@ export default function InterviewPanel({
               const sentAt = new Date().toISOString();
               if (inv?.backendId != null) {
                 try {
-                  const norm = await updateInterview(inv.backendId, buildInterviewPayload({ reminderSentAt: sentAt }));
+                  const norm = await triggerInterviewReminder(inv.backendId);
                   upsertInterview(norm);
                 } catch (err) {
                   console.error("Failed to record reminder:", err);

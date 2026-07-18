@@ -6,6 +6,7 @@ import { authHeaders, authFetch, API_BASE_URL } from "./authApi";
 
 const API_URL = `${API_BASE_URL}/applications/`;
 const GENERAL_API_URL = `${API_BASE_URL}/general-applications/`;
+const INTERVIEWS_URL = `${API_BASE_URL}/interviews/`;
 
 // Map one API record -> the shape the Applications screen expects.
 // The live API returns richer data than documented — candidate contact info,

@@ -93,6 +93,32 @@ class MeView(APIView):
                 ps = CandidateProfileUpdateSerializer(profile, data=serializer_data, partial=True)
                 ps.is_valid(raise_exception=True)
                 ps.save()
+
+            # Auto-create GeneralApplication if it doesn't exist yet and profile contains details
+            from applications.models import GeneralApplication
+            from users.utils import auto_id
+
+            gen_app = GeneralApplication.objects.filter(candidate=user).first()
+            if not gen_app:
+                profile.refresh_from_db()
+                edu = profile.educational_qualification or ""
+                deg = profile.degree_name or ""
+                qual = f"{edu} ({deg})" if (edu and deg) else (edu or deg or "")
+                profile_role = ", ".join(profile.roles_interested) if profile.roles_interested else ""
+
+                if (profile.educational_qualification or 
+                    profile.roles_interested or 
+                    profile.years_of_experience or 
+                    profile.current_location or 
+                    profile.resume):
+                    
+                    GeneralApplication.objects.create(
+                        candidate=user,
+                        app_id=auto_id("GAPP", GeneralApplication),
+                        preferred_role=profile_role,
+                        experience=profile.years_of_experience or "",
+                        qualification=qual,
+                    )
         return Response(UserSerializer(user).data)
 
 

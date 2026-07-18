@@ -234,12 +234,15 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
-# Celery Beat Schedule (Only active if using Redis & worker process)
 if USE_REDIS_CELERY:
     CELERY_BEAT_SCHEDULE = {
         "check-expired-jobs-every-hour": {
             "task": "jobs.tasks.check_expired_job_postings",
             "schedule": crontab(minute=0, hour="*/1"), # every hour
+        },
+        "send-automated-interview-reminders-every-10-min": {
+            "task": "notifications.tasks.send_automated_interview_reminders",
+            "schedule": crontab(minute="*/10"), # every 10 minutes
         }
     }
 

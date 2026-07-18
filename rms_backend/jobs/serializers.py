@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from users.utils import auto_id
+# pyrefly: ignore [missing-import]
 from .models import (
     JobCategory, ExistingRole, RoleRequest, JobRequest,
     ApprovalRequest, ApprovalHistory, JobPosting, RoleRequestVariation
@@ -52,6 +53,17 @@ def get_history_from_approvals(obj, is_job_request=False):
             "note": h.note or ""
         })
     return history_list
+
+
+class JobCategorySlugField(serializers.SlugRelatedField):
+    def to_internal_value(self, data):
+        if not data:
+            return None
+        try:
+            category, _ = self.get_queryset().get_or_create(**{self.slug_field: data})
+            return category
+        except (TypeError, ValueError):
+            self.fail('invalid')
 
 
 class JobCategorySerializer(serializers.ModelSerializer):
@@ -182,7 +194,7 @@ class RoleRequestStatusSerializer(serializers.ModelSerializer):
 
 class JobRequestSerializer(serializers.ModelSerializer):
     history = serializers.SerializerMethodField(read_only=True)
-    category = serializers.SlugRelatedField(
+    category = JobCategorySlugField(
         slug_field="name",
         queryset=JobCategory.objects.all(),
         allow_null=True,
@@ -362,7 +374,7 @@ class ApprovalActionSerializer(serializers.Serializer):
 
 class JobPostingSerializer(serializers.ModelSerializer):
     application_count          = serializers.SerializerMethodField()
-    category                   = serializers.SlugRelatedField(
+    category                   = JobCategorySlugField(
         slug_field="name",
         queryset=JobCategory.objects.all(),
         allow_null=True,
@@ -423,7 +435,7 @@ class JobPostingSerializer(serializers.ModelSerializer):
 
 
 class JobPostingPublicSerializer(serializers.ModelSerializer):
-    category = serializers.SlugRelatedField(
+    category = JobCategorySlugField(
         slug_field="name",
         queryset=JobCategory.objects.all(),
         allow_null=True,

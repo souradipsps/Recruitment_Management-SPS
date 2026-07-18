@@ -70,6 +70,26 @@ class JobApplicationSerializer(serializers.ModelSerializer):
             if "admin_note" in self.fields:
                 self.fields["admin_note"].read_only = True
 
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        request = self.context.get("request")
+        if request and request.user and request.user.role == "candidate":
+            if ret.get("status") == "Shortlisted":
+                has_scheduled_interview = instance.interviews.filter(
+                    status__in=["Scheduled", "Completed", "Rescheduled"]
+                ).exists()
+                if not has_scheduled_interview:
+                    from interviews.models import Interview
+                    full_name = instance.candidate.get_full_name().strip()
+                    has_scheduled_interview = Interview.objects.filter(
+                        candidate_name__iexact=full_name,
+                        role__iexact=instance.role,
+                        status__in=["Scheduled", "Completed", "Rescheduled"]
+                    ).exists()
+                if not has_scheduled_interview:
+                    ret["status"] = "Under Review"
+        return ret
+
 
     def get_candidate_name(self, obj):
         return obj.candidate.get_full_name()
@@ -192,6 +212,21 @@ class GeneralApplicationSerializer(serializers.ModelSerializer):
                 self.fields["status"].read_only = True
             if "admin_note" in self.fields:
                 self.fields["admin_note"].read_only = True
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        request = self.context.get("request")
+        if request and request.user and request.user.role == "candidate":
+            if ret.get("status") == "Shortlisted":
+                from interviews.models import Interview
+                full_name = instance.candidate.get_full_name().strip()
+                has_scheduled = Interview.objects.filter(
+                    candidate_name__iexact=full_name,
+                    status__in=["Scheduled", "Completed", "Rescheduled"]
+                ).exists()
+                if not has_scheduled:
+                    ret["status"] = "Under Review"
+        return ret
 
 
     def get_candidate_name(self, obj):

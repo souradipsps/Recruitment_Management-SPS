@@ -557,3 +557,62 @@ class InterviewStatusLogicTestCase(APITransactionTestCase):
         self.interview.refresh_from_db()
         self.assertEqual(self.interview.status, "Scheduled")
 
+    @patch("notifications.tasks.send_interview_reminder_task.delay")
+    def test_remind_endpoint(self, mock_reminder_task):
+        interview = Interview.objects.create(
+            interview_id="INT-997",
+            candidate_name="Jane Doe",
+            role="Math Teacher",
+            date="2026-07-20",
+            time="10:00:00",
+            mode="Offline",
+            status="Scheduled"
+        )
+        url = reverse("interviews-remind", args=[interview.id])
+        response = self.client.post(url, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_reminder_task.assert_called_once_with(interview.id)
+        interview.refresh_from_db()
+        self.assertIsNotNone(interview.reminder_sent_at)
+
+    @patch("notifications.tasks.send_interview_reminder_task")
+    def test_automated_reminders_task(self, mock_reminder_func):
+        from django.utils import timezone
+        from datetime import datetime, timedelta
+        from notifications.tasks import send_automated_interview_reminders
+
+        now = timezone.localtime(timezone.now())
+        target_time = (now + timedelta(hours=1)).time()
+        target_date = (now + timedelta(hours=1)).date()
+
+        interview1 = Interview.objects.create(
+            interview_id="INT-998",
+            candidate_name="Remind Me",
+            role="Science Teacher",
+            date=target_date,
+            time=target_time,
+            mode="Offline",
+            status="Scheduled"
+        )
+
+        interview2 = Interview.objects.create(
+            interview_id="INT-999",
+            candidate_name="Don't Remind Me Yet",
+            role="Music Teacher",
+            date=target_date,
+            time=(now + timedelta(hours=5)).time(),
+            mode="Offline",
+            status="Scheduled"
+        )
+
+        send_automated_interview_reminders()
+
+        mock_reminder_func.assert_called_once_with(interview1.id)
+
+        interview1.refresh_from_db()
+        interview2.refresh_from_db()
+        self.assertIsNotNone(interview1.reminder_sent_at)
+        self.assertIsNone(interview2.reminder_sent_at)
+
+
+

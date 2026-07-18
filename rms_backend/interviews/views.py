@@ -32,6 +32,17 @@ class InterviewViewSet(viewsets.ModelViewSet):
     serializer_class = InterviewSerializer
 
     def get_queryset(self):
+        # Dynamically trigger automated reminders check to support environments without Celery Beat
+        # Bypassed in unit tests to prevent SQLite database lock contention.
+        import sys
+        if "test" not in sys.argv:
+            try:
+                from notifications.tasks import send_automated_interview_reminders
+                import threading
+                threading.Thread(target=send_automated_interview_reminders, daemon=True).start()
+            except Exception:
+                pass
+
         user = self.request.user
         if user.role == "candidate":
             from django.db.models import Q

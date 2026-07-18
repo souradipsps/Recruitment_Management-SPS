@@ -10,6 +10,40 @@ const STATUS_OPTIONS = [
   { value: "Rejected", label: "Rejected" },
 ];
 
+const matchRole = (preferredRoleStr, roleToCheck) => {
+  if (!preferredRoleStr || !roleToCheck) return false;
+  
+  try {
+    const parsed = JSON.parse(preferredRoleStr);
+    if (Array.isArray(parsed)) {
+      return parsed.some(r => typeof r === "string" && r.trim().toLowerCase() === roleToCheck.trim().toLowerCase());
+    }
+  } catch (e) {
+    // ignore
+  }
+  
+  const splitRoles = preferredRoleStr.split(",").map(r => r.trim().toLowerCase());
+  if (splitRoles.includes(roleToCheck.trim().toLowerCase())) {
+    return true;
+  }
+  
+  return preferredRoleStr.trim().toLowerCase() === roleToCheck.trim().toLowerCase();
+};
+
+const formatPreferredRole = (preferredRole) => {
+  if (!preferredRole) return "—";
+  try {
+    const parsed = JSON.parse(preferredRole);
+    if (Array.isArray(parsed)) {
+      return parsed.join(", ");
+    }
+  } catch (e) {
+    // ignore
+  }
+  return preferredRole;
+};
+
+
 export default function Applications({
   jobApplications,
   setJobApplications,
@@ -36,6 +70,14 @@ export default function Applications({
   const [currentPage, setCurrentPage] = useState(1);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [statusError, setStatusError] = useState("");
+  const [confirmModal, setConfirmModal] = useState({
+    open: false,
+    title: "",
+    message: "",
+    confirmLabel: "",
+    confirmVariant: "primary",
+    onConfirm: null,
+  });
 
   const hScroll = useHorizontalScroll();
   const scrollRef = useRef(null);
@@ -58,7 +100,7 @@ export default function Applications({
   const enrichedPostings = jobPostings.map((p) => {
     const jr = jobRequests.find((r) => r.role === p.role);
     const jobAppCount = jobApplications.filter((a) => a.jobPostingId === p.id || (p.backendId && String(a.jobPostingId) === String(p.backendId))).length;
-    const genAppCount = generalApplications.filter((a) => a.preferredRole === p.role).length;
+    const genAppCount = generalApplications.filter((a) => matchRole(a.preferredRole, p.role)).length;
     return {
       ...p,
       exp: p.exp || jr?.exp || "—",
@@ -80,7 +122,7 @@ export default function Applications({
     : jobApplications;
 
   const baseGenData = selectedRole
-    ? generalApplications.filter((a) => a.preferredRole === selectedRole)
+    ? generalApplications.filter((a) => matchRole(a.preferredRole, selectedRole))
     : generalApplications;
 
   const setData = isJob ? setJobApplications : setGeneralApplications;
@@ -99,7 +141,7 @@ export default function Applications({
     .filter(
       (a) =>
         a.name.toLowerCase().includes(search.toLowerCase()) ||
-        (a.preferredRole || "").toLowerCase().includes(search.toLowerCase()) ||
+        (formatPreferredRole(a.preferredRole) || "").toLowerCase().includes(search.toLowerCase()) ||
         a.email.toLowerCase().includes(search.toLowerCase()),
     );
 
@@ -124,7 +166,7 @@ export default function Applications({
 
   // Job-post applications are backed by PATCH /applications/{id}/update_status/;
   // general applications (profiles) are backed by PATCH /general-applications/{id}/.
-  const updateStatus = async (app, status) => {
+  const performStatusUpdate = async (app, status) => {
     setStatusError("");
     setStatusUpdating(true);
     try {
@@ -161,8 +203,8 @@ export default function Applications({
         if (onNavigate) {
           onNavigate("interview-panel");
         }
-      } else if (status === "Rejected" && setInterviews) {
-        // Remove any interview record(s) tied to this candidate — they're no longer in the running.
+      } else if ((status === "Rejected" || status === "Applied") && setInterviews) {
+        // Remove any interview record(s) tied to this candidate — they're no longer in the running or no longer shortlisted.
         const role = isJob ? app.role : app.preferredRole;
         const toRemove = interviews.filter((i) => i.candidate === app.name && i.role === role);
         for (const i of toRemove) {
@@ -170,7 +212,7 @@ export default function Applications({
             try {
               await deleteInterview(i.backendId);
             } catch (err) {
-              setStatusError(err.message || "Rejected, but failed to remove the interview record.");
+              setStatusError(err.message || "Failed to remove the interview record.");
             }
           }
         }
@@ -183,6 +225,47 @@ export default function Applications({
     } finally {
       setStatusUpdating(false);
     }
+  };
+
+  const updateStatus = (app, status) => {
+    if (statusUpdating) return;
+
+    let title = "";
+    let message = "";
+    let confirmLabel = "";
+    let confirmVariant = "primary";
+
+    if (status === "Shortlisted") {
+      title = "Confirm Shortlist";
+      message = `Are you sure you want to shortlist ${app.name}? This will add them to the interview panel.`;
+      confirmLabel = "Shortlist Candidate";
+      confirmVariant = "success";
+    } else if (status === "Rejected") {
+      title = "Confirm Rejection";
+      message = `Are you sure you want to reject ${app.name}? This will remove them from active consideration.`;
+      confirmLabel = "Reject Candidate";
+      confirmVariant = "danger";
+    } else if (status === "Applied") {
+      title = "Remove from Shortlist";
+      message = `Are you sure you want to remove ${app.name} from the shortlist? Any pending or scheduled interviews for this candidate will be deleted.`;
+      confirmLabel = "Remove";
+      confirmVariant = "danger";
+    } else {
+      performStatusUpdate(app, status);
+      return;
+    }
+
+    setConfirmModal({
+      open: true,
+      title,
+      message,
+      confirmLabel,
+      confirmVariant,
+      onConfirm: () => {
+        setConfirmModal(prev => ({ ...prev, open: false }));
+        performStatusUpdate(app, status);
+      }
+    });
   };
 
   const scrollCarousel = (dir) => {
@@ -591,7 +674,7 @@ export default function Applications({
                       <div>
                         <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#fff" }}>{a.name}</h3>
                         <div style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", marginTop: 2 }}>
-                          {isJob ? a.role : a.preferredRole || "—"}
+                          {isJob ? a.role : formatPreferredRole(a.preferredRole)}
                         </div>
                       </div>
                     </div>
@@ -620,18 +703,29 @@ export default function Applications({
                   </div>
 
                   <div style={{ display: "flex", gap: 8, width: "100%", marginTop: 14 }} onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => updateStatus(a, "Shortlisted")}
-                      style={{ flex: 1, background: isShortlisted ? T.green : T.greenLight, color: isShortlisted ? "#fff" : T.green, border: "none", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 10px rgba(0,0,0,0.15)" }}
-                    >
-                      {isShortlisted ? "✓ Shortlisted" : "Shortlist"}
-                    </button>
-                    <button
-                      onClick={() => updateStatus(a, "Rejected")}
-                      style={{ flex: 1, background: isRejected ? T.red : T.redLight, color: isRejected ? "#fff" : T.red, border: "none", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 10px rgba(0,0,0,0.15)" }}
-                    >
-                      {isRejected ? "✗ Rejected" : "Reject"}
-                    </button>
+                    {isShortlisted ? (
+                      <button
+                        onClick={() => updateStatus(a, "Applied")}
+                        style={{ flex: 1, background: T.red, color: "#fff", border: "none", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 10px rgba(0,0,0,0.15)" }}
+                      >
+                        Remove from Shortlist
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => updateStatus(a, "Shortlisted")}
+                          style={{ flex: 1, background: T.greenLight, color: T.green, border: "none", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 10px rgba(0,0,0,0.15)" }}
+                        >
+                          Shortlist
+                        </button>
+                        <button
+                          onClick={() => updateStatus(a, "Rejected")}
+                          style={{ flex: 1, background: isRejected ? T.red : T.redLight, color: isRejected ? "#fff" : T.red, border: "none", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 10px rgba(0,0,0,0.15)" }}
+                        >
+                          {isRejected ? "✗ Rejected" : "Reject"}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               );
@@ -734,8 +828,14 @@ export default function Applications({
                 a.applied,
                 <Badge label={a.status} variant={statusVariant(a.status)} />,
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Shortlisted"); }} style={actionBtnStyle("shortlist")} className="btn-shortlist">Shortlist</button>
-                  <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Rejected"); }} style={actionBtnStyle("reject")} className="btn-reject">Reject</button>
+                  {a.status === "Shortlisted" ? (
+                    <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Applied"); }} style={actionBtnStyle("reject")} className="btn-remove-shortlist">Remove from Shortlist</button>
+                  ) : (
+                    <>
+                      <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Shortlisted"); }} style={actionBtnStyle("shortlist")} className="btn-shortlist">Shortlist</button>
+                      <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Rejected"); }} style={actionBtnStyle("reject")} className="btn-reject">Reject</button>
+                    </>
+                  )}
                 </div>,
               ])}
             />
@@ -750,15 +850,21 @@ export default function Applications({
                   {avatar(a.name)}
                   <div><strong>{a.name}</strong><div style={{ fontSize: 11, color: T.inkFaint }}>{a.email}</div></div>
                 </div>,
-                a.preferredRole || "—",
+                formatPreferredRole(a.preferredRole),
                 <span style={{ fontSize: 12, color: T.inkMid }}>{a.location || "—"}</span>,
                 a.exp,
                 a.qualification || "—",
                 a.applied,
                 <Badge label={a.status} variant={statusVariant(a.status)} />,
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Shortlisted"); }} style={actionBtnStyle("shortlist")} className="btn-shortlist">Shortlist</button>
-                  <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Rejected"); }} style={actionBtnStyle("reject")} className="btn-reject">Reject</button>
+                  {a.status === "Shortlisted" ? (
+                    <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Applied"); }} style={actionBtnStyle("reject")} className="btn-remove-shortlist">Remove from Shortlist</button>
+                  ) : (
+                    <>
+                      <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Shortlisted"); }} style={actionBtnStyle("shortlist")} className="btn-shortlist">Shortlist</button>
+                      <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Rejected"); }} style={actionBtnStyle("reject")} className="btn-reject">Reject</button>
+                    </>
+                  )}
                 </div>,
               ])}
             />
@@ -836,7 +942,7 @@ export default function Applications({
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>
-                  {isJob ? selectedApp.role : selectedApp.preferredRole || "Candidate"}
+                  {isJob ? selectedApp.role : formatPreferredRole(selectedApp.preferredRole) || "Candidate"}
                 </div>
                 <h3 style={{ margin: 0, fontSize: isMobile ? 17 : 19, fontWeight: 900, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {selectedApp.name}
@@ -871,7 +977,7 @@ export default function Applications({
                   ]
                   : [
                     { icon: "🆔", label: "Application ID", value: selectedApp.id },
-                    { icon: "💼", label: "Preferred Role", value: selectedApp.preferredRole || "—" },
+                    { icon: "💼", label: "Preferred Role", value: formatPreferredRole(selectedApp.preferredRole) || "—" },
                     { icon: "📍", label: "Location", value: selectedApp.location || "—" },
                     { icon: "⏳", label: "Experience", value: selectedApp.exp },
                     { icon: "🎓", label: "Qualification", value: selectedApp.qualification || "—" },
@@ -901,8 +1007,14 @@ export default function Applications({
                   📄 View Resume
                 </a>
                 <div style={{ display: "flex", gap: 8, width: isMobile ? "100%" : "auto" }}>
-                  <Btn label={selectedApp.status === "Shortlisted" ? "✓ Shortlisted" : "Shortlist"} variant={selectedApp.status === "Shortlisted" ? "success" : "outline"} onClick={() => updateStatus(selectedApp, "Shortlisted")} disabled={statusUpdating} style={{ flex: isMobile ? 1 : undefined }} />
-                  <Btn label={selectedApp.status === "Rejected" ? "✗ Rejected" : "Reject"} variant={selectedApp.status === "Rejected" ? "danger" : "outline"} onClick={() => updateStatus(selectedApp, "Rejected")} disabled={statusUpdating} style={{ flex: isMobile ? 1 : undefined }} />
+                  {selectedApp.status === "Shortlisted" ? (
+                    <Btn label="Remove from Shortlist" variant="danger" onClick={() => updateStatus(selectedApp, "Applied")} disabled={statusUpdating} style={{ flex: isMobile ? 1 : undefined }} />
+                  ) : (
+                    <>
+                      <Btn label="Shortlist" variant="outline" onClick={() => updateStatus(selectedApp, "Shortlisted")} disabled={statusUpdating} style={{ flex: isMobile ? 1 : undefined }} />
+                      <Btn label={selectedApp.status === "Rejected" ? "✗ Rejected" : "Reject"} variant={selectedApp.status === "Rejected" ? "danger" : "outline"} onClick={() => updateStatus(selectedApp, "Rejected")} disabled={statusUpdating} style={{ flex: isMobile ? 1 : undefined }} />
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -919,7 +1031,7 @@ export default function Applications({
                 {avatar(statusModalApp.name, 40, 14)}
                 <div>
                   <div style={{ fontWeight: 700, color: T.ink }}>{statusModalApp.name}</div>
-                  <div style={{ fontSize: 12, color: T.inkLight }}>{isJob ? statusModalApp.role : statusModalApp.preferredRole}</div>
+                  <div style={{ fontSize: 12, color: T.inkLight }}>{isJob ? statusModalApp.role : formatPreferredRole(statusModalApp.preferredRole)}</div>
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
@@ -939,6 +1051,27 @@ export default function Applications({
             </div>
           </>
         )}
+      </Modal>
+
+      <Modal open={confirmModal.open} onClose={() => setConfirmModal(prev => ({ ...prev, open: false }))} maxWidth={400}>
+        <ModalHeader title={confirmModal.title} onClose={() => setConfirmModal(prev => ({ ...prev, open: false }))} />
+        <div style={{ padding: "0 0 16px" }}>
+          <p style={{ margin: "0 0 24px", color: T.inkMid, fontSize: 14, lineHeight: 1.5 }}>
+            {confirmModal.message}
+          </p>
+          <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+            <Btn
+              label="Cancel"
+              variant="ghost"
+              onClick={() => setConfirmModal(prev => ({ ...prev, open: false }))}
+            />
+            <Btn
+              label={confirmModal.confirmLabel}
+              variant={confirmModal.confirmVariant}
+              onClick={confirmModal.onConfirm}
+            />
+          </div>
+        </div>
       </Modal>
     </div>
   );

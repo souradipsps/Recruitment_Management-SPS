@@ -150,9 +150,18 @@ export function ApplyModal({ onClose, signupData, onSubmitData, onFormSubmit, on
         },
         resumeFile,
       );
-      await submitGeneralApplication({
-        selectedRoles, experience: form.experience, education: form.education, degreeName: form.degreeName,
-      });
+      try {
+        await submitGeneralApplication({
+          selectedRoles, experience: form.experience, education: form.education, degreeName: form.degreeName,
+        });
+      } catch (err) {
+        // If a general application already exists for this candidate,
+        // we can ignore the duplicate error since their profile and general application
+        // have already been successfully updated by the updateUserProfile call.
+        if (!err.message?.includes("You have already submitted a general application.")) {
+          throw err;
+        }
+      }
 
       onFormError?.();
       const fullName = [firstName, lastName].filter(Boolean).join(" ");

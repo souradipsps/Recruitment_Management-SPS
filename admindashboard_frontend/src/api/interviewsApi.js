@@ -94,6 +94,7 @@ export const normalizeEvaluation = (e) => ({
 export const normalizeInterview = (r) => ({
   backendId: r.id,
   id: r.interview_id || `INT-${r.id}`,
+  applicationId: r.application ?? null,
   candidate: r.candidate_name || "",
   role: r.role || "",
   date: r.date || "",
@@ -132,6 +133,7 @@ export const buildInterviewPayload = (fi) => {
   if (fi.reminderSentAt !== undefined) p.reminder_sent_at = fi.reminderSentAt;
   if (fi.panelIds !== undefined) p.panel = fi.panelIds;
   if (fi.candidatePresent !== undefined) p.candidate_present = fi.candidatePresent;
+  if (fi.applicationId !== undefined) p.application = fi.applicationId;
   return p;
 };
 
@@ -237,3 +239,21 @@ export async function deleteInterview(backendId) {
     throw new Error(`Failed to delete interview (${res.status}): ${errText}`);
   }
 }
+
+// POST /api/interviews/{backendId}/remind/ -> triggers reminder emails
+export async function triggerInterviewReminder(backendId) {
+  if (!getAccessToken()) throw new Error("Not authenticated — please log in.");
+
+  const res = await authFetch(`${API_URL}${backendId}/remind/`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`API Error: ${res.status} - ${errText}`);
+  }
+
+  return normalizeInterview(await res.json());
+}
+

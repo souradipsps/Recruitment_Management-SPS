@@ -296,3 +296,124 @@ class CandidateProfileGeneralApplicationSyncTestCase(APITestCase):
         self.assertEqual(response.data["salary"], "₹5,00,000")
         self.assertEqual(response.data["professional_qualification"], "B.Ed (Science)")
         self.assertEqual(response.data["extracurricular_qualification"], "Sports (Football Coach)")
+
+    def test_profile_update_creates_general_application(self):
+        """Updating CandidateProfile via API should create a GeneralApplication if none exists."""
+        self.client.force_authenticate(user=self.candidate)
+        
+        # Verify no GeneralApplication currently exists
+        self.assertFalse(GeneralApplication.objects.filter(candidate=self.candidate).exists())
+        
+        url = reverse("auth-me")
+        data = {
+            "first_name": "Sync",
+            "last_name": "Candidate",
+            "phone": "9876543210",
+            "profile": {
+                "current_location": "Guwahati",
+                "educational_qualification": "Bachelor's",
+                "degree_name": "CSE",
+                "years_of_experience": "1-2",
+                "roles_interested": ["Computer Science Teacher"]
+            }
+        }
+        response = self.client.put(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Verify GeneralApplication was automatically created
+        self.assertTrue(GeneralApplication.objects.filter(candidate=self.candidate).exists())
+        gen_app = GeneralApplication.objects.get(candidate=self.candidate)
+        self.assertEqual(gen_app.preferred_role, "Computer Science Teacher")
+        self.assertEqual(gen_app.experience, "1-2")
+        self.assertEqual(gen_app.qualification, "Bachelor's (CSE)")
+
+    def test_job_request_creation_auto_creates_category(self):
+        """Creating a JobRequest with a category that does not exist in the database should auto-create it on-the-fly."""
+        from jobs.models import JobCategory, JobRequest
+        
+        admin_user = User.objects.create_user(
+            email="admin_test@school.com",
+            password="testpassword",
+            first_name="Admin",
+            last_name="Test",
+            role="admin"
+        )
+        self.client.force_authenticate(user=admin_user)
+        
+        # Verify category doesn't exist
+        self.assertFalse(JobCategory.objects.filter(name="New Unique Category Positions").exists())
+        
+        url = reverse("job-requests-list")
+        data = {
+            "role": "QA Engineer",
+            "department": "IT DEP",
+            "vacancies": 2,
+            "experience": "2-5",
+            "salary_range": "20000-30000",
+            "type": "Full-time",
+            "description": "we need QA",
+            "justification": "we need",
+            "location": "Guwahati",
+            "category": "New Unique Category Positions",
+            "educational_qualifications": "B.Ed",
+            "skills_required": "Manual testing"
+        }
+        response = self.client.post(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        # Verify category was auto-created and request created successfully
+        self.assertTrue(JobCategory.objects.filter(name="New Unique Category Positions").exists())
+        req = JobRequest.objects.get(request_id=response.data["request_id"])
+        self.assertEqual(req.category.name, "New Unique Category Positions")
+
+    def test_shortlisted_status_mapping_for_candidate(self):
+        """A candidate should see 'Under Review' instead of 'Shortlisted' until an interview has been scheduled."""
+        from interviews.models import Interview
+        from jobs.models import JobPosting
+        
+        # Create a JobPosting
+        posting = JobPosting.objects.create(
+            posting_id="JP-TEST-0001",
+            role="Science Teacher",
+            department="Science",
+            type="Full-time",
+            location="Guwahati",
+            status="Published"
+        )
+        
+        # Create a JobApplication for the candidate, set status to 'Shortlisted'
+        app = JobApplication.objects.create(
+            posting=posting,
+            candidate=self.candidate,
+            status="Shortlisted"
+        )
+        
+        # 1. Candidate views application — should see 'Under Review' because no interview is scheduled
+        self.client.force_authenticate(user=self.candidate)
+        url = reverse("applications-detail", kwargs={"pk": app.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "Under Review")
+        
+        # 2. HR Admin creates an interview but leaves it 'Pending'
+        interview = Interview.objects.create(
+            interview_id="INT-TEST-0001",
+            application=app,
+            candidate_name=self.candidate.get_full_name(),
+            role="Science Teacher",
+            status="Pending"
+        )
+        
+        # Candidate views application — should still see 'Under Review' because interview is not scheduled
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "Under Review")
+        
+        # 3. Interview is scheduled
+        interview.status = "Scheduled"
+        interview.save()
+        
+        # Candidate views application — should now see 'Shortlisted'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "Shortlisted")
