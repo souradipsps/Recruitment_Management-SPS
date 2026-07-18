@@ -45,7 +45,7 @@ export default function ApprovalRequests({
   const openModal  = (r) => { setSel(r); setComment(""); setFieldErrors({}); };
   const closeModal = ()  => { setSel(null); setComment(""); setFieldErrors({}); };
 
-  const { performAction, takeAction } = useApprovalActions({
+  const { performAction, takeAction, isActionPending } = useApprovalActions({
     sel, setSel, comment, setFieldErrors, closeModal,
     setRequests, setRoleRequests, setJobRequests,
     setExistingRoles, setJobPostings,
@@ -94,6 +94,7 @@ export default function ApprovalRequests({
         isMobile={isMobile}
         existingRoles={existingRoles}
         currentUser={currentUser}
+        isActionPending={isActionPending}
       />
 
       {/* Top Card: Pending Requests */}
@@ -135,9 +136,9 @@ export default function ApprovalRequests({
             <div style={{ fontSize: 12, color: T.inkLight }}>No pending requests requiring your review.</div>
           </div>
         ) : isMobile ? (
-          <ApprovalListMobile filtered={pendingRequests} openModal={openModal} performAction={performAction} />
+          <ApprovalListMobile filtered={pendingRequests} openModal={openModal} performAction={performAction} isActionPending={isActionPending} />
         ) : (
-          <ApprovalListDesktop filtered={pendingRequests} openModal={openModal} performAction={performAction} />
+          <ApprovalListDesktop filtered={pendingRequests} openModal={openModal} performAction={performAction} isActionPending={isActionPending} />
         )}
       </Card>
 
@@ -172,9 +173,9 @@ export default function ApprovalRequests({
             <div style={{ fontSize: 13, color: T.inkLight }}>No requests match the selected filters.</div>
           </div>
         ) : isMobile ? (
-          <ApprovalListMobile filtered={filtered} openModal={openModal} performAction={performAction} />
+          <ApprovalListMobile filtered={filtered} openModal={openModal} performAction={performAction} isActionPending={isActionPending} />
         ) : (
-          <ApprovalListDesktop filtered={filtered} openModal={openModal} performAction={performAction} />
+          <ApprovalListDesktop filtered={filtered} openModal={openModal} performAction={performAction} isActionPending={isActionPending} />
         )}
       </Card>
     </div>

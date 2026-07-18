@@ -19,6 +19,27 @@ export const normalizeRoleRequest = (r) => ({
   submittedBy: r.submitted_by || "",
   date: r.created_at ? new Date(r.created_at).toLocaleDateString() : "",
   history: Array.isArray(r.history) ? r.history : [],
+  variations: Array.isArray(r.variations) && r.variations.length > 0
+    ? r.variations.map((v) => ({
+        id: v.id,
+        type: v.type || "",
+        minExperience: v.experience ? String(v.experience).split("-")[0] || "" : "",
+        maxExperience: v.experience ? String(v.experience).split("-")[1] || "" : "",
+        minSalary: v.salary_range ? String(v.salary_range).split("-")[0] || "" : "",
+        maxSalary: v.salary_range ? String(v.salary_range).split("-")[1] || "" : "",
+        experience: v.experience || "",
+        salaryRange: v.salary_range || "",
+      }))
+    : [{
+        id: "legacy",
+        type: r.type || "",
+        minExperience: r.experience ? String(r.experience).split("-")[0] || "" : "",
+        maxExperience: r.experience ? String(r.experience).split("-")[1] || "" : "",
+        minSalary: r.salary_range ? String(r.salary_range).split("-")[0] || "" : "",
+        maxSalary: r.salary_range ? String(r.salary_range).split("-")[1] || "" : "",
+        experience: r.experience || "",
+        salaryRange: r.salary_range || "",
+      }],
 });
 
 // DRF validation errors come back as { field: ["message", ...], ... }; flatten to one readable string.
@@ -55,11 +76,13 @@ export async function createRoleRequest(formData, submittedBy) {
   const payload = {
     department: formData.dept,
     role: formData.role,
-    type: formData.type,
     justification: formData.just,
-    salary_range: formData.salaryRange,
-    experience: formData.experience,
     submitted_by: submittedBy,
+    variations: (formData.variations || []).map((v) => ({
+      type: v.type,
+      experience: v.experience,
+      salary_range: v.salaryRange,
+    })),
   };
 
   const res = await authFetch(API_URL, {

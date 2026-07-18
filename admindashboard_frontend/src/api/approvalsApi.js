@@ -51,6 +51,27 @@ export const normalizeApproval = (r) => ({
   comment: "",
   just: r.justification || "",
   history: toHistory(r.history),
+  variations: Array.isArray(r.variations) && r.variations.length > 0
+    ? r.variations.map((v) => ({
+        id: v.id,
+        type: v.type || "",
+        minExperience: v.experience ? String(v.experience).split("-")[0] || "" : "",
+        maxExperience: v.experience ? String(v.experience).split("-")[1] || "" : "",
+        minSalary: v.salary_range ? String(v.salary_range).split("-")[0] || "" : "",
+        maxSalary: v.salary_range ? String(v.salary_range).split("-")[1] || "" : "",
+        experience: v.experience || "",
+        salaryRange: v.salary_range || "",
+      }))
+    : [{
+        id: "legacy",
+        type: r.employment_type || "",
+        minExperience: r.experience ? String(r.experience).split("-")[0] || "" : "",
+        maxExperience: r.experience ? String(r.experience).split("-")[1] || "" : "",
+        minSalary: r.salary_range ? String(r.salary_range).split("-")[0] || "" : "",
+        maxSalary: r.salary_range ? String(r.salary_range).split("-")[1] || "" : "",
+        experience: r.experience || "",
+        salaryRange: r.salary_range || "",
+      }],
 });
 
 // GET /api/approvals/ -> normalized array.

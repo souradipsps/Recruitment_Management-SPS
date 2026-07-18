@@ -2,9 +2,10 @@ import { T, font } from "../../theme";
 import { STATUS_COLORS } from "../../theme";
 import { Modal, ModalHeader, Btn } from "../../components/ui";
 
-export default function RoleDetailsModal({ sel, setSel, onClose, onStatusChange, onDelete, bp }) {
+export default function RoleDetailsModal({ sel, setSel, onClose, onStatusChange, onDelete, bp, roles = [] }) {
   if (!sel) return null;
   const sc = STATUS_COLORS[sel.currentStatus] || STATUS_COLORS.Active;
+  const siblingRoles = roles.filter((r) => r.role === sel.role && r.dept === sel.dept);
 
   return (
     <Modal open={!!sel} onClose={onClose} maxWidth={520}>
@@ -31,53 +32,18 @@ export default function RoleDetailsModal({ sel, setSel, onClose, onStatusChange,
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
-              {sel.dept} · {sel.type}
+              {sel.dept}
             </div>
             <h3 style={{ margin: 0, fontSize: font.lg + 1, fontWeight: font.black, fontFamily: font.heading, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {sel.role}
             </h3>
           </div>
-          <span style={{
-            fontSize: 11, fontWeight: 700, borderRadius: 99, padding: "5px 14px",
-            background: sel.currentStatus === "Active" ? "rgba(52,211,153,0.2)" : "rgba(255,255,255,0.12)",
-            color: sel.currentStatus === "Active" ? "#6EE7B7" : "rgba(255,255,255,0.7)",
-            border: `1px solid ${sel.currentStatus === "Active" ? "rgba(110,231,183,0.35)" : "rgba(255,255,255,0.18)"}`,
-            flexShrink: 0, letterSpacing: "0.02em",
-          }}>
-            {sel.currentStatus}
-          </span>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: bp === "mobile" ? "1fr" : "1fr 1fr", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: bp === "mobile" ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 16 }}>
           {[
             { label: "Role ID", value: <span style={{ fontFamily: font.mono, fontWeight: 700 }}>{sel.id}</span> },
-            { label: "Department", value: sel.dept },
-            { label: "Employment Type", value: sel.type },
-            { label: "Work Experience Required", value: sel.experience ? `${sel.experience} years` : "No experience required" },
-            { label: "Salary Budget (Annual)", value: <strong style={{ color: T.tealDark }}>{sel.salaryRange || "—"}</strong> },
-            {
-              label: "Status Toggle",
-              value: (
-                <select
-                  value={sel.currentStatus}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    onStatusChange(sel.id, val);
-                    setSel((prev) => prev ? { ...prev, currentStatus: val } : null);
-                  }}
-                  style={{
-                    background: sel.currentStatus === "Active" ? T.greenLight : T.canvas,
-                    color: sel.currentStatus === "Active" ? T.green : T.inkLight,
-                    border: `1.5px solid ${sel.currentStatus === "Active" ? "#34D399" : T.border}`,
-                    borderRadius: 8, padding: "3px 10px", fontSize: 11, fontWeight: 700,
-                    cursor: "pointer", outline: "none", width: "100%"
-                  }}
-                >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
-              )
-            }
+            { label: "Department", value: sel.dept }
           ].map((item, idx) => (
             <div key={idx} style={{
               padding: 10, background: T.canvas, border: `1px solid ${T.border}`,
@@ -91,6 +57,64 @@ export default function RoleDetailsModal({ sel, setSel, onClose, onStatusChange,
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Variations List */}
+        <div style={{
+          padding: 14, background: T.canvas, border: `1px solid ${T.border}`,
+          borderRadius: 8, display: "flex", flexDirection: "column", gap: 10, marginBottom: 12
+        }}>
+          <span style={{ fontSize: 9.5, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            Variations (Type, Experience, Salary)
+          </span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {siblingRoles.map((r, idx) => (
+              <div key={r.id || idx} style={{
+                fontSize: 12.5, fontWeight: 600, color: T.ink,
+                padding: "10px 14px", background: T.surface, borderRadius: 8,
+                border: `1px solid ${T.border}`,
+                display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap"
+              }}>
+                <div style={{ flex: 1, minWidth: 150 }}>
+                  • <strong>{r.type || "Full-time"}</strong> ({r.experience ? `${r.experience} yrs` : "—"}) : {r.salaryRange ? `₹${r.salaryRange}` : "—"}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <select
+                    value={r.currentStatus}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      onStatusChange(r.id, val);
+                      if (r.id === sel.id) {
+                        setSel((prev) => prev ? { ...prev, currentStatus: val } : null);
+                      }
+                    }}
+                    style={{
+                      background: r.currentStatus === "Active" ? T.greenLight : T.canvas,
+                      color: r.currentStatus === "Active" ? T.green : T.inkLight,
+                      border: `1.5px solid ${r.currentStatus === "Active" ? "#34D399" : T.border}`,
+                      borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 700,
+                      cursor: "pointer", outline: "none"
+                    }}
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                  <button
+                    onClick={() => {
+                      onDelete(r.id);
+                      if (r.id === sel.id) onClose();
+                    }}
+                    style={{
+                      background: "none", border: "none", cursor: "pointer",
+                      color: T.red, fontWeight: 700, fontSize: 11, padding: "4px 8px"
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 20, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>

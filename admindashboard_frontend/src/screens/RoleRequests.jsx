@@ -23,12 +23,16 @@ const emptyForm = () => ({
   id: Date.now() + Math.random(),
   dept: "",
   role: "",
-  type: "",
-  category: "",
-  minExperience: "",
-  maxExperience: "",
-  minSalary: "",
-  maxSalary: "",
+  variations: [
+    {
+      id: Date.now() + Math.random(),
+      type: "",
+      minExperience: "",
+      maxExperience: "",
+      minSalary: "",
+      maxSalary: "",
+    }
+  ],
   just: "",
   date: new Date().toLocaleDateString(),
   status: "Pending",
@@ -100,10 +104,33 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
     setRoleForms((prev) => prev.map((f, i) => i === index ? { ...f, [key]: value } : f));
     setFormErrors((prev) => {
       const updated = { ...prev };
-      if (updated[index]) {
+      if (updated[index] && updated[index][key]) {
         const fieldErrors = { ...updated[index] };
         delete fieldErrors[key];
         updated[index] = fieldErrors;
+      }
+      return updated;
+    });
+  };
+
+  const updateVariation = (index, vIndex, key, value) => {
+    setRoleForms((prev) => prev.map((f, i) => {
+      if (i !== index) return f;
+      const updatedVars = f.variations.map((v, vi) => vi === vIndex ? { ...v, [key]: value } : v);
+      return { ...f, variations: updatedVars };
+    }));
+    setFormErrors((prev) => {
+      const updated = { ...prev };
+      if (updated[index] && updated[index].variations && updated[index].variations[vIndex]) {
+        const fieldErrors = { ...updated[index] };
+        const updatedVars = { ...fieldErrors.variations };
+        if (updatedVars[vIndex]) {
+          const varErrors = { ...updatedVars[vIndex] };
+          delete varErrors[key];
+          updatedVars[vIndex] = varErrors;
+          fieldErrors.variations = updatedVars;
+          updated[index] = fieldErrors;
+        }
       }
       return updated;
     });
@@ -126,66 +153,79 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
         valid = false;
       }
 
-      if (!f.type || !f.type.trim()) {
-        errs.type = "Employee type is required";
-        valid = false;
-      }
-
-      const minExp = parseFloat(f.minExperience);
-      const maxExp = parseFloat(f.maxExperience);
-
-      if (!f.minExperience || !f.minExperience.trim()) {
-        errs.minExperience = "Min experience is required";
-        valid = false;
-      } else if (isNaN(minExp)) {
-        errs.minExperience = "Must be a number";
-        valid = false;
-      }
-      
-      if (!f.maxExperience || !f.maxExperience.trim()) {
-        errs.maxExperience = "Max experience is required";
-        valid = false;
-      } else if (isNaN(maxExp)) {
-        errs.maxExperience = "Must be a number";
-        valid = false;
-      }
-      
-      if (f.minExperience && f.maxExperience && !isNaN(minExp) && !isNaN(maxExp) && minExp >= maxExp) {
-        errs.minExperience = "Min experience must be less than max experience";
-        valid = false;
-      }
-
-      const cleanMinSalary = (f.minSalary || "").replace(/,/g, "");
-      const cleanMaxSalary = (f.maxSalary || "").replace(/,/g, "");
-      const parsedMinSal = parseFloat(cleanMinSalary);
-      const parsedMaxSal = parseFloat(cleanMaxSalary);
-
-      if (!f.minSalary || !f.minSalary.trim()) {
-        errs.minSalary = "Min salary is required";
-        valid = false;
-      } else if (isNaN(parsedMinSal)) {
-        errs.minSalary = "Must be a number";
-        valid = false;
-      }
-      
-      if (!f.maxSalary || !f.maxSalary.trim()) {
-        errs.maxSalary = "Max salary is required";
-        valid = false;
-      } else if (isNaN(parsedMaxSal)) {
-        errs.maxSalary = "Must be a number";
-        valid = false;
-      }
-      
-      const minSal = parseSalary(f.minSalary);
-      const maxSal = parseSalary(f.maxSalary);
-      if (f.minSalary && f.maxSalary && minSal > 0 && maxSal > 0 && minSal >= maxSal) {
-        errs.minSalary = "Min salary must be less than max salary";
-        valid = false;
-      }
-
       if (!f.just || !f.just.trim()) {
         errs.just = "Justification is required";
         valid = false;
+      }
+
+      const variationsErrors = {};
+      const variations = f.variations || [];
+      variations.forEach((v, vi) => {
+        const vErrs = {};
+        if (!v.type || !v.type.trim()) {
+          vErrs.type = "Employee type is required";
+          valid = false;
+        }
+
+        const minExp = parseFloat(v.minExperience);
+        const maxExp = parseFloat(v.maxExperience);
+
+        if (!v.minExperience || !v.minExperience.trim()) {
+          vErrs.minExperience = "Min experience is required";
+          valid = false;
+        } else if (isNaN(minExp)) {
+          vErrs.minExperience = "Must be a number";
+          valid = false;
+        }
+        
+        if (!v.maxExperience || !v.maxExperience.trim()) {
+          vErrs.maxExperience = "Max experience is required";
+          valid = false;
+        } else if (isNaN(maxExp)) {
+          vErrs.maxExperience = "Must be a number";
+          valid = false;
+        }
+        
+        if (v.minExperience && v.maxExperience && !isNaN(minExp) && !isNaN(maxExp) && minExp >= maxExp) {
+          vErrs.minExperience = "Min experience must be less than max experience";
+          valid = false;
+        }
+
+        const cleanMinSalary = (v.minSalary || "").replace(/,/g, "");
+        const cleanMaxSalary = (v.maxSalary || "").replace(/,/g, "");
+        const parsedMinSal = parseFloat(cleanMinSalary);
+        const parsedMaxSal = parseFloat(cleanMaxSalary);
+
+        if (!v.minSalary || !v.minSalary.trim()) {
+          vErrs.minSalary = "Min salary is required";
+          valid = false;
+        } else if (isNaN(parsedMinSal)) {
+          vErrs.minSalary = "Must be a number";
+          valid = false;
+        }
+        
+        if (!v.maxSalary || !v.maxSalary.trim()) {
+          vErrs.maxSalary = "Max salary is required";
+          valid = false;
+        } else if (isNaN(parsedMaxSal)) {
+          vErrs.maxSalary = "Must be a number";
+          valid = false;
+        }
+        
+        const minSal = parseSalary(v.minSalary);
+        const maxSal = parseSalary(v.maxSalary);
+        if (v.minSalary && v.maxSalary && minSal > 0 && maxSal > 0 && minSal >= maxSal) {
+          vErrs.minSalary = "Min salary must be less than max salary";
+          valid = false;
+        }
+
+        if (Object.keys(vErrs).length > 0) {
+          variationsErrors[vi] = vErrs;
+        }
+      });
+
+      if (Object.keys(variationsErrors).length > 0) {
+        errs.variations = variationsErrors;
       }
 
       if (Object.keys(errs).length > 0) errors[i] = errs;
@@ -196,6 +236,93 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
 
   const removeForm = (index) => {
     setRoleForms((prev) => prev.filter((_, i) => i !== index));
+    setFormErrors((prev) => {
+      const updated = {};
+      Object.keys(prev).forEach((key) => {
+        const idx = parseInt(key, 10);
+        if (idx > index) {
+          updated[idx - 1] = prev[key];
+        } else if (idx < index) {
+          updated[idx] = prev[key];
+        }
+      });
+      return updated;
+    });
+  };
+
+  const addFormVariation = (index) => {
+    const sourceForm = roleForms[index];
+    const newForm = {
+      ...emptyForm(),
+      id: Date.now() + Math.random(),
+      dept: sourceForm.dept,
+      role: sourceForm.role,
+      just: sourceForm.just,
+    };
+    setRoleForms((prev) => {
+      const updated = [...prev];
+      updated.splice(index + 1, 0, newForm);
+      return updated;
+    });
+    setFormErrors((prev) => {
+      const updated = {};
+      Object.keys(prev).forEach((key) => {
+        const idx = parseInt(key, 10);
+        if (idx > index) {
+          updated[idx + 1] = prev[key];
+        } else {
+          updated[idx] = prev[key];
+        }
+      });
+      return updated;
+    });
+  };
+
+  const addVariation = (index) => {
+    setRoleForms((prev) => prev.map((f, i) => {
+      if (i !== index) return f;
+      return {
+        ...f,
+        variations: [
+          ...f.variations,
+          {
+            id: Date.now() + Math.random(),
+            type: "",
+            minExperience: "",
+            maxExperience: "",
+            minSalary: "",
+            maxSalary: "",
+          }
+        ]
+      };
+    }));
+  };
+
+  const removeVariation = (index, vIndex) => {
+    setRoleForms((prev) => prev.map((f, i) => {
+      if (i !== index) return f;
+      return {
+        ...f,
+        variations: f.variations.filter((_, vi) => vi !== vIndex)
+      };
+    }));
+    setFormErrors((prev) => {
+      const updated = { ...prev };
+      if (updated[index] && updated[index].variations) {
+        const vars = updated[index].variations;
+        const newVars = {};
+        Object.keys(vars).forEach((key) => {
+          const vi = parseInt(key, 10);
+          if (vi > vIndex) {
+            newVars[vi - 1] = vars[key];
+          } else if (vi < vIndex) {
+            newVars[vi] = vars[key];
+          }
+        });
+        updated[index] = { ...updated[index], variations: newVars };
+      }
+      return updated;
+    });
   };
 
   const openNew = () => {
@@ -207,15 +334,22 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
 
   const submitRequests = async () => {
     if (!validateForms()) return;
+    
     const updatedForms = roleForms.map((f) => {
-      const cleanMinSalary = (f.minSalary || "").replace(/,/g, "");
-      const cleanMaxSalary = (f.maxSalary || "").replace(/,/g, "");
-      const combinedSalary = cleanMinSalary && cleanMaxSalary ? `${cleanMinSalary}-${cleanMaxSalary}` : (cleanMinSalary || cleanMaxSalary || "");
-      const combinedExperience = f.minExperience && f.maxExperience ? `${f.minExperience}-${f.maxExperience}` : (f.minExperience || f.maxExperience || "");
+      const parsedVariations = f.variations.map((v) => {
+        const cleanMinSalary = (v.minSalary || "").replace(/,/g, "");
+        const cleanMaxSalary = (v.maxSalary || "").replace(/,/g, "");
+        const combinedSalary = cleanMinSalary && cleanMaxSalary ? `${cleanMinSalary}-${cleanMaxSalary}` : (cleanMinSalary || cleanMaxSalary || "");
+        const combinedExperience = v.minExperience && v.maxExperience ? `${v.minExperience}-${v.maxExperience}` : (v.minExperience || v.maxExperience || "");
+        return {
+          ...v,
+          salaryRange: combinedSalary,
+          experience: combinedExperience,
+        };
+      });
       return {
         ...f,
-        salaryRange: combinedSalary,
-        experience: combinedExperience,
+        variations: parsedVariations,
       };
     });
 
@@ -246,7 +380,12 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
     setSubmitError("");
     setSubmitting(true);
     try {
-      const created = await Promise.all(updatedForms.map((f) => createRoleRequest(f, submittedBy)));
+      // Submit all role requests sequentially to prevent ID collisions
+      const created = [];
+      for (const f of updatedForms) {
+        const res = await createRoleRequest(f, submittedBy);
+        created.push(res);
+      }
       const now = new Date().toLocaleDateString();
       const newRequests = updatedForms.map((f, i) => ({
         ...f,
@@ -260,11 +399,6 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
       }));
       setRoleRequests((prev) => [...prev, ...newRequests]);
 
-      // The backend auto-creates the corresponding Approval record(s) for each
-      // Role Request. Re-fetch the real list instead of fabricating local
-      // stand-ins here — a fabricated entry has no backendId, so approving/
-      // rejecting it silently no-ops against the API while a duplicate,
-      // backend-sourced entry (with a real backendId) does update the database.
       await refreshRoleRequestApprovals();
 
       setRoleForms([emptyForm()]);
@@ -280,10 +414,6 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
     }
   };
 
-  // Re-fetches the authoritative approvals list and replaces all Role Request
-  // entries with it. Needed because a single role request can have multiple
-  // ApprovalRequest rows sharing the same sourceId (one per resubmit cycle) -
-  // patching by sourceId in place would touch every one of those rows instead
   // of just the currently active one.
   const refreshRoleRequestApprovals = async () => {
     try {
@@ -304,39 +434,36 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
       setModalError("This request has no backend record and cannot be saved.");
       return;
     }
-    const minS = selectedRequest.minSalary ?? selectedRequest.salaryRange?.split("-")[0]?.trim() ?? "";
-    const maxS = selectedRequest.maxSalary ?? selectedRequest.salaryRange?.split("-")[1]?.trim() ?? "";
-    const minE = selectedRequest.minExperience ?? selectedRequest.experience?.split("-")[0]?.trim() ?? "";
-    const maxE = selectedRequest.maxExperience ?? selectedRequest.experience?.split("-")[1]?.trim() ?? "";
-
-    const combinedSalary = minS && maxS ? `${minS}-${maxS}` : (minS || maxS || "");
-    const combinedExperience = minE && maxE ? `${minE}-${maxE}` : (minE || maxE || "");
+    
+    const formattedVariations = (selectedRequest.variations || []).map((v) => {
+      const cleanMinSalary = (v.minSalary || "").replace(/,/g, "");
+      const cleanMaxSalary = (v.maxSalary || "").replace(/,/g, "");
+      const combinedSalary = cleanMinSalary && cleanMaxSalary ? `${cleanMinSalary}-${cleanMaxSalary}` : (cleanMinSalary || cleanMaxSalary || "");
+      const combinedExperience = v.minExperience && v.maxExperience ? `${v.minExperience}-${v.maxExperience}` : (v.minExperience || v.maxExperience || "");
+      return {
+        type: v.type,
+        experience: combinedExperience,
+        salary_range: combinedSalary,
+      };
+    });
 
     const payload = {
       department: selectedRequest.dept,
       role: selectedRequest.role,
-      type: selectedRequest.type,
       justification: selectedRequest.just,
-      salary_range: combinedSalary,
-      experience: combinedExperience,
       status: submitAsPending ? "Pending" : selectedRequest.status,
+      variations: formattedVariations,
     };
 
     setModalError("");
     setModalSaving(true);
     try {
       const updated = await updateRoleRequest(selectedRequest.backendId, payload);
-
+ 
       setRoleRequests((prev) => prev.map((r) => r.id === selectedRequest.id ? updated : r));
-
-      // Resubmitting can spawn a brand-new ApprovalRequest row on the backend
-      // (see jobs/signals.py) while the prior Sent-Back/Rejected row for the
-      // same request_id still exists. Patching in place by sourceId would flip
-      // every historical row to the new status too, producing duplicate
-      // "Pending" cards until the next hard refresh. Re-fetch instead so local
-      // state always mirrors exactly which approval row is actually active.
+ 
       await refreshRoleRequestApprovals();
-
+ 
       setShowViewModal(false);
       setSelectedRequest(null);
       setOriginalRequest(null);
@@ -347,26 +474,15 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
       setModalSaving(false);
     }
   };
-
+ 
   const hasChanges = () => {
     if (!selectedRequest || !originalRequest) return false;
-    const currMinSal = selectedRequest.minSalary ?? selectedRequest.salaryRange?.split("-")[0]?.trim() ?? "";
-    const currMaxSal = selectedRequest.maxSalary ?? selectedRequest.salaryRange?.split("-")[1]?.trim() ?? "";
-    const currMinExp = selectedRequest.minExperience ?? selectedRequest.experience?.split("-")[0]?.trim() ?? "";
-    const currMaxExp = selectedRequest.maxExperience ?? selectedRequest.experience?.split("-")[1]?.trim() ?? "";
-    const origMinSal = originalRequest.salaryRange?.split("-")[0]?.trim() ?? "";
-    const origMaxSal = originalRequest.salaryRange?.split("-")[1]?.trim() ?? "";
-    const origMinExp = originalRequest.experience?.split("-")[0]?.trim() ?? "";
-    const origMaxExp = originalRequest.experience?.split("-")[1]?.trim() ?? "";
+    const varChanged = JSON.stringify(selectedRequest.variations || []) !== JSON.stringify(originalRequest.variations || []);
     return (
       selectedRequest.dept !== originalRequest.dept ||
       selectedRequest.role !== originalRequest.role ||
-      selectedRequest.type !== originalRequest.type ||
       selectedRequest.just !== originalRequest.just ||
-      currMinSal !== origMinSal ||
-      currMaxSal !== origMaxSal ||
-      currMinExp !== origMinExp ||
-      currMaxExp !== origMaxExp
+      varChanged
     );
   };
 
@@ -542,8 +658,10 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
           {roleForms.map((form, index) => (
             <Card key={form.id} hover={false} style={{ padding: 20, marginBottom: 16, borderTop: `3px solid ${T.blue}` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>
-                  {editingId ? "Edit Role Request" : `Role Request #${index + 1}`}
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>
+                    {editingId ? "Edit Role Request" : `Role Request #${index + 1}`}
+                  </span>
                 </div>
                 {roleForms.length > 1 && (
                   <button onClick={() => removeForm(index)} style={{ border: "none", background: "#FEE2E2", color: "#DC2626", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontWeight: 700 }}>
@@ -579,77 +697,160 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                     </div>
                   )}
                 </FormField>
-                <FormField label="Employee Type" required>
-                  <Select
-                    value={form.type}
-                    onChange={(e) => updateForm(index, "type", e.target.value)}
-                    options={TYPE_OPTIONS}
-                    placeholder="Select type…"
-                    style={formErrors[index]?.type ? { borderColor: T.red } : {}}
-                  />
-                  {formErrors[index]?.type && (
-                    <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
-                      {formErrors[index].type}
-                    </div>
-                  )}
-                </FormField>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <FormField label="Min Experience (Yrs)" required>
-                    <Input
-                      placeholder="e.g. 2"
-                      value={form.minExperience}
-                      onChange={(e) => updateForm(index, "minExperience", e.target.value)}
-                      style={formErrors[index]?.minExperience ? { borderColor: T.red } : {}}
-                    />
-                    {formErrors[index]?.minExperience && (
-                      <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
-                        {formErrors[index].minExperience}
-                      </div>
-                    )}
-                  </FormField>
-                  <FormField label="Max Experience (Yrs)" required>
-                    <Input
-                      placeholder="e.g. 5"
-                      value={form.maxExperience}
-                      onChange={(e) => updateForm(index, "maxExperience", e.target.value)}
-                      style={formErrors[index]?.maxExperience ? { borderColor: T.red } : {}}
-                    />
-                    {formErrors[index]?.maxExperience && (
-                      <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
-                        {formErrors[index].maxExperience}
-                      </div>
-                    )}
-                  </FormField>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <FormField label="Min Salary (₹)" required>
-                    <Input
-                      placeholder="e.g. 40,000"
-                      value={form.minSalary}
-                      onChange={(e) => updateForm(index, "minSalary", e.target.value)}
-                      style={formErrors[index]?.minSalary ? { borderColor: T.red } : {}}
-                    />
-                    {formErrors[index]?.minSalary && (
-                      <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
-                        {formErrors[index].minSalary}
-                      </div>
-                    )}
-                  </FormField>
-                  <FormField label="Max Salary (₹)" required>
-                    <Input
-                      placeholder="e.g. 60,000"
-                      value={form.maxSalary}
-                      onChange={(e) => updateForm(index, "maxSalary", e.target.value)}
-                      style={formErrors[index]?.maxSalary ? { borderColor: T.red } : {}}
-                    />
-                    {formErrors[index]?.maxSalary && (
-                      <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
-                        {formErrors[index].maxSalary}
-                      </div>
-                    )}
-                  </FormField>
-                </div>
               </div>
+
+              {/* Variations Container */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 14 }}>
+                {(form.variations || [form]).map((v, vIndex) => {
+                  const varErrors = formErrors[index]?.variations?.[vIndex] || {};
+                  const showRemoveVar = (form.variations && form.variations.length > 1);
+
+                  return (
+                    <div 
+                      key={v.id || vIndex} 
+                      style={{ 
+                        background: T.canvas, 
+                        border: `1.5px solid ${T.border}`, 
+                        borderRadius: 12, 
+                        padding: 16,
+                        position: "relative"
+                      }}
+                    >
+                      {showRemoveVar && (
+                        <button
+                          type="button"
+                          onClick={() => removeVariation(index, vIndex)}
+                          style={{
+                            position: "absolute",
+                            top: 12,
+                            right: 12,
+                            border: "none",
+                            background: "#FEE2E2",
+                            color: "#DC2626",
+                            padding: "4px 10px",
+                            borderRadius: 6,
+                            cursor: "pointer",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            zIndex: 2
+                          }}
+                        >
+                          Remove Option
+                        </button>
+                      )}
+                      
+                      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 14, marginBottom: 14 }}>
+                        <FormField label="Employee Type" required>
+                          <Select
+                            value={v.type}
+                            onChange={(e) => updateVariation(index, vIndex, "type", e.target.value)}
+                            options={TYPE_OPTIONS}
+                            placeholder="Select type…"
+                            style={varErrors.type ? { borderColor: T.red } : {}}
+                          />
+                          {varErrors.type && (
+                            <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+                              {varErrors.type}
+                            </div>
+                          )}
+                        </FormField>
+                        
+                        <FormField label="Min Experience (Yrs)" required>
+                          <Input
+                            placeholder="e.g. 2"
+                            value={v.minExperience}
+                            onChange={(e) => updateVariation(index, vIndex, "minExperience", e.target.value)}
+                            style={varErrors.minExperience ? { borderColor: T.red } : {}}
+                          />
+                          {varErrors.minExperience && (
+                            <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+                              {varErrors.minExperience}
+                            </div>
+                          )}
+                        </FormField>
+                        
+                        <FormField label="Max Experience (Yrs)" required>
+                          <Input
+                            placeholder="e.g. 5"
+                            value={v.maxExperience}
+                            onChange={(e) => updateVariation(index, vIndex, "maxExperience", e.target.value)}
+                            style={varErrors.maxExperience ? { borderColor: T.red } : {}}
+                          />
+                          {varErrors.maxExperience && (
+                            <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+                              {varErrors.maxExperience}
+                            </div>
+                          )}
+                        </FormField>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
+                        <FormField label="Min Salary (₹)" required>
+                          <Input
+                            placeholder="e.g. 40,000"
+                            value={v.minSalary}
+                            onChange={(e) => updateVariation(index, vIndex, "minSalary", e.target.value)}
+                            style={varErrors.minSalary ? { borderColor: T.red } : {}}
+                          />
+                          {varErrors.minSalary && (
+                            <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+                              {varErrors.minSalary}
+                            </div>
+                          )}
+                        </FormField>
+                        <FormField label="Max Salary (₹)" required>
+                          <Input
+                            placeholder="e.g. 60,000"
+                            value={v.maxSalary}
+                            onChange={(e) => updateVariation(index, vIndex, "maxSalary", e.target.value)}
+                            style={varErrors.maxSalary ? { borderColor: T.red } : {}}
+                          />
+                          {varErrors.maxSalary && (
+                            <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+                              {varErrors.maxSalary}
+                            </div>
+                          )}
+                        </FormField>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Add Variation Button right below variations */}
+              {!editingId && form.variations && (
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
+                  <button
+                    type="button"
+                    onClick={() => addVariation(index)}
+                    style={{
+                      border: "none",
+                      background: T.skyLight,
+                      color: T.sky,
+                      padding: "8px 16px",
+                      borderRadius: 8,
+                      cursor: "pointer",
+                      fontWeight: 700,
+                      fontSize: 12,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      transition: "all 0.15s"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = T.sky;
+                      e.currentTarget.style.color = "#fff";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = T.skyLight;
+                      e.currentTarget.style.color = T.sky;
+                    }}
+                  >
+                    + Add Variation
+                  </button>
+                </div>
+              )}
+
               <div style={{ marginTop: 14 }}>
                 <FormField label="Justification" required>
                   <textarea
@@ -854,9 +1055,9 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                 <Mono v={typeof r.id === "string" ? r.id.substring(0, 18) : String(r.id)} />,
                 r.dept || "—",
                 <strong>{r.role || "—"}</strong>,
-                r.type || "—",
-                r.experience ? `${r.experience} yrs` : "—",
-                r.salaryRange ? `₹${r.salaryRange}` : "—",
+                (r.variations || []).map((v) => v.type).filter(Boolean).join(", ") || r.type || "—",
+                (r.variations || []).map((v) => v.experience ? `${v.experience} yrs` : "").filter(Boolean).join(", ") || (r.experience ? `${r.experience} yrs` : "—"),
+                (r.variations || []).map((v) => v.salaryRange ? `₹${v.salaryRange}` : "").filter(Boolean).join(", ") || (r.salaryRange ? `₹${r.salaryRange}` : "—"),
                 <span style={{ fontSize: 12, color: T.inkLight, maxWidth: 180, display: "inline-block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.just || "—"}</span>,
                 <span style={{ ...ss, borderRadius: 99, padding: "3px 10px", fontSize: 11, fontWeight: 700, display: "inline-block" }}>{r.status}</span>,
               ];
@@ -948,72 +1149,137 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
 
 
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Employee Type</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Variations (Type, Experience, Salary)</div>
+                  
                   {selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back" ? (
-                    <Select
-                      value={selectedRequest.type || ""}
-                      onChange={(e) => setSelectedRequest({ ...selectedRequest, type: e.target.value })}
-                      options={TYPE_OPTIONS}
-                      placeholder="Select type…"
-                    />
-                  ) : (
-                    <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{selectedRequest.type || "—"}</div>
-                  )}
-                </div>
-
-                <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Salary Range</div>
-                  {selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back" ? (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                      <div>
-                        <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 3 }}>Min (₹)</div>
-                        <input
-                          value={selectedRequest.minSalary ?? selectedRequest.salaryRange?.split("-")[0] ?? ""}
-                          onChange={(e) => setSelectedRequest({ ...selectedRequest, minSalary: e.target.value })}
-                          placeholder="e.g. 40,000"
-                          style={{ width: "100%", padding: 9, border: `1.5px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }}
-                        />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 3 }}>Max (₹)</div>
-                        <input
-                          value={selectedRequest.maxSalary ?? selectedRequest.salaryRange?.split("-")[1] ?? ""}
-                          onChange={(e) => setSelectedRequest({ ...selectedRequest, maxSalary: e.target.value })}
-                          placeholder="e.g. 60,000"
-                          style={{ width: "100%", padding: 9, border: `1.5px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }}
-                        />
-                      </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {(selectedRequest.variations || []).map((v, vIndex) => (
+                        <div key={v.id || vIndex} style={{ border: `1px solid ${T.border}`, borderRadius: 10, padding: 12, background: T.canvas, position: "relative" }}>
+                          {selectedRequest.variations.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedRequest((prev) => ({
+                                  ...prev,
+                                  variations: prev.variations.filter((_, idx) => idx !== vIndex)
+                                }));
+                              }}
+                              style={{ position: "absolute", top: 6, right: 6, border: "none", background: "#FEE2E2", color: "#DC2626", padding: "2px 6px", borderRadius: 4, cursor: "pointer", fontSize: 10, fontWeight: 700 }}
+                            >
+                              Remove
+                            </button>
+                          )}
+                          
+                          <div style={{ marginBottom: 8 }}>
+                            <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 2 }}>Employee Type</div>
+                            <Select
+                              value={v.type}
+                              onChange={(e) => {
+                                setSelectedRequest((prev) => {
+                                  const u = prev.variations.map((item, idx) => idx === vIndex ? { ...item, type: e.target.value } : item);
+                                  return { ...prev, variations: u };
+                                });
+                              }}
+                              options={TYPE_OPTIONS}
+                              placeholder="Select type…"
+                            />
+                          </div>
+                          
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                            <div>
+                              <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 2 }}>Min Experience (Yrs)</div>
+                              <input
+                                value={v.minExperience ?? v.experience?.split("-")[0] ?? ""}
+                                onChange={(e) => {
+                                  setSelectedRequest((prev) => {
+                                    const u = prev.variations.map((item, idx) => idx === vIndex ? { ...item, minExperience: e.target.value } : item);
+                                    return { ...prev, variations: u };
+                                  });
+                                }}
+                                placeholder="e.g. 2"
+                                style={{ width: "100%", padding: 8, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }}
+                              />
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 2 }}>Max Experience (Yrs)</div>
+                              <input
+                                value={v.maxExperience ?? v.experience?.split("-")[1] ?? ""}
+                                onChange={(e) => {
+                                  setSelectedRequest((prev) => {
+                                    const u = prev.variations.map((item, idx) => idx === vIndex ? { ...item, maxExperience: e.target.value } : item);
+                                    return { ...prev, variations: u };
+                                  });
+                                }}
+                                placeholder="e.g. 5"
+                                style={{ width: "100%", padding: 8, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }}
+                              />
+                            </div>
+                          </div>
+                          
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                            <div>
+                              <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 2 }}>Min Salary (₹)</div>
+                              <input
+                                value={v.minSalary ?? v.salaryRange?.split("-")[0] ?? ""}
+                                onChange={(e) => {
+                                  setSelectedRequest((prev) => {
+                                    const u = prev.variations.map((item, idx) => idx === vIndex ? { ...item, minSalary: e.target.value } : item);
+                                    return { ...prev, variations: u };
+                                  });
+                                }}
+                                placeholder="e.g. 40,000"
+                                style={{ width: "100%", padding: 8, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }}
+                              />
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 2 }}>Max Salary (₹)</div>
+                              <input
+                                value={v.maxSalary ?? v.salaryRange?.split("-")[1] ?? ""}
+                                onChange={(e) => {
+                                  setSelectedRequest((prev) => {
+                                    const u = prev.variations.map((item, idx) => idx === vIndex ? { ...item, maxSalary: e.target.value } : item);
+                                    return { ...prev, variations: u };
+                                  });
+                                }}
+                                placeholder="e.g. 60,000"
+                                style={{ width: "100%", padding: 8, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedRequest((prev) => ({
+                            ...prev,
+                            variations: [
+                              ...(prev.variations || []),
+                              {
+                                id: Date.now() + Math.random(),
+                                type: "",
+                                minExperience: "",
+                                maxExperience: "",
+                                minSalary: "",
+                                maxSalary: "",
+                              }
+                            ]
+                          }));
+                        }}
+                        style={{ border: "none", background: T.skyLight, color: T.sky, padding: "6px 12px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, alignSelf: "flex-end" }}
+                      >
+                        + Add Variation
+                      </button>
                     </div>
                   ) : (
-                    <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>₹{selectedRequest.salaryRange || "—"}</div>
-                  )}
-                </div>
-
-                <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Experience</div>
-                  {selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back" ? (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                      <div>
-                        <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 3 }}>Min (yrs)</div>
-                        <input
-                          value={selectedRequest.minExperience ?? selectedRequest.experience?.split("-")[0] ?? ""}
-                          onChange={(e) => setSelectedRequest({ ...selectedRequest, minExperience: e.target.value })}
-                          placeholder="e.g. 2"
-                          style={{ width: "100%", padding: 9, border: `1.5px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }}
-                        />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 3 }}>Max (yrs)</div>
-                        <input
-                          value={selectedRequest.maxExperience ?? selectedRequest.experience?.split("-")[1] ?? ""}
-                          onChange={(e) => setSelectedRequest({ ...selectedRequest, maxExperience: e.target.value })}
-                          placeholder="e.g. 5"
-                          style={{ width: "100%", padding: 9, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }}
-                        />
-                      </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {(selectedRequest.variations || []).map((v, idx) => (
+                        <div key={v.id || idx} style={{ fontSize: 13, fontWeight: 600, color: T.ink, padding: "4px 8px", background: T.canvas, borderRadius: 6 }}>
+                          • <strong>{v.type || "Full-time"}</strong> ({v.experience ? `${v.experience} yrs` : "—"}) : {v.salaryRange ? `₹${v.salaryRange}` : "—"}
+                        </div>
+                      ))}
                     </div>
-                  ) : (
-                    <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{selectedRequest.experience ? `${selectedRequest.experience} yrs` : "—"}</div>
                   )}
                 </div>
 

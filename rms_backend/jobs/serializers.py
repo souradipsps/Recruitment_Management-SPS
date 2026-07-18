@@ -2,7 +2,7 @@ from rest_framework import serializers
 from users.utils import auto_id
 from .models import (
     JobCategory, ExistingRole, RoleRequest, JobRequest,
-    ApprovalRequest, ApprovalHistory, JobPosting
+    ApprovalRequest, ApprovalHistory, JobPosting, RoleRequestVariation
 )
 
 def get_history_from_approvals(obj, is_job_request=False):
@@ -101,9 +101,18 @@ class ExistingRoleSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
+class RoleRequestVariationSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
+
+    class Meta:
+        model = RoleRequestVariation
+        fields = ["id", "type", "experience", "salary_range"]
+
+
 class RoleRequestSerializer(serializers.ModelSerializer):
     created_by_name = serializers.SerializerMethodField(read_only=True)
     history = serializers.SerializerMethodField(read_only=True)
+    variations = RoleRequestVariationSerializer(many=True, required=False)
 
     class Meta:
         model  = RoleRequest
@@ -126,11 +135,43 @@ class RoleRequestSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
+        variations_data = validated_data.pop("variations", [])
+        
+        if variations_data:
+            first_var = variations_data[0]
+            validated_data["type"] = first_var.get("type", "Full-time")
+            validated_data["experience"] = first_var.get("experience", "")
+            validated_data["salary_range"] = first_var.get("salary_range", "")
+
         validated_data["request_id"] = auto_id("RR", RoleRequest)
         request = self.context.get("request")
         if request and request.user.is_authenticated:
             validated_data["created_by"] = request.user
-        return super().create(validated_data)
+            
+        instance = super().create(validated_data)
+        
+        for var_data in variations_data:
+            var_data.pop("id", None)
+            RoleRequestVariation.objects.create(role_request=instance, **var_data)
+            
+        return instance
+
+    def update(self, instance, validated_data):
+        variations_data = validated_data.pop("variations", None)
+        
+        if variations_data is not None:
+            if variations_data:
+                first_var = variations_data[0]
+                validated_data["type"] = first_var.get("type", "Full-time")
+                validated_data["experience"] = first_var.get("experience", "")
+                validated_data["salary_range"] = first_var.get("salary_range", "")
+            
+            instance.variations.all().delete()
+            for var_data in variations_data:
+                var_data.pop("id", None)
+                RoleRequestVariation.objects.create(role_request=instance, **var_data)
+
+        return super().update(instance, validated_data)
 
 
 class RoleRequestStatusSerializer(serializers.ModelSerializer):
@@ -195,6 +236,7 @@ class ApprovalRequestSerializer(serializers.ModelSerializer):
     category = serializers.SerializerMethodField(read_only=True)
     educational_qualifications = serializers.SerializerMethodField(read_only=True)
     skills_required = serializers.SerializerMethodField(read_only=True)
+    variations = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model  = ApprovalRequest
@@ -202,19 +244,19 @@ class ApprovalRequestSerializer(serializers.ModelSerializer):
         read_only_fields = ["date"]
 
     def get_history(self, obj):
-        has_prefetched = hasattr(obj, "_prefetched_objects_cache") and "history" in obj._prefetched_objects_cache
-        if has_prefetched:
-            histories = list(obj.history.all())
-            histories.sort(key=lambda x: x.id)
+        from .models import ApprovalHistory
+        if obj.job_request:
+            histories = list(ApprovalHistory.objects.filter(approval__job_request=obj.job_request).order_by("id"))
+        elif obj.role_request:
+            histories = list(ApprovalHistory.objects.filter(approval__role_request=obj.role_request).order_by("id"))
         else:
-            from .models import ApprovalHistory
-            if obj.job_request:
-                histories = list(ApprovalHistory.objects.filter(approval__job_request=obj.job_request).order_by("id"))
-            elif obj.role_request:
-                histories = list(ApprovalHistory.objects.filter(approval__role_request=obj.role_request).order_by("id"))
-            else:
-                histories = list(obj.history.all().order_by("id"))
+            histories = list(obj.history.all().order_by("id"))
         return ApprovalHistorySerializer(histories, many=True).data
+
+    def get_variations(self, obj):
+        if obj.role_request:
+            return RoleRequestVariationSerializer(obj.role_request.variations.all(), many=True).data
+        return []
 
     def get_department(self, obj):
         if obj.department:
@@ -315,6 +357,7 @@ class ApprovalActionSerializer(serializers.Serializer):
     description                = serializers.CharField(required=False, allow_blank=True)
     educational_qualifications = serializers.CharField(required=False, allow_blank=True)
     skills_required            = serializers.CharField(required=False, allow_blank=True)
+    variations                 = RoleRequestVariationSerializer(many=True, required=False)
 
 
 class JobPostingSerializer(serializers.ModelSerializer):

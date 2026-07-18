@@ -28,7 +28,7 @@ from onboarding.models import Offer, OnboardingRecord
 
 from .models import (
     JobCategory, ExistingRole, RoleRequest, JobRequest,
-    ApprovalRequest, ApprovalHistory, JobPosting
+    ApprovalRequest, ApprovalHistory, JobPosting, RoleRequestVariation
 )
 from .serializers import (
     JobCategorySerializer, ExistingRoleSerializer,
@@ -161,12 +161,26 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
             if "department" in serializer.validated_data:
                 role_req.department = serializer.validated_data["department"]
                 approval.department = serializer.validated_data["department"]
-            if "salary_range" in serializer.validated_data:
-                role_req.salary_range = serializer.validated_data["salary_range"]
-            if "experience" in serializer.validated_data:
-                role_req.experience = serializer.validated_data["experience"]
-            if "employment_type" in serializer.validated_data:
-                role_req.type = serializer.validated_data["employment_type"]
+            
+            if "variations" in serializer.validated_data:
+                variations_data = serializer.validated_data["variations"]
+                if variations_data:
+                    first_var = variations_data[0]
+                    role_req.type = first_var.get("type", "Full-time")
+                    role_req.experience = first_var.get("experience", "")
+                    role_req.salary_range = first_var.get("salary_range", "")
+                
+                role_req.variations.all().delete()
+                for var_data in variations_data:
+                    var_data.pop("id", None)
+                    RoleRequestVariation.objects.create(role_request=role_req, **var_data)
+            else:
+                if "salary_range" in serializer.validated_data:
+                    role_req.salary_range = serializer.validated_data["salary_range"]
+                if "experience" in serializer.validated_data:
+                    role_req.experience = serializer.validated_data["experience"]
+                if "employment_type" in serializer.validated_data:
+                    role_req.type = serializer.validated_data["employment_type"]
             role_req.save()
 
         # Update JobRequest if type is Job Request

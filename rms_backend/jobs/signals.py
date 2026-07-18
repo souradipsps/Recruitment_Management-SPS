@@ -102,31 +102,40 @@ def create_approval_for_role_request(sender, instance, created, **kwargs):
         # 1. Update the status of any pending approval requests to Approved
         ApprovalRequest.objects.filter(role_request=instance, status="Pending").update(status="Approved")
 
-        # 2. Create or update the ExistingRole
+        # 2. Create or update the ExistingRole for each variation
         from users.utils import auto_id
         
-        existing = ExistingRole.objects.filter(
-            role__iexact=instance.role,
-            department__iexact=instance.department
-        ).first()
-        
-        if existing:
-            existing.headcount += 1
-            if existing.status == "Inactive":
-                existing.status = "Active"
-            existing.save()
-        else:
-            ExistingRole.objects.create(
-                role_id=auto_id("ROL", ExistingRole),
-                role=instance.role,
-                department=instance.department,
-                salary_range=instance.salary_range,
-                experience=instance.experience,
-                type=instance.type or "Full-time",
-                headcount=1,
-                filled=0,
-                status="Active"
-            )
+        variations = list(instance.variations.all())
+        if not variations:
+            variations = [type("VariationFallback", (object,), {
+                "type": instance.type or "Full-time",
+                "experience": instance.experience or "",
+                "salary_range": instance.salary_range or "",
+            })()]
+
+        for var in variations:
+            existing = ExistingRole.objects.filter(
+                role__iexact=instance.role,
+                department__iexact=instance.department,
+                type=var.type,
+                experience=var.experience
+            ).first()
+            
+            if existing:
+                existing.headcount += 1
+                existing.save()
+            else:
+                ExistingRole.objects.create(
+                    role_id=auto_id("ROL", ExistingRole),
+                    role=instance.role,
+                    department=instance.department,
+                    salary_range=var.salary_range,
+                    experience=var.experience,
+                    type=var.type or "Full-time",
+                    headcount=1,
+                    filled=0,
+                    status="Inactive"
+                )
 
 
 # ── Auto-create ApprovalRequest when a JobRequest is created or resubmitted ──────────────

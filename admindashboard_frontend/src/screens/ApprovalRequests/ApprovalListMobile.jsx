@@ -22,7 +22,7 @@ function Avatar({ name, size = 48, fs = 16 }) {
  * Mobile horizontal card carousel.
  * Each card shows key request details and quick Accept / Reject buttons.
  */
-export default function ApprovalListMobile({ filtered, openModal, performAction }) {
+export default function ApprovalListMobile({ filtered, openModal, performAction, isActionPending }) {
   const scrollRef = useRef(null);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
 
@@ -152,12 +152,14 @@ export default function ApprovalListMobile({ filtered, openModal, performAction 
                 {r.status === "Pending" ? (
                   <div style={{ display: "flex", gap: 6 }}>
                     <button
+                      disabled={isActionPending}
                       onClick={() => performAction(r, "Approved")}
-                      style={{ background: "rgba(16,185,129,0.25)", color: "#34D399", border: "1px solid rgba(16,185,129,0.4)", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
+                      style={{ background: "rgba(16,185,129,0.25)", color: "#34D399", border: "1px solid rgba(16,185,129,0.4)", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: isActionPending ? "not-allowed" : "pointer", opacity: isActionPending ? 0.6 : 1 }}
                     >Accept</button>
                     <button
+                      disabled={isActionPending}
                       onClick={() => performAction(r, "Rejected")}
-                      style={{ background: "rgba(239,68,68,0.25)", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.4)", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
+                      style={{ background: "rgba(239,68,68,0.25)", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.4)", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: isActionPending ? "not-allowed" : "pointer", opacity: isActionPending ? 0.6 : 1 }}
                     >Reject</button>
                   </div>
                 ) : (() => {

@@ -79,43 +79,99 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
 
   const handleDepartmentChange = (index, department) => {
     setJobForms((prev) =>
-      prev.map((f, i) => (i === index ? { ...f, department, role: "", exp: "", salary: "", type: "" } : f)),
+      prev.map((f, i) => (i === index ? { ...f, department, role: "", type: "", exp: "", salary: "" } : f)),
     );
   };
 
   const handleRoleChange = (index, selectedRole) => {
-    updateForm(index, "role", selectedRole);
-    const department = jobForms[index]?.department;
-    const matchingRole = (existingRoles || []).find(
-      (r) => r.role === selectedRole && (!department || r.dept === department),
+    setJobForms((prev) =>
+      prev.map((f, i) => (i === index ? { ...f, role: selectedRole, type: "", exp: "", salary: "" } : f)),
     );
-    if (matchingRole) {
-      if (!department && matchingRole.dept) {
-        updateForm(index, "department", matchingRole.dept);
-      }
-      updateForm(index, "exp", matchingRole.experience || "");
-      updateForm(index, "salary", matchingRole.salaryRange || "");
-      updateForm(index, "type", matchingRole.type || "");
+  };
+
+  const handleTypeChange = (index, selectedType) => {
+    setJobForms((prev) =>
+      prev.map((f, i) => (i === index ? { ...f, type: selectedType, exp: "", salary: "" } : f)),
+    );
+  };
+
+  const handleExperienceChange = (index, selectedExp) => {
+    setJobForms((prev) =>
+      prev.map((f, i) => {
+        if (i !== index) return f;
+        const matching = (existingRoles || []).find(
+          (r) =>
+            r.role === f.role &&
+            r.dept === f.department &&
+            r.type === f.type &&
+            r.experience === selectedExp
+        );
+        return {
+          ...f,
+          exp: selectedExp,
+          salary: matching ? matching.salaryRange : ""
+        };
+      })
+    );
+  };
+
+  const getTypeOptionsForRole = (department, role) => {
+    const seen = new Set();
+    const opts = [];
+    for (const r of existingRoles || []) {
+      if (!isActiveRole(r)) continue;
+      if (department && r.dept !== department) continue;
+      if (role && r.role !== role) continue;
+      if (!r.type || seen.has(r.type)) continue;
+      seen.add(r.type);
+      opts.push({ value: r.type, label: r.type });
     }
+    return opts;
+  };
+
+  const getExperienceOptionsForType = (department, role, type) => {
+    const seen = new Set();
+    const opts = [];
+    for (const r of existingRoles || []) {
+      if (!isActiveRole(r)) continue;
+      if (department && r.dept !== department) continue;
+      if (role && r.role !== role) continue;
+      if (type && r.type !== type) continue;
+      if (!r.experience || seen.has(r.experience)) continue;
+      seen.add(r.experience);
+      opts.push({ value: r.experience, label: r.experience });
+    }
+    return opts;
   };
 
   const handleDepartmentChangeInModal = (department) => {
     if (!selectedRequest) return;
-    setSelectedRequest({ ...selectedRequest, department, role: "", exp: "", salary: "", type: "" });
+    setSelectedRequest({ ...selectedRequest, department, role: "", type: "", exp: "", salary: "" });
   };
 
   const handleRoleChangeInModal = (selectedRole) => {
     if (!selectedRequest) return;
-    const matchingRole = (existingRoles || []).find(
-      (r) => r.role === selectedRole && (!selectedRequest.department || r.dept === selectedRequest.department),
+    setSelectedRequest({ ...selectedRequest, role: selectedRole, type: "", exp: "", salary: "" });
+  };
+
+  const handleTypeChangeInModal = (selectedType) => {
+    if (!selectedRequest) return;
+    setSelectedRequest({ ...selectedRequest, type: selectedType, exp: "", salary: "" });
+  };
+
+  const handleExperienceChangeInModal = (selectedExp) => {
+    if (!selectedRequest) return;
+    const matching = (existingRoles || []).find(
+      (r) =>
+        r.role === selectedRequest.role &&
+        r.dept === selectedRequest.department &&
+        r.type === selectedRequest.type &&
+        r.experience === selectedExp
     );
     setSelectedRequest({
       ...selectedRequest,
-      role: selectedRole,
-      department: (!selectedRequest.department && matchingRole) ? (matchingRole.dept || "") : selectedRequest.department,
-      exp: matchingRole ? (matchingRole.experience || "") : selectedRequest.exp,
-      salary: matchingRole ? (matchingRole.salaryRange || "") : selectedRequest.salary,
-      type: matchingRole ? (matchingRole.type || "") : selectedRequest.type,
+      exp: selectedExp,
+      salary: matching ? matching.salaryRange : ""
     });
   };
 
@@ -326,8 +382,12 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     
     try {
       const now = new Date().toLocaleDateString();
-      // Send all forms to backend via API concurrently
-      const created = await Promise.all(jobForms.map(f => createJobRequest(f, submittedBy)));
+      // Send all forms to backend via API sequentially to prevent ID collisions
+      const created = [];
+      for (const f of jobForms) {
+        const res = await createJobRequest(f, submittedBy);
+        created.push(res);
+      }
       
       const newRequests = jobForms.map((f, i) => ({
         ...f,
@@ -396,8 +456,12 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     updateForm,
     handleDepartmentChange,
     handleRoleChange,
+    handleTypeChange,
+    handleExperienceChange,
     deptOptions,
     getRoleOptionsForDept,
+    getTypeOptionsForRole,
+    getExperienceOptionsForType,
     // modal state
     showViewModal,
     selectedRequest,
@@ -406,6 +470,8 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     closeModal,
     handleDepartmentChangeInModal,
     handleRoleChangeInModal,
+    handleTypeChangeInModal,
+    handleExperienceChangeInModal,
     hasChanges,
     handleAccept,
     cancelJobRequest,

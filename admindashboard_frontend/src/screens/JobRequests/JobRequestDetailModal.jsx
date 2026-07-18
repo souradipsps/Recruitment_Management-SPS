@@ -16,12 +16,12 @@ const textareaStyle = { width: "100%", minHeight: 80, padding: 10, border: `1px 
 const FIELDS = [
   { key: "department", label: "Department", type: "select", placeholder: "Select department…", weight: 600 },
   { key: "role", label: "Role", type: "select", placeholder: "Select role…", weight: 700 },
+  { key: "type", label: "Employment Type", type: "select", placeholder: "Select type…", weight: 400 },
+  { key: "exp", label: "Experience", type: "select", placeholder: "Select experience…", weight: 600 },
+  { key: "salary", label: "Salary Range", type: "input", placeholder: "Salary range", weight: 700 },
   { key: "vacancies", label: "Vacancies", type: "select", options: VACANCY_OPTIONS, placeholder: "Select count…", weight: 400 },
-  { key: "exp", label: "Experience", type: "input", placeholder: "Enter experience", weight: 600 },
-  { key: "type", label: "Employment Type", type: "select", options: TYPE_OPTIONS, placeholder: "Select type…", weight: 400 },
   { key: "location", label: "Location", type: "input", placeholder: "Enter job location", weight: 400 },
-  { key: "category", label: "Category", type: "select", options: CATEGORY_OPTIONS, placeholder: "Select category…", weight: 600 },
-  { key: "salary", label: "Salary Range", type: "input", placeholder: "Enter salary range", weight: 700, span2: true },
+  { key: "category", label: "Category", type: "select", options: CATEGORY_OPTIONS, placeholder: "Select category…", weight: 600, span2: true },
 ];
 
 const TEXT_FIELDS = [
@@ -35,8 +35,12 @@ export default function JobRequestDetailModal({
   isMobile,
   deptOptions,
   getRoleOptionsForDept,
+  getTypeOptionsForRole,
+  getExperienceOptionsForType,
   handleDepartmentChangeInModal,
   handleRoleChangeInModal,
+  handleTypeChangeInModal,
+  handleExperienceChangeInModal,
   hasChanges,
   handleAccept,
   cancelJobRequest,
@@ -156,20 +160,36 @@ export default function JobRequestDetailModal({
                   ? (e) => handleDepartmentChangeInModal(e.target.value)
                   : f.key === "role"
                   ? (e) => handleRoleChangeInModal(e.target.value)
+                  : f.key === "type"
+                  ? (e) => handleTypeChangeInModal(e.target.value)
+                  : f.key === "exp"
+                  ? (e) => handleExperienceChangeInModal(e.target.value)
                   : (e) => patch(f.key, e.target.value);
                 const options = f.key === "department"
                   ? deptOptions
                   : f.key === "role"
                   ? getRoleOptionsForDept(selectedRequest.department)
+                  : f.key === "type"
+                  ? getTypeOptionsForRole(selectedRequest.department, selectedRequest.role)
+                  : f.key === "exp"
+                  ? getExperienceOptionsForType(selectedRequest.department, selectedRequest.role, selectedRequest.type)
                   : f.options;
                 const placeholder = f.placeholder;
-                const isFieldDisabled = isExistingRole && ["department", "role", "exp", "salary", "type"].includes(f.key);
+
+                const isDisabledForCascading =
+                  (f.key === "role" && !selectedRequest.department) ||
+                  (f.key === "type" && !selectedRequest.role) ||
+                  (f.key === "exp" && !selectedRequest.type);
+
+                const isFieldDisabled = f.key === "salary" || isDisabledForCascading || (isExistingRole && ["department", "role"].includes(f.key));
+
+                const isSelectType = f.type === "select" || ["department", "role", "type", "exp"].includes(f.key);
 
                 return (
                   <div key={f.key} style={{ gridColumn: f.span2 && !isMobile ? "span 2" : "auto" }}>
                     <Label>{f.label}</Label>
                     {isEditable ? (
-                      f.type === "select" ? (
+                      isSelectType ? (
                         <Select
                           value={value}
                           onChange={onChange}

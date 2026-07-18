@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { takeApprovalAction } from "../../api/approvalsApi";
 import { updateJobRequestFields } from "../../api/jobRequestsApi";
 import { updateRoleRequest } from "../../api/roleRequestsApi";
 import { fetchJobPostings } from "../../api/jobPostingsApi";
+import { fetchRoles } from "../../api/rolesApi";
 
 const parseSal = (v) => parseFloat((v || "").replace(/,/g, "")) || 0;
 
@@ -23,8 +25,13 @@ export function useApprovalActions({
   onNavigateToApplications,
   onNavigateToExistingRoles,
 }) {
+  const [isActionPending, setIsActionPending] = useState(false);
+
   // Persist action to backend (if backendId present) and sync all local state.
   const performAction = async (r, action, customComment) => {
+    if (isActionPending) return false;
+    setIsActionPending(true);
+
     // takeApprovalAction only sends the action verb + note — any field edits
     // made in this modal (department, role, salary, etc.) must be saved to the
     // underlying Job/Role Request separately, or they'd silently vanish.
@@ -47,23 +54,36 @@ export function useApprovalActions({
       } catch (err) {
         console.error("Failed to save job request edits:", err);
         alert(`Could not save changes: ${err.message}`);
+        setIsActionPending(false);
         return false;
       }
     }
 
+    let updatedRole = null;
     if (r.type === "Role Request" && r.sourceDbId != null) {
       try {
-        await updateRoleRequest(r.sourceDbId, {
+        const formattedVariations = (r.variations || []).map((v) => {
+          const cleanMinSalary = (v.minSalary || "").replace(/,/g, "");
+          const cleanMaxSalary = (v.maxSalary || "").replace(/,/g, "");
+          const combinedSalary = cleanMinSalary && cleanMaxSalary ? `${cleanMinSalary}-${cleanMaxSalary}` : (cleanMinSalary || cleanMaxSalary || "");
+          const combinedExperience = v.minExperience && v.maxExperience ? `${v.minExperience}-${v.maxExperience}` : (v.minExperience || v.maxExperience || "");
+          return {
+            type: v.type,
+            experience: combinedExperience,
+            salary_range: combinedSalary,
+          };
+        });
+
+        updatedRole = await updateRoleRequest(r.sourceDbId, {
           department: r.dept,
           role: r.role,
-          type: r.empType,
           justification: r.just,
-          salary_range: r.salary ? r.salary.replace(/^₹/, "") : "",
-          experience: r.experience,
+          variations: formattedVariations,
         });
       } catch (err) {
         console.error("Failed to save role request edits:", err);
         alert(`Could not save changes: ${err.message}`);
+        setIsActionPending(false);
         return false;
       }
     }
@@ -74,6 +94,7 @@ export function useApprovalActions({
       } catch (err) {
         console.error("Failed to submit approval action:", err);
         alert(`Could not submit action: ${err.message}`);
+        setIsActionPending(false);
         return false;
       }
     }
@@ -102,6 +123,7 @@ export function useApprovalActions({
             salaryRange: r.salary ? r.salary.replace(/^₹/, "") : item.salaryRange,
             experience: r.experience || item.experience,
             category: r.category || item.category,
+            variations: updatedRole ? updatedRole.variations : r.variations,
           };
           delete updated2.minSalary;
           delete updated2.maxSalary;
@@ -139,18 +161,12 @@ export function useApprovalActions({
     }
 
     if (action === "Approved" && r.type === "Role Request") {
-      setExistingRoles((prev) => {
-        const exists = prev.some((x) => x.role === r.role && x.dept === r.dept);
-        if (exists) return prev;
-        const cleanedSalary = r.salary ? r.salary.replace(/^₹/, "") : "";
-        return [...prev, {
-          id: `ROL-${Date.now()}`, dept: r.dept, role: r.role, type: r.empType || "Full-time",
-          headcount: 1, filled: 0, currentFilled: 0, status: "Inactive", currentStatus: "Inactive",
-          experience: r.experience || "—",
-          salaryRange: cleanedSalary || "—",
-          category: r.category || "—",
-        }];
-      });
+      try {
+        const roles = await fetchRoles();
+        setExistingRoles(roles);
+      } catch (err) {
+        console.error("Failed to refresh existing roles after approval:", err);
+      }
       if (onNavigateToExistingRoles) setTimeout(() => { onNavigateToExistingRoles(); }, 300);
     }
 
@@ -169,12 +185,13 @@ export function useApprovalActions({
     }
 
     if (sel && sel.id === r.id) setSel(updated);
+    setIsActionPending(false);
     return true;
   };
 
   // Validates modal form fields then delegates to performAction.
   const takeAction = async (action) => {
-    if (!sel) return;
+    if (!sel || isActionPending) return;
     let updatedSel = { ...sel };
 
     if (sel.type === "Role Request") {
@@ -204,5 +221,5 @@ export function useApprovalActions({
     if (ok && action !== "Sent Back") closeModal();
   };
 
-  return { performAction, takeAction };
+  return { performAction, takeAction, isActionPending };
 }

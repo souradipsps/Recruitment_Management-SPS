@@ -13,6 +13,10 @@ export default function JobRequestForm({
   getRoleOptionsForDept,
   handleDepartmentChange,
   handleRoleChange,
+  handleTypeChange,
+  handleExperienceChange,
+  getTypeOptionsForRole,
+  getExperienceOptionsForType,
   updateForm,
   submitRequests,
   submitting,
@@ -84,23 +88,33 @@ export default function JobRequestForm({
                   onChange={(e) => handleRoleChange(index, e.target.value)}
                   options={getRoleOptionsForDept(form.department)}
                   placeholder="Select role…"
-                  disabled={isExistingRole}
+                  disabled={isExistingRole || !form.department}
+                />
+              </FormField>
+              <FormField label="Employment Type" required>
+                <Select
+                  value={form.type}
+                  onChange={(e) => handleTypeChange(index, e.target.value)}
+                  options={getTypeOptionsForRole(form.department, form.role)}
+                  placeholder="Select type…"
+                  disabled={!form.role}
                 />
               </FormField>
               <FormField label="Experience" required>
-                <Input
-                  placeholder="Enter experience"
+                <Select
                   value={form.exp}
-                  onChange={(e) => updateForm(index, "exp", e.target.value)}
-                  disabled={isExistingRole}
+                  onChange={(e) => handleExperienceChange(index, e.target.value)}
+                  options={getExperienceOptionsForType(form.department, form.role, form.type)}
+                  placeholder="Select experience…"
+                  disabled={!form.type}
                 />
               </FormField>
               <FormField label="Salary Range" required>
                 <Input
-                  placeholder="Enter salary range"
+                  placeholder="Salary range"
                   value={form.salary}
                   onChange={(e) => updateForm(index, "salary", e.target.value)}
-                  disabled={isExistingRole}
+                  disabled={true}
                 />
               </FormField>
               <FormField label="Educational Qualification" required>
@@ -113,15 +127,6 @@ export default function JobRequestForm({
               </FormField>
               <FormField label="Vacancies" required>
                 <Select value={form.vacancies} onChange={(e) => updateForm(index, "vacancies", e.target.value)} options={VACANCY_OPTIONS} placeholder="Select count…" />
-              </FormField>
-              <FormField label="Employment Type" required>
-                <Select
-                  value={form.type}
-                  onChange={(e) => updateForm(index, "type", e.target.value)}
-                  options={TYPE_OPTIONS}
-                  placeholder="Select type…"
-                  disabled={isExistingRole}
-                />
               </FormField>
               <FormField label="Location" required>
                 <Input placeholder="Enter job location" value={form.location} onChange={(e) => updateForm(index, "location", e.target.value)} />

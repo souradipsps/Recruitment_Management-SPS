@@ -14,7 +14,7 @@ const isActiveRole = (r) => (r.currentStatus || r.status) === "Active";
  * Full-screen portal modal showing request details, editable fields for
  * Pending requests, activity history, comment textarea, and action buttons.
  */
-export default function ApprovalModal({ sel, setSel, closeModal, isPending, comment, setComment, fieldErrors, setFieldErrors, takeAction, isMobile, existingRoles, currentUser }) {
+export default function ApprovalModal({ sel, setSel, closeModal, isPending, comment, setComment, fieldErrors, setFieldErrors, takeAction, isMobile, existingRoles, currentUser, isActionPending }) {
   if (!sel) return null;
 
   const isExistingRole = sel.type === "Job Request" && (existingRoles || []).some(
@@ -171,79 +171,138 @@ export default function ApprovalModal({ sel, setSel, closeModal, isPending, comm
               </div>
             )}
 
+            {/* Variations */}
             {sel.type === "Role Request" && (
               <div>
-                <div style={labelCss}>Employee Type</div>
+                <div style={labelCss}>Variations (Type, Experience, Salary)</div>
                 {isPending ? (
-                  <Select value={sel.empType || ""} onChange={(e) => setSel({ ...sel, empType: e.target.value })} options={TYPE_OPTIONS} placeholder="Select type…" />
-                ) : (
-                  <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{sel.empType || "—"}</div>
-                )}
-              </div>
-            )}
-
-
-            {/* Salary Range */}
-            {(sel.salary || sel.type === "Role Request") && (
-              <div>
-                <div style={labelCss}>Salary Range</div>
-                {sel.type === "Role Request" && isPending ? (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    <div>
-                      <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 3 }}>Min (₹)</div>
-                      <input
-                        value={sel.minSalary ?? (sel.salary ? sel.salary.replace(/^₹/, "").split("-")[0]?.trim() : "")}
-                        onChange={(e) => { setSel({ ...sel, minSalary: e.target.value }); setFieldErrors((p) => { const n = { ...p }; delete n.minSalary; return n; }); }}
-                        placeholder="e.g. 40,000"
-                        style={{ width: "100%", padding: 9, border: `1.5px solid ${fieldErrors.minSalary ? T.red : T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface }}
-                      />
-                      {fieldErrors.minSalary && <div style={{ color: T.red, fontSize: 11, marginTop: 3, fontWeight: 600 }}>{fieldErrors.minSalary}</div>}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 3 }}>Max (₹)</div>
-                      <input
-                        value={sel.maxSalary ?? (sel.salary ? sel.salary.replace(/^₹/, "").split("-")[1]?.trim() : "")}
-                        onChange={(e) => setSel({ ...sel, maxSalary: e.target.value })}
-                        placeholder="e.g. 60,000"
-                        style={{ width: "100%", padding: 9, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface }}
-                      />
-                    </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {(sel.variations || []).map((v, vIndex) => (
+                      <div key={v.id || vIndex} style={{ border: `1px solid ${T.border}`, borderRadius: 10, padding: 12, background: T.canvas, position: "relative" }}>
+                        {sel.variations.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSel((prev) => ({
+                                ...prev,
+                                variations: prev.variations.filter((_, idx) => idx !== vIndex)
+                              }));
+                            }}
+                            style={{ position: "absolute", top: 6, right: 6, border: "none", background: "#FEE2E2", color: "#DC2626", padding: "2px 6px", borderRadius: 4, cursor: "pointer", fontSize: 10, fontWeight: 700 }}
+                          >
+                            Remove
+                          </button>
+                        )}
+                        
+                        <div style={{ marginBottom: 8 }}>
+                          <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 2 }}>Employee Type</div>
+                          <Select
+                            value={v.type}
+                            onChange={(e) => {
+                              setSel((prev) => {
+                                const u = prev.variations.map((item, idx) => idx === vIndex ? { ...item, type: e.target.value } : item);
+                                return { ...prev, variations: u };
+                              });
+                            }}
+                            options={TYPE_OPTIONS}
+                            placeholder="Select type…"
+                          />
+                        </div>
+                        
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                          <div>
+                            <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 2 }}>Min Experience (Yrs)</div>
+                            <input
+                              value={v.minExperience ?? v.experience?.split("-")[0] ?? ""}
+                              onChange={(e) => {
+                                setSel((prev) => {
+                                  const u = prev.variations.map((item, idx) => idx === vIndex ? { ...item, minExperience: e.target.value } : item);
+                                  return { ...prev, variations: u };
+                                });
+                              }}
+                              placeholder="e.g. 2"
+                              style={{ width: "100%", padding: 8, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }}
+                            />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 2 }}>Max Experience (Yrs)</div>
+                            <input
+                              value={v.maxExperience ?? v.experience?.split("-")[1] ?? ""}
+                              onChange={(e) => {
+                                setSel((prev) => {
+                                  const u = prev.variations.map((item, idx) => idx === vIndex ? { ...item, maxExperience: e.target.value } : item);
+                                  return { ...prev, variations: u };
+                                });
+                              }}
+                              placeholder="e.g. 5"
+                              style={{ width: "100%", padding: 8, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }}
+                            />
+                          </div>
+                        </div>
+                        
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                          <div>
+                            <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 2 }}>Min Salary (₹)</div>
+                            <input
+                              value={v.minSalary ?? v.salaryRange?.split("-")[0] ?? ""}
+                              onChange={(e) => {
+                                setSel((prev) => {
+                                  const u = prev.variations.map((item, idx) => idx === vIndex ? { ...item, minSalary: e.target.value } : item);
+                                  return { ...prev, variations: u };
+                                });
+                              }}
+                              placeholder="e.g. 40,000"
+                              style={{ width: "100%", padding: 8, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }}
+                            />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 2 }}>Max Salary (₹)</div>
+                            <input
+                              value={v.maxSalary ?? v.salaryRange?.split("-")[1] ?? ""}
+                              onChange={(e) => {
+                                setSel((prev) => {
+                                  const u = prev.variations.map((item, idx) => idx === vIndex ? { ...item, maxSalary: e.target.value } : item);
+                                  return { ...prev, variations: u };
+                                });
+                              }}
+                              placeholder="e.g. 60,000"
+                              style={{ width: "100%", padding: 8, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, outline: "none", boxSizing: "border-box", background: T.surface, color: T.ink }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSel((prev) => ({
+                          ...prev,
+                          variations: [
+                            ...(prev.variations || []),
+                            {
+                              id: Date.now() + Math.random(),
+                              type: "",
+                              minExperience: "",
+                              maxExperience: "",
+                              minSalary: "",
+                              maxSalary: "",
+                            }
+                          ]
+                        }));
+                      }}
+                      style={{ border: "none", background: T.skyLight, color: T.sky, padding: "6px 12px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, alignSelf: "flex-end" }}
+                    >
+                      + Add Variation
+                    </button>
                   </div>
                 ) : (
-                  <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{sel.salary || "—"}</div>
-                )}
-              </div>
-            )}
-
-            {/* Experience */}
-            {(sel.experience || sel.exp || sel.type === "Role Request") && (
-              <div>
-                <div style={labelCss}>Experience</div>
-                {sel.type === "Role Request" && isPending ? (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    <div>
-                      <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 3 }}>Min (yrs)</div>
-                      <input
-                        value={sel.minExp ?? (sel.experience ? String(sel.experience).split("-")[0]?.trim() : "")}
-                        onChange={(e) => { setSel({ ...sel, minExp: e.target.value }); setFieldErrors((p) => { const n = { ...p }; delete n.minExp; return n; }); }}
-                        placeholder="e.g. 2"
-                        style={{ width: "100%", padding: 9, border: `1.5px solid ${fieldErrors.minExp ? T.red : T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface }}
-                      />
-                      {fieldErrors.minExp && <div style={{ color: T.red, fontSize: 11, marginTop: 3, fontWeight: 600 }}>{fieldErrors.minExp}</div>}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 10, color: T.inkFaint, marginBottom: 3 }}>Max (yrs)</div>
-                      <input
-                        value={sel.maxExp ?? (sel.experience ? String(sel.experience).split("-")[1]?.trim() : "")}
-                        onChange={(e) => setSel({ ...sel, maxExp: e.target.value })}
-                        placeholder="e.g. 5"
-                        style={{ width: "100%", padding: 9, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", background: T.surface }}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>
-                    {sel.experience ? `${sel.experience} yrs` : sel.exp ? `${sel.exp} yrs` : "—"}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {(sel.variations || []).map((v, idx) => (
+                      <div key={v.id || idx} style={{ fontSize: 13, fontWeight: 600, color: T.ink, padding: "6px 12px", background: T.canvas, borderRadius: 8, border: `1px solid ${T.border}` }}>
+                        <strong>{v.type || "Full-time"}</strong> ({v.experience ? `${v.experience} yrs` : "—"}) : {v.salaryRange ? `₹${v.salaryRange}` : "—"}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -498,9 +557,27 @@ export default function ApprovalModal({ sel, setSel, closeModal, isPending, comm
             display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap",
             background: T.canvas, borderRadius: "0 0 16px 16px",
           }}>
-            <Btn label="Sendback" variant="amber" small onClick={() => { if (!comment.trim()) { alert("Please add a comment before sending back."); return; } takeAction("Sent Back"); }} />
-            <Btn label="Reject"   variant="danger"  small onClick={() => { if (!sel) return; takeAction("Rejected"); }} />
-            <Btn label="Accept"   variant="success" small onClick={() => { takeAction("Approved"); }} />
+            <Btn
+              label={isActionPending ? "Processing..." : "Sendback"}
+              variant="amber"
+              small
+              disabled={isActionPending}
+              onClick={() => { if (!comment.trim()) { alert("Please add a comment before sending back."); return; } takeAction("Sent Back"); }}
+            />
+            <Btn
+              label={isActionPending ? "Processing..." : "Reject"}
+              variant="danger"
+              small
+              disabled={isActionPending}
+              onClick={() => { if (!sel) return; takeAction("Rejected"); }}
+            />
+            <Btn
+              label={isActionPending ? "Processing..." : "Accept"}
+              variant="success"
+              small
+              disabled={isActionPending}
+              onClick={() => { takeAction("Approved"); }}
+            />
           </div>
         )}
       </div>

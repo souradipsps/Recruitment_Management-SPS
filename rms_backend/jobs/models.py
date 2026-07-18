@@ -79,9 +79,9 @@ class RoleRequest(models.Model):
     department    = models.CharField(max_length=100)
     role          = models.CharField(max_length=200)
     justification = models.TextField(blank=True)
-    salary_range  = models.CharField(max_length=100, blank=True)
-    experience    = models.CharField(max_length=50, blank=True)
-    type          = models.CharField(max_length=50, choices=TYPE_CHOICES, default="Full-time")
+    salary_range  = models.CharField(max_length=100, blank=True, null=True)
+    experience    = models.CharField(max_length=50, blank=True, null=True)
+    type          = models.CharField(max_length=50, choices=TYPE_CHOICES, default="Full-time", blank=True, null=True)
     status        = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Pending")
     submitted_by  = models.CharField(max_length=200, blank=True)
     date          = models.DateField(auto_now_add=True)
@@ -98,6 +98,21 @@ class RoleRequest(models.Model):
 
     def __str__(self):
         return f"{self.request_id} — {self.role} ({self.status})"
+
+
+class RoleRequestVariation(models.Model):
+    role_request = models.ForeignKey(
+        RoleRequest, on_delete=models.CASCADE, related_name="variations"
+    )
+    type         = models.CharField(max_length=50, choices=RoleRequest.TYPE_CHOICES, default="Full-time")
+    experience   = models.CharField(max_length=50, blank=True)
+    salary_range = models.CharField(max_length=100, blank=True)
+
+    class Meta:
+        db_table = "role_request_variations"
+
+    def __str__(self):
+        return f"{self.role_request.role} — {self.type} ({self.experience} yrs)"
 
 
 class JobRequest(models.Model):

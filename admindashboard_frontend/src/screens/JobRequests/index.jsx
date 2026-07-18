@@ -57,6 +57,10 @@ export default function JobRequests(props) {
           getRoleOptionsForDept={s.getRoleOptionsForDept}
           handleDepartmentChange={s.handleDepartmentChange}
           handleRoleChange={s.handleRoleChange}
+          handleTypeChange={s.handleTypeChange}
+          handleExperienceChange={s.handleExperienceChange}
+          getTypeOptionsForRole={s.getTypeOptionsForRole}
+          getExperienceOptionsForType={s.getExperienceOptionsForType}
           updateForm={s.updateForm}
           submitRequests={s.submitRequests}
           submitting={s.submitting}
@@ -88,8 +92,12 @@ export default function JobRequests(props) {
           isMobile={isMobile}
           deptOptions={s.deptOptions}
           getRoleOptionsForDept={s.getRoleOptionsForDept}
+          getTypeOptionsForRole={s.getTypeOptionsForRole}
+          getExperienceOptionsForType={s.getExperienceOptionsForType}
           handleDepartmentChangeInModal={s.handleDepartmentChangeInModal}
           handleRoleChangeInModal={s.handleRoleChangeInModal}
+          handleTypeChangeInModal={s.handleTypeChangeInModal}
+          handleExperienceChangeInModal={s.handleExperienceChangeInModal}
           hasChanges={s.hasChanges}
           handleAccept={s.handleAccept}
           cancelJobRequest={s.cancelJobRequest}

@@ -7,7 +7,7 @@ import { CATEGORY_OPTIONS } from "../../data";
  * Desktop table-row list of approval requests.
  * Each row has quick Accept / Reject inline buttons for Pending items.
  */
-export default function ApprovalListDesktop({ filtered, openModal, performAction }) {
+export default function ApprovalListDesktop({ filtered, openModal, performAction, isActionPending }) {
   return (
     <div>
       {filtered.map((r) => (
@@ -60,26 +60,28 @@ export default function ApprovalListDesktop({ filtered, openModal, performAction
               onClick={(e) => e.stopPropagation()}
             >
               <button
+                disabled={isActionPending}
                 onClick={(e) => { e.stopPropagation(); performAction(r, "Approved"); }}
                 style={{
                   background: T.greenLight, color: T.green, border: `1.5px solid #A7F3D0`,
                   borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700,
-                  cursor: "pointer", transition: "all 0.15s",
+                  cursor: isActionPending ? "not-allowed" : "pointer", opacity: isActionPending ? 0.6 : 1, transition: "all 0.15s",
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = T.green; e.currentTarget.style.color = "#fff"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = T.greenLight; e.currentTarget.style.color = T.green; }}
+                onMouseEnter={(e) => { if (!isActionPending) { e.currentTarget.style.background = T.green; e.currentTarget.style.color = "#fff"; } }}
+                onMouseLeave={(e) => { if (!isActionPending) { e.currentTarget.style.background = T.greenLight; e.currentTarget.style.color = T.green; } }}
               >
                 ✓ Accept
               </button>
               <button
+                disabled={isActionPending}
                 onClick={(e) => { e.stopPropagation(); performAction(r, "Rejected"); }}
                 style={{
                   background: T.redLight, color: T.red, border: `1.5px solid #FECACA`,
                   borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700,
-                  cursor: "pointer", transition: "all 0.15s",
+                  cursor: isActionPending ? "not-allowed" : "pointer", opacity: isActionPending ? 0.6 : 1, transition: "all 0.15s",
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = T.red; e.currentTarget.style.color = "#fff"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = T.redLight; e.currentTarget.style.color = T.red; }}
+                onMouseEnter={(e) => { if (!isActionPending) { e.currentTarget.style.background = T.red; e.currentTarget.style.color = "#fff"; } }}
+                onMouseLeave={(e) => { if (!isActionPending) { e.currentTarget.style.background = T.redLight; e.currentTarget.style.color = T.red; } }}
               >
                 ✕ Reject
               </button>
