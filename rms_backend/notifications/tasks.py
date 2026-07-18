@@ -108,7 +108,7 @@ South Point School Recruitment Team
             message=candidate_body,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[candidate.email],
-            fail_silently=True,
+            fail_silently=False,
         )
 
     # 2. Email to Panelists
@@ -148,7 +148,7 @@ South Point School Recruitment Team
             message=panelist_body,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[panelist.email],
-            fail_silently=True,
+            fail_silently=False,
         )
 
     return f"Sent interview scheduling/rescheduling emails for {interview.interview_id}"
@@ -188,7 +188,7 @@ South Point School Recruitment Team
             message=panelist_body,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[panelist.email],
-            fail_silently=True,
+            fail_silently=False,
         )
 
     return f"Sent assignment email to newly added panelists for interview {interview.interview_id}"
@@ -259,7 +259,7 @@ South Point School Recruitment Team
             message=candidate_body,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[candidate.email],
-            fail_silently=True,
+            fail_silently=False,
         )
 
     # 2. Email to Panelists
@@ -284,7 +284,7 @@ South Point School Recruitment Team
             message=panelist_body,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[panelist.email],
-            fail_silently=True,
+            fail_silently=False,
         )
 
     return f"Sent interview reminder emails for {interview.interview_id}"
@@ -347,7 +347,7 @@ South Point School Recruitment Team
         message=body,
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[email],
-        fail_silently=True,
+        fail_silently=False,
     )
     return f"Sent offer letter email to {email} for offer {offer.offer_id}"
 
@@ -428,6 +428,6 @@ South Point School Recruitment Team
         message=body,
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[candidate.email],
-        fail_silently=True,
+        fail_silently=False,
     )
     return f"Sent interview round completed email to candidate {candidate.email} for round {interview.round}"

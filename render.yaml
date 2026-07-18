@@ -16,6 +16,10 @@ services:
         value: "*" # Automatically matches the Render domain name
       - key: USE_REDIS_CELERY
         value: "False" # Defaults to lifetime free tier mode (threads & memory cache)
+      - key: USE_SMTP_EMAIL
+        value: "False"
+      - key: USE_RESEND
+        value: "False"
       - key: CORS_ORIGINS
         value: "http://localhost:5173,http://localhost:5174" # Add production frontend URLs here after deployment
       - key: CSRF_TRUSTED_ORIGINS
