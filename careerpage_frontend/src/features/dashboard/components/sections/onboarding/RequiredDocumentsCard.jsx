@@ -60,6 +60,11 @@ export function RequiredDocumentsCard({
   );
   const isApproved = !!onboardingRecord?.docsVerified || allCompulsoryVerified;
 
+  const docKeys = [...COMPULSORY_DOCS, ...OPTIONAL_DOCS].map((d) => d.key);
+  const docsChanged = docKeys.some(
+    (key) => (docs[key] || "") !== (onboardingRecord?.uploadedDocNames?.[key] || "")
+  );
+
   const hasUnsavedChanges = 
     (pfNumber || "") !== (onboardingRecord?.pfNumber || "") ||
     (esiNumber || "") !== (onboardingRecord?.esiNumber || "") ||
@@ -69,7 +74,7 @@ export function RequiredDocumentsCard({
     (bankIfsc || "") !== (onboardingRecord?.bankIfsc || "") ||
     (bankName || "") !== (onboardingRecord?.bankName || "") ||
     (bankHolder || "") !== (onboardingRecord?.bankHolderName || "") ||
-    Object.keys(docFiles).length > 0;
+    docsChanged;
 
   const extraFor = (key) => {
     if (key === "aadhar") {
