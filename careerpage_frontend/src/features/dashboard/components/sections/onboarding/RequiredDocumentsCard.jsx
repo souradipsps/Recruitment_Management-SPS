@@ -61,14 +61,14 @@ export function RequiredDocumentsCard({
   const isApproved = !!onboardingRecord?.docsVerified || allCompulsoryVerified;
 
   const hasUnsavedChanges = 
-    pfNumber !== (onboardingRecord?.pfNumber || "") ||
-    esiNumber !== (onboardingRecord?.esiNumber || "") ||
-    aadharNumber.replace(/\s/g, "") !== (onboardingRecord?.aadharNumber || "") ||
-    panNumber !== (onboardingRecord?.panNumber || "") ||
-    bankAccount !== (onboardingRecord?.bankAccountNumber || "") ||
-    bankIfsc !== (onboardingRecord?.bankIfsc || "") ||
-    bankName !== (onboardingRecord?.bankName || "") ||
-    bankHolder !== (onboardingRecord?.bankHolderName || "") ||
+    (pfNumber || "") !== (onboardingRecord?.pfNumber || "") ||
+    (esiNumber || "") !== (onboardingRecord?.esiNumber || "") ||
+    (aadharNumber || "").replace(/\s/g, "") !== (onboardingRecord?.aadharNumber || "") ||
+    (panNumber || "") !== (onboardingRecord?.panNumber || "") ||
+    (bankAccount || "") !== (onboardingRecord?.bankAccountNumber || "") ||
+    (bankIfsc || "") !== (onboardingRecord?.bankIfsc || "") ||
+    (bankName || "") !== (onboardingRecord?.bankName || "") ||
+    (bankHolder || "") !== (onboardingRecord?.bankHolderName || "") ||
     Object.keys(docFiles).length > 0;
 
   const extraFor = (key) => {
