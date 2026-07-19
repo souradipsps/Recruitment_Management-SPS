@@ -1,5 +1,5 @@
 import React from "react";
-import { Upload, Clock } from "lucide-react";
+import { Upload, Clock, CheckCircle } from "lucide-react";
 import { DocumentRow } from "./DocumentRow";
 import { AadhaarField, PanField, BankDetailsField } from "./IdentityFields";
 import "../../css/sections/onboarding/RequiredDocumentsCard.css";
