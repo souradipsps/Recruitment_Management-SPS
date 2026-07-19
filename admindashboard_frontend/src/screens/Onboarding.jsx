@@ -378,24 +378,16 @@ export default function Onboarding({ jobPostings = [], jobApplications = [], gen
                   <span style={{ fontWeight: 700, color: T.ink }}>{d.label}</span>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <a href={record[d.fileField]} target="_blank" rel="noreferrer" style={{ fontSize: 11, fontWeight: 700, color: T.blue, textDecoration: "none" }}>View</a>
-                    {isVerified ? (
-                      <span title="Verified" style={{ display: "flex", alignItems: "center", justifyContent: "center", background: T.green, color: "#fff", borderRadius: 99, width: 22, height: 22, fontSize: 12, fontWeight: 800 }}>✓</span>
-                    ) : isRejected ? (
-                      <span title="Rejected" style={{ display: "flex", alignItems: "center", justifyContent: "center", background: T.red, color: "#fff", borderRadius: 99, width: 22, height: 22, fontSize: 12, fontWeight: 800 }}>✗</span>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => toggleDocVerification(record.id, d.key, "Verified")}
-                          title="Verify"
-                          style={{ border: "none", background: T.greenLight, color: T.green, borderRadius: 99, width: 22, height: 22, fontSize: 12, fontWeight: 800, cursor: "pointer" }}
-                        >✓</button>
-                        <button
-                          onClick={() => toggleDocVerification(record.id, d.key, "Rejected")}
-                          title="Reject"
-                          style={{ border: "none", background: T.redLight, color: T.red, borderRadius: 99, width: 22, height: 22, fontSize: 12, fontWeight: 800, cursor: "pointer" }}
-                        >✗</button>
-                      </>
-                    )}
+                    <button
+                      onClick={() => toggleDocVerification(record.id, d.key, "Verified")}
+                      title="Verify"
+                      style={{ border: "none", background: isVerified ? T.green : T.greenLight, color: isVerified ? "#fff" : T.green, borderRadius: 99, width: 22, height: 22, fontSize: 12, fontWeight: 800, cursor: "pointer", transition: "all 0.15s" }}
+                    >✓</button>
+                    <button
+                      onClick={() => toggleDocVerification(record.id, d.key, "Rejected")}
+                      title="Reject"
+                      style={{ border: "none", background: isRejected ? T.red : T.redLight, color: isRejected ? "#fff" : T.red, borderRadius: 99, width: 22, height: 22, fontSize: 12, fontWeight: 800, cursor: "pointer", transition: "all 0.15s" }}
+                    >✗</button>
                   </div>
                 </div>
                 {detail && <div style={{ fontSize: 11, color: T.inkLight }}>{detail}</div>}

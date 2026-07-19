@@ -127,22 +127,83 @@ class OnboardingViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         # A candidate re-uploading a document that HR previously rejected
-        # should clear it out of rejected_docs, so it goes back to "pending"
-        # review instead of staying stuck showing "Rejected" forever.
+        # or verified should clear it out of verified_docs / rejected_docs,
+        # so it goes back to "pending" review instead of staying stuck.
+        # Also reset the overall task_docs_verify status to False since
+        # documents need to be verified again.
         instance = serializer.instance
-        reuploaded_keys = {
-            key for field, key in self.DOC_FIELD_TO_KEY.items()
-            if field in self.request.FILES
-        }
+        data = self.request.data
+        files = self.request.FILES
+
+        reuploaded_keys = set()
+
+        # Helper to check if text value changed
+        def val_changed(field_name, new_val):
+            if new_val is None:
+                return False
+            old_val = getattr(instance, field_name) or ""
+            return str(new_val).strip() != str(old_val).strip()
+
+        # Check Aadhar
+        if "aadhar_card" in files:
+            reuploaded_keys.add("aadhar")
+        elif "aadhar_number" in data:
+            new_num = str(data["aadhar_number"]).replace(" ", "")
+            old_num = str(instance.aadhar_number or "").replace(" ", "")
+            if new_num != old_num:
+                reuploaded_keys.add("aadhar")
+
+        # Check PAN
+        if "pan_card" in files:
+            reuploaded_keys.add("pan")
+        elif "pan_number" in data and val_changed("pan_number", data["pan_number"]):
+            reuploaded_keys.add("pan")
+
+        # Check Bank Details
+        bank_fields = ["bank_holder_name", "bank_account_number", "bank_ifsc", "bank_name"]
+        if "bank_passbook" in files:
+            reuploaded_keys.add("bank_details")
+        else:
+            for bf in bank_fields:
+                if bf in data and val_changed(bf, data[bf]):
+                    reuploaded_keys.add("bank_details")
+                    break
+
+        # Check all other documents (which only have files)
+        for field, key in self.DOC_FIELD_TO_KEY.items():
+            if key not in ["aadhar", "pan", "bank_details"]:
+                if field in files:
+                    reuploaded_keys.add(key)
+
         if reuploaded_keys:
             import json
             try:
                 rejected = json.loads(instance.rejected_docs or "[]")
             except (TypeError, ValueError):
                 rejected = []
-            remaining = [k for k in rejected if k not in reuploaded_keys]
-            if len(remaining) != len(rejected):
-                serializer.save(rejected_docs=json.dumps(remaining))
+            try:
+                verified = json.loads(instance.verified_docs or "[]")
+            except (TypeError, ValueError):
+                verified = []
+
+            new_rejected = [k for k in rejected if k not in reuploaded_keys]
+            new_verified = [k for k in verified if k not in reuploaded_keys]
+
+            extra_kwargs = {}
+            if len(new_rejected) != len(rejected):
+                extra_kwargs["rejected_docs"] = json.dumps(new_rejected)
+            if len(new_verified) != len(verified):
+                extra_kwargs["verified_docs"] = json.dumps(new_verified)
+
+            # Since a document is being reuploaded/modified, the overall verification
+            # status task_docs_verify needs to go back to False
+            if instance.task_docs_verify:
+                extra_kwargs["task_docs_verify"] = False
+                if instance.status == "Completed":
+                    extra_kwargs["status"] = "In Progress"
+
+            if extra_kwargs:
+                serializer.save(**extra_kwargs)
                 return
         serializer.save()
 
