@@ -70,7 +70,7 @@ export function ForgotPasswordForm({ onBackToLogin }) {
     setError("");
     setSubmitting(true);
     try {
-      await resetPassword({ email: identifier, otp, newPassword });
+      await resetPassword({ email: identifier, otp, newPassword, confirmPassword });
       setStep(4);
       setTimeout(() => { onBackToLogin(); }, 2000);
     } catch (err) {
@@ -80,7 +80,18 @@ export function ForgotPasswordForm({ onBackToLogin }) {
     }
   };
 
-  const handleResendOtp = () => { setOtp(""); setError(""); startOtpTimer(); };
+  const handleResendOtp = async () => {
+    setOtp(""); setError("");
+    setSubmitting(true);
+    try {
+      await sendPasswordResetOtp({ email: identifier });
+      startOtpTimer();
+    } catch (err) {
+      setError(err.message || "Could not resend OTP. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <>
@@ -113,7 +124,6 @@ export function ForgotPasswordForm({ onBackToLogin }) {
       {/* Step 2 — OTP */}
       {step === 2 && (
         <form onSubmit={handleVerifyOtp} className="lm-form--gap14">
-          <div className="lm-otp-banner">Demo Mode: You can type any 6-digit OTP to verify.</div>
           <div className="lm-input-wrap">
             <Lock size={15} className="lm-input-icon" />
             <input type="text" placeholder="Enter 6-digit OTP" value={otp}
