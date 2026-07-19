@@ -60,6 +60,17 @@ export function RequiredDocumentsCard({
   );
   const isApproved = !!onboardingRecord?.docsVerified || allCompulsoryVerified;
 
+  const hasUnsavedChanges = 
+    pfNumber !== (onboardingRecord?.pfNumber || "") ||
+    esiNumber !== (onboardingRecord?.esiNumber || "") ||
+    aadharNumber.replace(/\s/g, "") !== (onboardingRecord?.aadharNumber || "") ||
+    panNumber !== (onboardingRecord?.panNumber || "") ||
+    bankAccount !== (onboardingRecord?.bankAccountNumber || "") ||
+    bankIfsc !== (onboardingRecord?.bankIfsc || "") ||
+    bankName !== (onboardingRecord?.bankName || "") ||
+    bankHolder !== (onboardingRecord?.bankHolderName || "") ||
+    Object.keys(docFiles).length > 0;
+
   const extraFor = (key) => {
     if (key === "aadhar") {
       return (
@@ -128,7 +139,7 @@ export function RequiredDocumentsCard({
               <input
                 type="text"
                 value={pfNumber}
-                disabled={isApproved || (docsSubmitted && !hasRejectedDocs)}
+                disabled={isApproved}
                 onChange={(e) => setPfNumber(e.target.value.replace(/\D/g, ""))}
                 placeholder="Enter PF Number"
                 className="rd-field-input"
@@ -141,7 +152,7 @@ export function RequiredDocumentsCard({
               <input
                 type="text"
                 value={esiNumber}
-                disabled={isApproved || (docsSubmitted && !hasRejectedDocs)}
+                disabled={isApproved}
                 onChange={(e) => setEsiNumber(e.target.value.replace(/\D/g, ""))}
                 placeholder="Enter ESI Number"
                 className="rd-field-input"
@@ -154,7 +165,7 @@ export function RequiredDocumentsCard({
         </div>
 
         {/* Document Submit Bottom Status / Action */}
-        {docsSubmitted && !hasRejectedDocs ? (
+        {docsSubmitted && !hasRejectedDocs && !hasUnsavedChanges ? (
           isApproved ? (
             <div className="rd-banner--verified" style={{ display: "flex", alignItems: "center", gap: 10, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: 14, marginTop: 8 }}>
               <CheckCircle size={20} color="#16a34a" className="rd-banner-icon" />
@@ -187,12 +198,12 @@ export function RequiredDocumentsCard({
                 One or more documents were rejected — re-upload them above, then submit again.
               </div>
             )}
-            <button
+             <button
               onClick={handleSubmitDocs}
               className="rd-btn-submit"
               disabled={docsSubmitting}
             >
-              {docsSubmitting ? "Submitting…" : docsSubmitted ? "Resubmit Documents" : "Submit Documents"}
+              {docsSubmitting ? "Submitting…" : docsSubmitted ? (hasRejectedDocs ? "Resubmit Documents" : "Save Changes") : "Submit Documents"}
             </button>
           </div>
         )}
