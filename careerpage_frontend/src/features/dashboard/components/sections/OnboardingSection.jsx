@@ -85,6 +85,7 @@ export function OnboardingSection({
       {/* Required Documents Checklist - visible after acceptance */}
       {offerAccepted && (
         <RequiredDocumentsCard
+          onboardingRecord={onboardingRecord}
           docs={docs}
           setDocs={setDocs}
           docUrls={docUrls}

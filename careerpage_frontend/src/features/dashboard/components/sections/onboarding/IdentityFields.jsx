@@ -4,7 +4,7 @@ import "../../css/sections/onboarding/IdentityFields.css";
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 
-export function AadhaarField({ aadharNumber, setAadharNumber, docsSubmitted }) {
+export function AadhaarField({ aadharNumber, setAadharNumber, disabled }) {
   const digits = aadharNumber.replace(/\s/g, "");
   return (
     <div className="idf-container">
@@ -15,7 +15,7 @@ export function AadhaarField({ aadharNumber, setAadharNumber, docsSubmitted }) {
         <input
           type="text"
           value={aadharNumber}
-          disabled={docsSubmitted}
+          disabled={disabled}
           onChange={(e) => {
             const rawVal = e.target.value.replace(/\D/g, "").slice(0, 12);
             const formatted = rawVal.replace(/(\d{4})(?=\d)/g, "$1 ");
@@ -42,7 +42,7 @@ export function AadhaarField({ aadharNumber, setAadharNumber, docsSubmitted }) {
   );
 }
 
-export function PanField({ panNumber, setPanNumber, docsSubmitted }) {
+export function PanField({ panNumber, setPanNumber, disabled }) {
   return (
     <div className="idf-container">
       <label className="idf-label">
@@ -52,7 +52,7 @@ export function PanField({ panNumber, setPanNumber, docsSubmitted }) {
         <input
           type="text"
           value={panNumber}
-          disabled={docsSubmitted}
+          disabled={disabled}
           onChange={(e) => {
             const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
             setPanNumber(val);
@@ -87,7 +87,7 @@ export function BankDetailsField({
   setBankIfsc,
   bankName,
   setBankName,
-  docsSubmitted,
+  disabled,
 }) {
   return (
     <div className="idf-container">
@@ -99,7 +99,7 @@ export function BankDetailsField({
           <input
             type="text"
             value={bankHolder}
-            disabled={docsSubmitted}
+            disabled={disabled}
             onChange={(e) => setBankHolder(e.target.value)}
             placeholder="Account Holder's Name"
             className="idf-input"
@@ -109,7 +109,7 @@ export function BankDetailsField({
           <input
             type="text"
             value={bankAccount}
-            disabled={docsSubmitted}
+            disabled={disabled}
             onChange={(e) => setBankAccount(e.target.value.replace(/\D/g, ""))}
             placeholder="Account Number"
             className="idf-input"
@@ -119,7 +119,7 @@ export function BankDetailsField({
           <input
             type="text"
             value={bankIfsc}
-            disabled={docsSubmitted}
+            disabled={disabled}
             onChange={(e) => setBankIfsc(e.target.value.toUpperCase())}
             placeholder="IFSC Code"
             className="idf-input"
@@ -129,7 +129,7 @@ export function BankDetailsField({
           <input
             type="text"
             value={bankName}
-            disabled={docsSubmitted}
+            disabled={disabled}
             onChange={(e) => setBankName(e.target.value)}
             placeholder="Bank Name"
             className="idf-input"

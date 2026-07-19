@@ -21,6 +21,7 @@ const OPTIONAL_DOCS = [
 ];
 
 export function RequiredDocumentsCard({
+  onboardingRecord,
   docs,
   setDocs,
   docUrls,
@@ -54,19 +55,28 @@ export function RequiredDocumentsCard({
     (doc) => docStatus[doc.key] === "rejected"
   );
 
+  const allCompulsoryVerified = COMPULSORY_DOCS.every(
+    (doc) => docStatus[doc.key] === "verified"
+  );
+  const isApproved = !!onboardingRecord?.docsVerified || allCompulsoryVerified;
+
   const extraFor = (key) => {
     if (key === "aadhar") {
       return (
         <AadhaarField
           aadharNumber={aadharNumber}
           setAadharNumber={setAadharNumber}
-          docsSubmitted={docsSubmitted}
+          disabled={isApproved || (docsSubmitted && docStatus["aadhar"] !== "rejected")}
         />
       );
     }
     if (key === "pan") {
       return (
-        <PanField panNumber={panNumber} setPanNumber={setPanNumber} docsSubmitted={docsSubmitted} />
+        <PanField
+          panNumber={panNumber}
+          setPanNumber={setPanNumber}
+          disabled={isApproved || (docsSubmitted && docStatus["pan"] !== "rejected")}
+        />
       );
     }
     if (key === "bank_details") {
@@ -80,7 +90,7 @@ export function RequiredDocumentsCard({
           setBankIfsc={setBankIfsc}
           bankName={bankName}
           setBankName={setBankName}
-          docsSubmitted={docsSubmitted}
+          disabled={isApproved || (docsSubmitted && docStatus["bank_details"] !== "rejected")}
         />
       );
     }
@@ -118,7 +128,7 @@ export function RequiredDocumentsCard({
               <input
                 type="text"
                 value={pfNumber}
-                disabled={docsSubmitted}
+                disabled={isApproved || (docsSubmitted && !hasRejectedDocs)}
                 onChange={(e) => setPfNumber(e.target.value.replace(/\D/g, ""))}
                 placeholder="Enter PF Number"
                 className="rd-field-input"
@@ -131,7 +141,7 @@ export function RequiredDocumentsCard({
               <input
                 type="text"
                 value={esiNumber}
-                disabled={docsSubmitted}
+                disabled={isApproved || (docsSubmitted && !hasRejectedDocs)}
                 onChange={(e) => setEsiNumber(e.target.value.replace(/\D/g, ""))}
                 placeholder="Enter ESI Number"
                 className="rd-field-input"
@@ -145,17 +155,31 @@ export function RequiredDocumentsCard({
 
         {/* Document Submit Bottom Status / Action */}
         {docsSubmitted && !hasRejectedDocs ? (
-          <div className="rd-banner--review">
-            <Clock size={20} color="#b45309" className="rd-banner-icon" />
-            <div>
-              <div className="rd-banner-title--review">
-                Documents Under Review
-              </div>
-              <div className="rd-banner-text">
-                Your documents have been submitted and are currently under review by HR.
+          isApproved ? (
+            <div className="rd-banner--verified" style={{ display: "flex", alignItems: "center", gap: 10, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: 14, marginTop: 8 }}>
+              <CheckCircle size={20} color="#16a34a" className="rd-banner-icon" />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#166534" }}>
+                  Documents Verified
+                </div>
+                <div className="rd-banner-text" style={{ color: "#14532d" }}>
+                  Your documents have been verified and approved by HR.
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="rd-banner--review">
+              <Clock size={20} color="#b45309" className="rd-banner-icon" />
+              <div>
+                <div className="rd-banner-title--review">
+                  Documents Under Review
+                </div>
+                <div className="rd-banner-text">
+                  Your documents have been submitted and are currently under review by HR.
+                </div>
+              </div>
+            </div>
+          )
         ) : (
           <div className="rd-footer">
             {docsSubmitted && hasRejectedDocs && (
