@@ -871,13 +871,14 @@ export function CandidateDashboard({
       await updateUserProfile(
         {
           firstName: profile.name, lastName: profile.lastName, phone: profile.phone,
+          email: profile.email,
           location: profile.location, education: profile.highestEducation, degreeName: profile.degreeName,
           professionalQualification: profile.professionalQualification,
           professionalQualificationOther: profile.professionalQualificationOther,
           experience: profile.experience, salary: profile.salary,
-          extracurricular: profile.extracurricular, extracurricularOther: profile.extracurricularOther,
           selectedRoles: profile.roles, selectedSkills: profile.skills,
           linkedin: profile.linkedin, portfolio: profile.portfolio,
+          extracurricular: profile.extracurricular, extracurricularOther: profile.extracurricularOther,
         },
         resumeFileObj,
       );

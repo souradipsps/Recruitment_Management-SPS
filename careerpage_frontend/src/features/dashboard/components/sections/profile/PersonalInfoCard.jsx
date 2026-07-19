@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { CheckCircle } from "lucide-react";
 import { capitalizeWords } from "../../../../../mockData/dashboardMockData";
+import { toast } from "sonner";
+import { sendChangeEmailOtp, verifyChangeEmailOtp } from "../../../../careerpage/services/authService";
 import "../../css/sections/profile/PersonalInfoCard.css";
 
 export function PersonalInfoCard({ profile, setProfile, sectionRef }) {
@@ -11,22 +13,50 @@ export function PersonalInfoCard({ profile, setProfile, sectionRef }) {
   const [enteredOtp, setEnteredOtp] = useState("");
   const [otpError, setOtpError] = useState("");
   const [emailVerified, setEmailVerified] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
 
-  const handleSendOtp = () => {
-    if (newEmail) {
+  const handleSendOtp = async () => {
+    if (!newEmail) {
+      setOtpError("Please enter a new email address.");
+      return;
+    }
+    if (!newEmail.includes("@")) {
+      setOtpError("Please enter a valid email address.");
+      return;
+    }
+    setSendingOtp(true);
+    setOtpError("");
+    try {
+      await sendChangeEmailOtp({ email: newEmail });
       setOtpSent(true);
-      setOtpError("");
+      toast.success("OTP sent to your new email address.");
+    } catch (err) {
+      setOtpError(err.message || "Failed to send OTP. Please try again.");
+      toast.error(err.message || "Failed to send OTP.");
+    } finally {
+      setSendingOtp(false);
     }
   };
 
-  const handleVerifyOtp = () => {
-    if (enteredOtp.length > 0) {
+  const handleVerifyOtp = async () => {
+    if (enteredOtp.length !== 6) {
+      setOtpError("Please enter the 6-digit OTP.");
+      return;
+    }
+    setVerifyingOtp(true);
+    setOtpError("");
+    try {
+      await verifyChangeEmailOtp({ email: newEmail, otp: enteredOtp });
       setProfile((prev) => ({ ...prev, email: newEmail }));
       setEmailVerified(true);
       setEmailEdit(false);
-      setOtpError("");
-    } else {
-      setOtpError("Please enter the OTP.");
+      toast.success("Email verified! Click 'Save Changes' at the bottom to update.");
+    } catch (err) {
+      setOtpError(err.message || "Invalid OTP. Please try again.");
+      toast.error(err.message || "Verification failed.");
+    } finally {
+      setVerifyingOtp(false);
     }
   };
 
@@ -110,20 +140,18 @@ export function PersonalInfoCard({ profile, setProfile, sectionRef }) {
                 {!otpSent ? (
                   <button
                     onClick={handleSendOtp}
+                    disabled={sendingOtp}
                     className="pic-btn-primary"
                   >
-                    Send OTP
+                    {sendingOtp ? "Sending..." : "Send OTP"}
                   </button>
                 ) : (
                   <button
-                    onClick={() => {
-                      setOtpSent(false);
-                      setEnteredOtp("");
-                      setOtpError("");
-                    }}
+                    onClick={handleSendOtp}
+                    disabled={sendingOtp}
                     className="pic-btn-secondary"
                   >
-                    Resend
+                    {sendingOtp ? "Sending..." : "Resend"}
                   </button>
                 )}
               </div>
@@ -139,15 +167,17 @@ export function PersonalInfoCard({ profile, setProfile, sectionRef }) {
                       placeholder="Enter 6-digit OTP"
                       maxLength={6}
                       inputMode="numeric"
+                      disabled={verifyingOtp}
                       className={`pic-input pic-input--otp ${
                         otpError ? "pic-input--otp-error" : ""
                       }`}
                     />
                     <button
                       onClick={handleVerifyOtp}
+                      disabled={verifyingOtp}
                       className="pic-btn-verify"
                     >
-                      Verify OTP
+                      {verifyingOtp ? "Verifying..." : "Verify OTP"}
                     </button>
                   </div>
                   {otpError && <div className="pic-error-msg">{otpError}</div>}

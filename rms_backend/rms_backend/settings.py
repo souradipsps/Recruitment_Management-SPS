@@ -280,6 +280,7 @@ elif USE_SMTP_EMAIL:
     EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")  # Use a Gmail App Password
     DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="no-reply@southpoint.edu")
 else:
-    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+    EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
+    EMAIL_FILE_PATH = BASE_DIR / "sent_emails"
 
 

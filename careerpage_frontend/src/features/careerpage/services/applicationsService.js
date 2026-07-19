@@ -31,7 +31,7 @@ function combineQualification(education, degreeName) {
 export async function updateUserProfile(profileFields, resumeFile = null) {
   const token = requireAuthToken();
   const {
-    firstName, lastName, phone,
+    firstName, lastName, phone, email,
     location, education, degreeName, professionalQualification, professionalQualificationOther,
     experience, salary, extracurricular, extracurricularOther,
     selectedRoles, selectedSkills, linkedin, portfolio,
@@ -62,6 +62,7 @@ export async function updateUserProfile(profileFields, resumeFile = null) {
     if (firstName !== undefined) formData.append("first_name", firstName);
     if (lastName !== undefined) formData.append("last_name", lastName);
     if (phone !== undefined) formData.append("phone", phone);
+    if (email !== undefined) formData.append("email", email);
     formData.append("profile", JSON.stringify(profile));
     formData.append("resume", resumeFile);
 
@@ -77,7 +78,7 @@ export async function updateUserProfile(profileFields, resumeFile = null) {
         "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ first_name: firstName, last_name: lastName, phone, profile }),
+      body: JSON.stringify({ first_name: firstName, last_name: lastName, phone, email, profile }),
     });
   }
 

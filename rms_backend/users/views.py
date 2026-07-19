@@ -52,7 +52,6 @@ class LogoutView(APIView):
 class MeView(APIView):
     """GET/PUT /api/auth/me/ — current user profile"""
     permission_classes = [IsAuthenticated]
-
     def get(self, request):
         serializer = UserSerializer(request.user)
         data = serializer.data
@@ -66,6 +65,20 @@ class MeView(APIView):
 
     def put(self, request):
         user = request.user
+        email = request.data.get("email")
+        if email:
+            email = email.strip().lower()
+            if email != user.email:
+                is_verified = cache.get(f"change_email_verified_{user.id}_{email}")
+                if not is_verified:
+                    return Response({"error": "Email verification is required before updating."}, status=status.HTTP_400_BAD_REQUEST)
+                if User.objects.filter(email=email).exclude(id=user.id).exists():
+                    return Response({"error": "A user with this email address already exists."}, status=status.HTTP_400_BAD_REQUEST)
+                user.email = email
+                user.username = email
+                cache.delete(f"change_email_otp_{user.id}_{email}")
+                cache.delete(f"change_email_verified_{user.id}_{email}")
+
         for field in ["first_name", "last_name", "phone"]:
             if field in request.data:
                 setattr(user, field, request.data[field])
@@ -248,6 +261,84 @@ class ResetPasswordView(APIView):
             return Response({"message": "Password reset successfully."}, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response({"error": "User does not exist."}, status=status.HTTP_404_NOT_FOUND)
+
+class ChangeEmailSendOTPView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        email = request.data.get("email")
+        if not email:
+            return Response({"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        email = email.strip().lower()
+        if "@" not in email:
+            return Response({"error": "Enter a valid email address."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if User.objects.filter(email=email).exclude(id=request.user.id).exists():
+            return Response({"error": "A user with this email address already exists."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        otp = str(random.randint(100000, 999999))
+        cache.set(f"change_email_otp_{request.user.id}_{email}", otp, timeout=300)
+
+        # Write to debug file and print to console for development and local testing
+        try:
+            debug_file = settings.BASE_DIR / "otp_debug.txt"
+            with open(debug_file, "w", encoding="utf-8") as f:
+                f.write(f"Email: {email}\nOTP: {otp}\n")
+            print("\n" + "="*50)
+            print(f"DEBUG CHANGE EMAIL OTP FOR {email}: {otp}")
+            print(f"Written to: {debug_file}")
+            print("="*50 + "\n")
+        except Exception as debug_err:
+            print(f"Failed to write debug OTP file: {debug_err}")
+        
+        subject = "Change Email OTP - South Point School"
+        message = f"""Dear User,
+
+You have requested to change your email address. 
+
+Your 6-digit One-Time Password (OTP) is:
+
+{otp}
+
+This OTP is valid for 5 minutes. Please do not share this OTP with anyone.
+
+Best regards,
+South Point School Recruitment Team"""
+        
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+            return Response({"message": "OTP sent successfully."}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": f"Failed to send email: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ChangeEmailVerifyOTPView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        email = request.data.get("email")
+        otp = request.data.get("otp")
+        if not email or not otp:
+            return Response({"error": "Email and OTP are required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        email = email.strip().lower()
+        cached_otp = cache.get(f"change_email_otp_{request.user.id}_{email}")
+        
+        if not cached_otp:
+            return Response({"error": "OTP has expired or does not exist. Please request a new one."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if cached_otp != str(otp).strip():
+            return Response({"error": "Invalid OTP. Please try again."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        cache.set(f"change_email_verified_{request.user.id}_{email}", True, timeout=300)
+        return Response({"message": "OTP verified successfully."}, status=status.HTTP_200_OK)
 
 
 from django.http import HttpResponse, Http404

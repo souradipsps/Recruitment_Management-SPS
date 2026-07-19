@@ -129,3 +129,53 @@ export async function resetPassword({ email, otp, newPassword }) {
   // TODO: POST `${BASE_URL}/auth/reset-password`
   return { success: true };
 }
+
+/**
+ * Send an OTP to verify the new email address.
+ * @param {{ email: string }} data
+ * @returns {Promise<{ message: string }>}
+ */
+export async function sendChangeEmailOtp({ email }) {
+  const token = localStorage.getItem("accessToken");
+  if (!token) throw new Error("You must be logged in to do this. Please log in and try again.");
+
+  const res = await fetch(`${BASE_URL}/auth/change-email/send-otp/`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseApiError(data, "Failed to send OTP. Please try again."));
+  }
+  return data;
+}
+
+/**
+ * Verify the OTP sent to the new email address.
+ * @param {{ email: string, otp: string }} data
+ * @returns {Promise<{ message: string }>}
+ */
+export async function verifyChangeEmailOtp({ email, otp }) {
+  const token = localStorage.getItem("accessToken");
+  if (!token) throw new Error("You must be logged in to do this. Please log in and try again.");
+
+  const res = await fetch(`${BASE_URL}/auth/change-email/verify-otp/`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, otp }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseApiError(data, "Invalid OTP or verification failed. Please try again."));
+  }
+  return data;
+}
