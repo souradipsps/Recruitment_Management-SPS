@@ -168,6 +168,21 @@ export default function Onboarding({ jobPostings = [], jobApplications = [], gen
     return () => { active = false; };
   }, []);
 
+  // Refresh onboarding records whenever HR opens a document preview — a candidate
+  // may have re-uploaded a rejected document since the list last loaded, which
+  // clears that doc's key out of rejected_docs server-side (see
+  // OnboardingViewSet.perform_update). Without this refetch the Verify/Reject
+  // buttons here would keep showing the stale "Rejected" state until a full
+  // page reload, instead of going back to reactive tick/cross buttons.
+  useEffect(() => {
+    if (!previewDoc) return;
+    let active = true;
+    fetchOnboardingRecords()
+      .then((data) => { if (active) setRecords(data); })
+      .catch(() => { /* keep showing the last known list on a refresh failure */ });
+    return () => { active = false; };
+  }, [previewDoc?.recordId, previewDoc?.type]);
+
   // Real applications (GET /api/applications/, /api/general-applications/) and
   // offers (GET /api/offers/) — same data the Applications and Offer Management
   // screens use — matched by candidate name since OnboardingRecord doesn't carry

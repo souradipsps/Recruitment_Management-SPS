@@ -50,6 +50,10 @@ export function RequiredDocumentsCard({
 }) {
   const rowProps = { docs, setDocs, docUrls, setDocUrls, setDocFiles, docStatus, docsSubmitted, startDocCamera };
 
+  const hasRejectedDocs = [...COMPULSORY_DOCS, ...OPTIONAL_DOCS].some(
+    (doc) => docStatus[doc.key] === "rejected"
+  );
+
   const extraFor = (key) => {
     if (key === "aadhar") {
       return (
@@ -140,7 +144,7 @@ export function RequiredDocumentsCard({
         </div>
 
         {/* Document Submit Bottom Status / Action */}
-        {docsSubmitted ? (
+        {docsSubmitted && !hasRejectedDocs ? (
           <div className="rd-banner--review">
             <Clock size={20} color="#b45309" className="rd-banner-icon" />
             <div>
@@ -154,12 +158,17 @@ export function RequiredDocumentsCard({
           </div>
         ) : (
           <div className="rd-footer">
+            {docsSubmitted && hasRejectedDocs && (
+              <div className="rd-banner-text rd-banner-text--rejected">
+                One or more documents were rejected — re-upload them above, then submit again.
+              </div>
+            )}
             <button
               onClick={handleSubmitDocs}
               className="rd-btn-submit"
               disabled={docsSubmitting}
             >
-              {docsSubmitting ? "Submitting…" : "Submit Documents"}
+              {docsSubmitting ? "Submitting…" : docsSubmitted ? "Resubmit Documents" : "Submit Documents"}
             </button>
           </div>
         )}

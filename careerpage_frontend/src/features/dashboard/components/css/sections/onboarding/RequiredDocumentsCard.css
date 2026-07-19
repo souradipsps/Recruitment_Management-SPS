@@ -122,8 +122,15 @@
 /* ── Footer ──────────────────────────────────────────────────────────────── */
 .rd-footer {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
   margin-top: 8px;
+}
+
+.rd-banner-text--rejected {
+  color: #991b1b;
+  font-weight: 600;
 }
 
 .rd-btn-submit {

@@ -48,6 +48,10 @@ export function DocumentRow({
 }) {
   const uploaded = docs[docKey];
   const verif = docsSubmitted && uploaded ? docStatus[docKey] || "pending" : null;
+  // A rejected doc stays editable even after the form has otherwise been
+  // locked by submission, so the candidate can fix whatever HR flagged.
+  const isRejected = verif === "rejected";
+  const canEdit = !docsSubmitted || isRejected;
 
   return (
     <div className="dr-row-container">
@@ -76,33 +80,64 @@ export function DocumentRow({
               >
                 <Eye size={12} /> View
               </button>
-              {!docsSubmitted && (
-                <button
-                  onClick={() => {
-                    setDocs((prev) => {
-                      const copy = { ...prev };
-                      delete copy[docKey];
-                      return copy;
-                    });
-                    setDocUrls((prev) => {
-                      const copy = { ...prev };
-                      delete copy[docKey];
-                      return copy;
-                    });
-                    setDocFiles?.((prev) => {
-                      const copy = { ...prev };
-                      delete copy[docKey];
-                      return copy;
-                    });
-                  }}
-                  className="dr-btn-remove"
-                  title="Remove document"
-                >
-                  <Trash2 size={14} />
-                </button>
+              {canEdit && (
+                <>
+                  <label className="dr-pointer-label">
+                    <div className="dr-btn-upload-wrap">
+                      <Upload size={12} /> {isRejected ? "Re-upload" : "Replace"}
+                    </div>
+                    <input
+                      type="file"
+                      accept={accept}
+                      className="dr-file-input"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) {
+                          const url = URL.createObjectURL(f);
+                          setDocs((prev) => ({ ...prev, [docKey]: f.name }));
+                          setDocUrls((prev) => ({ ...prev, [docKey]: url }));
+                          setDocFiles?.((prev) => ({ ...prev, [docKey]: f }));
+                        }
+                      }}
+                    />
+                  </label>
+                  {isRejected && (
+                    <button
+                      onClick={() => startDocCamera(docKey)}
+                      className="dr-btn-camera"
+                    >
+                      <Camera size={12} /> Take Photo
+                    </button>
+                  )}
+                  {!docsSubmitted && (
+                    <button
+                      onClick={() => {
+                        setDocs((prev) => {
+                          const copy = { ...prev };
+                          delete copy[docKey];
+                          return copy;
+                        });
+                        setDocUrls((prev) => {
+                          const copy = { ...prev };
+                          delete copy[docKey];
+                          return copy;
+                        });
+                        setDocFiles?.((prev) => {
+                          const copy = { ...prev };
+                          delete copy[docKey];
+                          return copy;
+                        });
+                      }}
+                      className="dr-btn-remove"
+                      title="Remove document"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </>
               )}
             </>
-          ) : !docsSubmitted ? (
+          ) : canEdit ? (
             <>
               <label className="dr-pointer-label">
                 <div className="dr-btn-upload-wrap">

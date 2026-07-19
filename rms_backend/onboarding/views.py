@@ -82,6 +82,21 @@ class OfferViewSet(viewsets.ModelViewSet):
 class OnboardingViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
+    # Same doc-key <-> file-field mapping the frontend uses (see
+    # careerpage_frontend's offersService.js / CandidateDashboard.jsx).
+    DOC_FIELD_TO_KEY = {
+        "aadhar_card": "aadhar",
+        "pan_card": "pan",
+        "bank_passbook": "bank_details",
+        "passport_photo": "photo",
+        "driving_license": "driving_license",
+        "class10_marksheet": "class10",
+        "class12_marksheet": "class12",
+        "degree_certificate": "degree",
+        "experience_certificate": "experience_cert",
+        "professional_certificate": "prof_cert",
+    }
+
     def get_queryset(self):
         if self.request.user.role == "candidate":
             qs = OnboardingRecord.objects.filter(candidate=self.request.user).select_related("offer", "candidate", "candidate__profile")
@@ -109,6 +124,27 @@ class OnboardingViewSet(viewsets.ModelViewSet):
         if self.action in ["create", "destroy", "tasks"]:
             return [IsHRAdmin()]
         return [IsAuthenticated()]
+
+    def perform_update(self, serializer):
+        # A candidate re-uploading a document that HR previously rejected
+        # should clear it out of rejected_docs, so it goes back to "pending"
+        # review instead of staying stuck showing "Rejected" forever.
+        instance = serializer.instance
+        reuploaded_keys = {
+            key for field, key in self.DOC_FIELD_TO_KEY.items()
+            if field in self.request.FILES
+        }
+        if reuploaded_keys:
+            import json
+            try:
+                rejected = json.loads(instance.rejected_docs or "[]")
+            except (TypeError, ValueError):
+                rejected = []
+            remaining = [k for k in rejected if k not in reuploaded_keys]
+            if len(remaining) != len(rejected):
+                serializer.save(rejected_docs=json.dumps(remaining))
+                return
+        serializer.save()
 
     @action(detail=True, methods=["patch"], permission_classes=[IsHRAdmin])
     def tasks(self, request, pk=None):
