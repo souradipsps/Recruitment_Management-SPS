@@ -567,7 +567,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
               const evaluations = getDisplayEvaluations(interview);
               const totalScore = computeTotalScore(evaluations);
               const isCompleted = interview.status === "Completed";
-              const isExpanded = expandedCards[cardKey] ?? evaluations.length > 0;
+              const isExpanded = expandedCards[cardKey] ?? false;
               const isBeingEvaluated = selectedInterview && selectedInterview.candidate === interview.candidate && selectedInterview.role === interview.role && selectedInterview.round === interview.round;
 
               if (isMobile) {

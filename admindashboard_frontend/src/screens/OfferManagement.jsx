@@ -34,6 +34,7 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [], i
   const [genSubmitting, setGenSubmitting] = useState(false);
   const [selectedPostingId, setSelectedPostingId] = useState(null);
   const [selectedOfferForModal, setSelectedOfferForModal] = useState(null);
+  const [openEvaluations, setOpenEvaluations] = useState({});
   const [historyCandidate, setHistoryCandidate] = useState(null);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [filterActiveIndex, setFilterActiveIndex] = useState(0);
@@ -866,140 +867,214 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [], i
                             </div>
 
                             {/* Per-Panelist Evaluation Scorecards */}
-                            {(roundInv.evaluations || []).length > 0 && (
-                              <div style={{ marginTop: 20, borderTop: "1.5px solid rgba(0,0,0,0.06)", paddingTop: 18 }}>
-                                <div style={{ 
-                                  fontSize: 10, 
-                                  fontWeight: 800, 
-                                  color: T.inkLight, 
-                                  textTransform: "uppercase", 
-                                  letterSpacing: "0.08em", 
-                                  marginBottom: 14,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 6
-                                }}>
-                                  <span>📋</span> Panelist Evaluations ({roundInv.evaluations.length})
-                                </div>
-                                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                                  {roundInv.evaluations.map((ev, evIdx) => {
-                                    const pName = ev.panelistId != null
-                                      ? (panelists.find((p) => p.backendId === ev.panelistId)?.name || `Panelist #${ev.panelistId}`)
-                                      : `Panelist ${evIdx + 1}`;
-                                    const criteriaEntries = Object.entries(ev.criteria || {});
-                                    const evScore = ev.overallScore ?? (criteriaEntries.length > 0 ? Math.round((criteriaEntries.reduce((s, [, v]) => s + v, 0) / criteriaEntries.length) * 20) : null);
+                            {(roundInv.evaluations || []).length > 0 && (() => {
+                              const evalKey = `offer_${roundInv.id || roundInv.candidate}_round_${roundInv.round}`;
+                              const isExpanded = openEvaluations[evalKey] ?? false;
 
-                                    const REC_COLORS = {
-                                      "Strong Hire": { bg: "#ECFDF5", color: "#059669" },
-                                      "Hire": { bg: "#F0FDF4", color: "#16A34A" },
-                                      "Hold": { bg: "#FFFBEB", color: "#D97706" },
-                                      "Reject": { bg: "#FEF2F2", color: "#DC2626" },
-                                      "Selected": { bg: "#ECFDF5", color: "#059669" },
-                                      "Rejected": { bg: "#FEF2F2", color: "#DC2626" },
-                                      "On Hold": { bg: "#FFFBEB", color: "#D97706" },
-                                      "Next Round": { bg: "#F0F9FF", color: "#0284C7" },
-                                    };
-                                    const recStyle = REC_COLORS[ev.rec] || { bg: "#F8FAFC", color: T.inkLight };
+                              return (
+                                <div style={{ marginTop: 20, borderTop: "1.5px solid rgba(0,0,0,0.06)", paddingTop: 18 }}>
+                                  <button 
+                                    type="button"
+                                    onClick={() => setOpenEvaluations((prev) => ({ ...prev, [evalKey]: !isExpanded }))}
+                                    style={{ 
+                                      width: "100%", 
+                                      background: "none", 
+                                      border: "none", 
+                                      padding: 0,
+                                      marginBottom: isExpanded ? 14 : 0, 
+                                      display: "flex", 
+                                      justifyContent: "space-between", 
+                                      alignItems: "center", 
+                                      cursor: "pointer", 
+                                      textAlign: "left",
+                                      outline: "none"
+                                    }}
+                                  >
+                                    <div style={{ 
+                                      fontSize: 10, 
+                                      fontWeight: 800, 
+                                      color: T.inkLight, 
+                                      textTransform: "uppercase", 
+                                      letterSpacing: "0.08em", 
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 6
+                                    }}>
+                                      <span>📋</span> Panelist Evaluations ({roundInv.evaluations.length})
+                                    </div>
+                                    <span style={{ 
+                                      fontSize: 14, 
+                                      color: T.inkLight, 
+                                      transition: "transform 0.2s ease", 
+                                      transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                                      display: "inline-block"
+                                    }}>
+                                      ▾
+                                    </span>
+                                  </button>
 
-                                    return (
-                                      <div 
-                                        key={evIdx} 
-                                        style={{ 
-                                          background: "#ffffff", 
-                                          borderRadius: 16, 
-                                          border: "1px solid #ECE7E1", 
-                                          borderLeft: `5px solid ${recStyle.color}`,
-                                          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.02)",
-                                          overflow: "hidden",
-                                          padding: "16px 20px"
-                                        }}
-                                      >
-                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
-                                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                                            <div style={{ 
-                                              width: 36, 
-                                              height: 36, 
-                                              borderRadius: "50%", 
-                                              background: `linear-gradient(135deg, ${T.primary} 0%, ${T.primaryDark} 100%)`, 
-                                              color: "#ffffff", 
-                                              display: "flex", 
-                                              alignItems: "center", 
-                                              justifyContent: "center", 
-                                              fontWeight: 800, 
-                                              fontSize: 12, 
-                                              flexShrink: 0,
-                                              boxShadow: "0 3px 8px rgba(114, 16, 42, 0.15)"
-                                            }}>
-                                              {pName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-                                            </div>
-                                            <div>
-                                              <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink, letterSpacing: "-0.01em" }}>{pName}</div>
-                                              {ev.submittedAt && (
-                                                <div style={{ fontSize: 10, color: T.inkFaint, marginTop: 1, display: "flex", alignItems: "center", gap: 4 }}>
-                                                  <span>📅</span>
-                                                  {new Date(ev.submittedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                                  {isExpanded && (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                                      {roundInv.evaluations.map((ev, evIdx) => {
+                                        const pName = ev.panelistId != null
+                                          ? (panelists.find((p) => p.backendId === ev.panelistId)?.name || `Panelist #${ev.panelistId}`)
+                                          : `Panelist ${evIdx + 1}`;
+                                        const criteriaEntries = Object.entries(ev.criteria || {});
+                                        const evScore = ev.overallScore ?? (criteriaEntries.length > 0 ? Math.round((criteriaEntries.reduce((s, [, v]) => s + v, 0) / criteriaEntries.length) * 20) : null);
+
+                                        const REC_COLORS = {
+                                          "Strong Hire": { bg: "#ECFDF5", color: "#059669" },
+                                          "Hire": { bg: "#F0FDF4", color: "#16A34A" },
+                                          "Hold": { bg: "#FFFBEB", color: "#D97706" },
+                                          "Reject": { bg: "#FEF2F2", color: "#DC2626" },
+                                          "Selected": { bg: "#ECFDF5", color: "#059669" },
+                                          "Rejected": { bg: "#FEF2F2", color: "#DC2626" },
+                                          "On Hold": { bg: "#FFFBEB", color: "#D97706" },
+                                          "Next Round": { bg: "#F0F9FF", color: "#0284C7" },
+                                        };
+                                        const recStyle = REC_COLORS[ev.rec] || { bg: "#F8FAFC", color: T.inkLight };
+
+                                        return (
+                                          <div 
+                                            key={evIdx} 
+                                            style={{ 
+                                              background: "#ffffff", 
+                                              borderRadius: 16, 
+                                              border: "1px solid #ECE7E1", 
+                                              borderLeft: `5px solid ${recStyle.color}`,
+                                              boxShadow: "0 4px 20px rgba(0, 0, 0, 0.02)",
+                                              overflow: "hidden",
+                                              padding: "16px 20px"
+                                            }}
+                                          >
+                                            {/* Panelist Header */}
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+                                              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                                <div style={{ 
+                                                  width: 36, 
+                                                  height: 36, 
+                                                  borderRadius: "50%", 
+                                                  background: `linear-gradient(135deg, ${T.primary} 0%, ${T.primaryDark} 100%)`, 
+                                                  color: "#ffffff", 
+                                                  display: "flex", 
+                                                  alignItems: "center", 
+                                                  justifyContent: "center", 
+                                                  fontWeight: 800, 
+                                                  fontSize: 12, 
+                                                  flexShrink: 0,
+                                                  boxShadow: "0 3px 8px rgba(114, 16, 42, 0.15)"
+                                                }}>
+                                                  {pName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
                                                 </div>
-                                              )}
-                                            </div>
-                                          </div>
-
-                                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                            {ev.rec && ev.rec !== "—" && (
-                                              <span style={{ 
-                                                fontSize: 10.5, 
-                                                fontWeight: 700, 
-                                                borderRadius: 100, 
-                                                padding: "4px 12px", 
-                                                background: recStyle.bg, 
-                                                color: recStyle.color, 
-                                                border: `1px solid ${recStyle.color}1A`,
-                                                display: "inline-flex",
-                                                alignItems: "center",
-                                                gap: 4
-                                              }}>
-                                                {ev.rec}
-                                              </span>
-                                            )}
-                                            {evScore !== null && (
-                                              <span style={{ 
-                                                fontSize: 11, 
-                                                fontWeight: 800, 
-                                                color: evScore >= 80 ? T.green : evScore >= 60 ? T.accentDark : T.red,
-                                                background: evScore >= 80 ? T.greenLight : evScore >= 60 ? T.accentLight : T.redLight,
-                                                padding: "4px 10px", 
-                                                borderRadius: 100,
-                                                border: `1px solid ${evScore >= 80 ? "#A7F3D0" : evScore >= 60 ? T.border : "#FCA5A5"}`
-                                              }}>
-                                                ★ {evScore}
-                                              </span>
-                                            )}
-                                          </div>
-                                        </div>
-
-                                        {/* Criteria scores grid */}
-                                        {criteriaEntries.length > 0 && (
-                                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, background: T.canvas, padding: 12, borderRadius: 10, marginBottom: 12, border: `1px solid ${T.border}` }}>
-                                            {criteriaEntries.map(([cName, cVal]) => (
-                                              <div key={cName} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11 }}>
-                                                <span style={{ color: T.inkLight }}>{cName}</span>
-                                                <strong style={{ color: T.ink }}>{cVal}/5</strong>
+                                                <div>
+                                                  <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink, letterSpacing: "-0.01em" }}>{pName}</div>
+                                                  {ev.submittedAt && (
+                                                    <div style={{ fontSize: 10, color: T.inkFaint, marginTop: 1, display: "flex", alignItems: "center", gap: 4 }}>
+                                                      <span>📅</span>
+                                                      {new Date(ev.submittedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                                                    </div>
+                                                  )}
+                                                </div>
                                               </div>
-                                            ))}
-                                          </div>
-                                        )}
+                                              
+                                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                {ev.rec && ev.rec !== "—" && (
+                                                  <span style={{ 
+                                                    fontSize: 10.5, 
+                                                    fontWeight: 700, 
+                                                    borderRadius: 100, 
+                                                    padding: "4px 12px", 
+                                                    background: recStyle.bg, 
+                                                    color: recStyle.color, 
+                                                    border: `1px solid ${recStyle.color}1A`,
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: 5
+                                                  }}>
+                                                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: recStyle.color }} />
+                                                    {ev.rec}
+                                                  </span>
+                                                )}
+                                                {evScore !== null && (
+                                                  <div style={{ 
+                                                    background: "linear-gradient(135deg, #1A1A1A 0%, #4A4A4A 100%)", 
+                                                    color: "#ffffff", 
+                                                    borderRadius: 100, 
+                                                    padding: "4px 12px", 
+                                                    display: "inline-flex", 
+                                                    alignItems: "center", 
+                                                    gap: 5,
+                                                    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.08)"
+                                                  }}>
+                                                    <span style={{ fontSize: 9.5, color: "rgba(255, 255, 255, 0.7)", fontWeight: 700, letterSpacing: "0.03em" }}>SCORE</span>
+                                                    <span style={{ 
+                                                      fontSize: 12, 
+                                                      fontWeight: 900, 
+                                                      color: evScore >= 80 ? "#4ADE80" : evScore >= 60 ? "#FBBF24" : "#F87171" 
+                                                    }}>{evScore}</span>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
 
-                                        {/* Remarks */}
-                                        {ev.notes && (
-                                          <div style={{ fontSize: 12, color: T.inkMid, lineHeight: 1.5, background: T.canvas, padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, fontStyle: "italic" }}>
-                                            "{ev.notes}"
+                                            {/* Criteria Grid */}
+                                            {criteriaEntries.length > 0 && (
+                                              <div style={{ 
+                                                display: "grid", 
+                                                gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", 
+                                                gap: "8px 24px",
+                                                background: "#FAF9F6",
+                                                borderRadius: 12,
+                                                border: "1px solid #E8E2D9",
+                                                padding: "12px 16px",
+                                                marginBottom: ev.notes ? 12 : 0
+                                              }}>
+                                                {criteriaEntries.map(([field, val]) => (
+                                                  <div key={field} style={{ 
+                                                    display: "flex", 
+                                                    justifyContent: "space-between", 
+                                                    alignItems: "center", 
+                                                    gap: 8, 
+                                                    padding: "6px 0", 
+                                                    borderBottom: "1px dashed rgba(232, 226, 217, 0.6)" 
+                                                  }}>
+                                                    <span style={{ fontSize: 11.5, color: T.inkMid, fontWeight: 600 }}>{field}</span>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                                      <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+                                                        {Array.from({ length: 5 }).map((_, di) => (
+                                                          <div 
+                                                            key={di} 
+                                                            style={{ 
+                                                              width: 14, 
+                                                              height: 5, 
+                                                              borderRadius: 2.5, 
+                                                              background: di < val ? recStyle.color : "#E2E8F0", 
+                                                              transition: "background 0.2s" 
+                                                            }} 
+                                                          />
+                                                        ))}
+                                                      </div>
+                                                      <span style={{ fontSize: 10.5, fontWeight: 800, color: T.ink, minWidth: 20, textAlign: "right" }}>{val}/5</span>
+                                                    </div>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            )}
+
+                                            {/* Remarks */}
+                                            {ev.notes && (
+                                              <div style={{ fontSize: 12, color: T.inkMid, lineHeight: 1.5, background: T.canvas, padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, fontStyle: "italic" }}>
+                                                "{ev.notes}"
+                                              </div>
+                                            )}
                                           </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
+                                        );
+                                      })}
+                                    </div>
+                                  )}
                                 </div>
-                              </div>
-                            )}
+                              );
+                            })()}
                           </div>
                         )}
                       </div>
