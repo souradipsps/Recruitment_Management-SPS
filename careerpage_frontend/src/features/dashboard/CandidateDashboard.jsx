@@ -22,6 +22,7 @@ import { DashboardSidebar } from "./components/layout/DashboardSidebar";
 import { OverviewSection } from "./components/sections/OverviewSection";
 import { ApplicationsSection } from "./components/sections/ApplicationsSection";
 import { ProfileSection } from "./components/sections/ProfileSection";
+import { SecuritySection } from "./components/sections/SecuritySection";
 import { InterviewsSection } from "./components/sections/InterviewsSection";
 import { OnboardingSection } from "./components/sections/OnboardingSection";
 import { NotificationsSection } from "./components/sections/NotificationsSection";
@@ -1454,6 +1455,12 @@ export function CandidateDashboard({
                   resumeSectionRef={resumeSectionRef}
                 />
               )}
+
+              {/* Change Password / Security Tab */}
+              {activeTab === "security" && (
+                <SecuritySection />
+              )}
+
 
               {/* Notifications Tab */}
               {activeTab === "notifications" && (

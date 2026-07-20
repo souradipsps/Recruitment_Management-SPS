@@ -213,3 +213,33 @@ export async function verifyChangeEmailOtp({ email, otp }) {
   }
   return data;
 }
+
+/**
+ * Change the password for the currently logged-in candidate.
+ * POST /api/auth/change-password/
+ * @param {{ oldPassword: string, newPassword: string }} data
+ * @returns {Promise<{ message: string }>}
+ */
+export async function changePassword({ oldPassword, newPassword }) {
+  const token = localStorage.getItem("accessToken");
+  if (!token) throw new Error("You must be logged in to change your password. Please log in and try again.");
+
+  const res = await fetch(`${BASE_URL}/auth/change-password/`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      old_password: oldPassword,
+      new_password: newPassword,
+    }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseApiError(data, "Could not change password. Please verify your current password."));
+  }
+  return data;
+}
+

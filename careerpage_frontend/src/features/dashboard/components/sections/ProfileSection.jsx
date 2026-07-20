@@ -44,6 +44,8 @@ export function ProfileSection({
         sectionRef={professionalSectionRef}
       />
 
+
+
       <ResumeUploadCard
         resumeFile={resumeFile}
         resumeUrl={resumeUrl}
