@@ -224,7 +224,7 @@ export default function Auth({ onLoginSuccess }) {
                   letterSpacing: "0.15em",
                 }}
               >
-                HR Recruitment Portal
+                Management Information System
               </p>
               <div style={{ width: 16, height: 1, background: "rgba(255, 255, 255, 0.3)" }} />
             </div>
