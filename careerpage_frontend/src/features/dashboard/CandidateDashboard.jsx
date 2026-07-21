@@ -11,9 +11,7 @@ import { updateUserProfile, fetchMyJobApplications } from "../careerpage/service
 import { fetchPublicJobs } from "../careerpage/services/jobsService";
 import { fetchMyOffers, acceptOffer, declineOffer, fetchMyOnboardingRecord, submitOnboardingDocuments } from "../careerpage/services/offersService";
 import { fetchUpcomingInterviews } from "../careerpage/services/interviewsService";
-
-// Mock data & configurations
-import { notifications } from "../../mockData/dashboardMockData";
+import { fetchMyNotifications, markAllNotificationsRead } from "../careerpage/services/notificationsService";
 
 // Layout
 import { DashboardSidebar } from "./components/layout/DashboardSidebar";
@@ -384,9 +382,15 @@ export function CandidateDashboard({
     });
   }, [jobApplications, liveJobs]);
 
-  const [dashboardNotifications, setDashboardNotifications] = useState(() =>
-    notifications.map((n) => ({ ...n, isNew: !n.read }))
-  );
+  const [dashboardNotifications, setDashboardNotifications] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchMyNotifications()
+      .then((data) => { if (!cancelled) setDashboardNotifications(data); })
+      .catch(() => { /* silent fallback */ });
+    return () => { cancelled = true; };
+  }, []);
 
   const unreadCount = dashboardNotifications.filter((n) => !n.read).length;
 
@@ -404,6 +408,9 @@ export function CandidateDashboard({
       setDashboardNotifications((prev) =>
         prev.map((n) => (n.read ? n : { ...n, read: true }))
       );
+      markAllNotificationsRead().catch((err) => {
+        console.error("Failed to mark all notifications read on backend:", err);
+      });
     }
   }, [activeTab]);
 
