@@ -269,9 +269,20 @@ textarea {
   animation: countUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* ═══════════════════════════════════════════════════
-   INTERACTIVE COMPONENT STYLES
-   ═══════════════════════════════════════════════════ */
+/* ── Global Hand Cursor (Pointer) for All Clickable Elements ── */
+button,
+a,
+select,
+summary,
+[role="button"],
+[tabindex],
+.card-hover,
+.row-hover,
+.btn-hover,
+.sidebar-item,
+.cursor-pointer {
+  cursor: pointer;
+}
 
 .card-hover {
   transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),

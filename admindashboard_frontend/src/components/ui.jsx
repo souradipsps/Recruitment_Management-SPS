@@ -50,7 +50,7 @@ export const Card = ({
 }) => (
   <div
     onClick={onClick}
-    className={`${hover ? "card-hover" : ""} ${className || ""}`.trim() || undefined}
+    className={`${hover ? "card-hover" : ""} ${onClick ? "cursor-pointer" : ""} ${className || ""}`.trim() || undefined}
     style={{
       background: T.surface,
       border: `1px solid ${T.border}`,
@@ -59,6 +59,7 @@ export const Card = ({
       width: "100%",
       overflow: "hidden",
       transition: transition.medium,
+      ...(onClick ? { cursor: "pointer" } : {}),
       ...style,
     }}
   >

@@ -228,10 +228,41 @@ export default function Dashboard({
 
   const monthlyChartData = getMonthlyChartData();
 
+  const legendOnHover = (event) => {
+    if (event.native && event.native.target) {
+      event.native.target.style.cursor = "pointer";
+    }
+  };
+
+  const legendOnLeave = (event) => {
+    if (event.native && event.native.target) {
+      event.native.target.style.cursor = "default";
+    }
+  };
+
+  const chartOnHover = (event, chartElement, chart) => {
+    if (!event.native || !event.native.target) return;
+    if (chartElement && chartElement.length > 0) {
+      event.native.target.style.cursor = "pointer";
+      return;
+    }
+    const leg = chart?.legend;
+    if (leg && leg.options && leg.options.display !== false) {
+      const { x, y } = event;
+      if (x >= leg.left && x <= leg.right && y >= leg.top && y <= leg.bottom) {
+        event.native.target.style.cursor = "pointer";
+        return;
+      }
+    }
+    event.native.target.style.cursor = "default";
+  };
+
   const getMonthlyChartOptions = () => {
     const basePlugins = {
       legend: {
         position: "top",
+        onHover: legendOnHover,
+        onLeave: legendOnLeave,
         labels: {
           font: { family: "'Inter', sans-serif", size: 12, weight: 600 },
           color: T.inkMid,
@@ -252,6 +283,7 @@ export default function Dashboard({
       return {
         responsive: true,
         maintainAspectRatio: false,
+        onHover: chartOnHover,
         plugins: basePlugins,
         scales: {
           x: {
@@ -283,6 +315,7 @@ export default function Dashboard({
     return {
       responsive: true,
       maintainAspectRatio: false,
+      onHover: chartOnHover,
       plugins: basePlugins,
       scales: {
         x: {
@@ -328,9 +361,12 @@ export default function Dashboard({
     responsive: true,
     maintainAspectRatio: false,
     cutout: "72%",
+    onHover: chartOnHover,
     plugins: {
       legend: {
         position: "bottom",
+        onHover: legendOnHover,
+        onLeave: legendOnLeave,
         labels: {
           font: { family: "'Inter', sans-serif", size: 11, weight: 600 },
           color: T.inkMid,
@@ -416,9 +452,12 @@ export default function Dashboard({
       indexAxis: "y",
       responsive: true,
       maintainAspectRatio: false,
+      onHover: chartOnHover,
       plugins: {
         legend: {
           position: "top",
+          onHover: legendOnHover,
+          onLeave: legendOnLeave,
           labels: {
             font: { family: "'Inter', sans-serif", size: 11, weight: 600 },
             color: T.inkMid,
@@ -697,6 +736,7 @@ export default function Dashboard({
     return {
       responsive: true,
       maintainAspectRatio: false,
+      onHover: chartOnHover,
       interaction: {
         mode: "index",
         intersect: false,
@@ -705,6 +745,8 @@ export default function Dashboard({
         legend: {
           position: "top",
           padding: 16,
+          onHover: legendOnHover,
+          onLeave: legendOnLeave,
           labels: {
             font: { family: "'Inter', sans-serif", size: 12, weight: 700 },
             color: T.inkMid,
@@ -1087,6 +1129,9 @@ export default function Dashboard({
 
             {/* Quick Hires Stats Banner */}
             <div
+              onClick={() => navigate && navigate("applications")}
+              className="card-hover"
+              title="Click to view candidate applications"
               style={{
                 marginTop: 14,
                 padding: "10px 14px",
@@ -1094,10 +1139,11 @@ export default function Dashboard({
                 borderRadius: radius.md,
                 border: `1px solid ${T.teal}25`,
                 display: "flex",
-                justify: "space-between",
+                justifyContent: "space-between",
                 alignItems: "center",
                 flexWrap: "wrap",
                 gap: 10,
+                cursor: "pointer",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1230,6 +1276,9 @@ export default function Dashboard({
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14 }}>
               {/* Card 1: Shortlist Efficiency */}
               <div
+                onClick={() => navigate && navigate("applications")}
+                className="card-hover"
+                title="Click to view candidate applications"
                 style={{
                   background: T.skyLight,
                   borderRadius: radius.md,
@@ -1238,6 +1287,7 @@ export default function Dashboard({
                   display: "flex",
                   flexDirection: "column",
                   gap: 4,
+                  cursor: "pointer",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1267,6 +1317,9 @@ export default function Dashboard({
 
               {/* Card 2: Offer Conversion Rate */}
               <div
+                onClick={() => navigate && navigate("offer-management")}
+                className="card-hover"
+                title="Click to view offer management"
                 style={{
                   background: T.greenLight,
                   borderRadius: radius.md,
@@ -1275,6 +1328,7 @@ export default function Dashboard({
                   display: "flex",
                   flexDirection: "column",
                   gap: 4,
+                  cursor: "pointer",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1388,6 +1442,9 @@ export default function Dashboard({
 
             {/* Department Overall Headcount Summary Banner */}
             <div
+              onClick={() => navigate && navigate("job-postings")}
+              className="card-hover"
+              title="Click to view department job postings"
               style={{
                 marginTop: 14,
                 padding: "10px 14px",
@@ -1399,6 +1456,7 @@ export default function Dashboard({
                 alignItems: "center",
                 flexWrap: "wrap",
                 gap: 10,
+                cursor: "pointer",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1443,6 +1501,9 @@ export default function Dashboard({
               {sampleUpcoming.map((u, i) => (
                 <div
                   key={u.id || i}
+                  onClick={() => navigate && navigate("interview-panel")}
+                  className="row-hover"
+                  title="Click to view in interview panel"
                   style={{
                     background: T.canvas,
                     borderRadius: radius.lg,
@@ -1453,6 +1514,7 @@ export default function Dashboard({
                     alignItems: "center",
                     flexWrap: "wrap",
                     gap: 10,
+                    cursor: "pointer",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -1733,9 +1795,13 @@ export default function Dashboard({
                     return (
                       <tr
                         key={item.id || item.role || idx}
+                        onClick={() => navigate && navigate("existing-roles")}
+                        className="row-hover"
+                        title="Click to view role details in Existing Roles"
                         style={{
                           borderBottom: `1px solid ${T.border}60`,
                           background: idx % 2 === 0 ? "#ffffff" : T.canvas + "60",
+                          cursor: "pointer",
                         }}
                       >
                         <td style={{ padding: "10px 12px", fontWeight: font.bold, color: T.ink }}>
@@ -1856,21 +1922,32 @@ export default function Dashboard({
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {activity.map((a, i) => (
-              <div
-                key={i}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 14,
-                  padding: "12px 16px",
-                  borderRadius: radius.md,
-                  background: i % 2 === 0 ? "#FAFAFA" : "#ffffff",
-                  border: `1px solid ${T.border}70`,
-                  transition: transition.fast,
-                  boxShadow: shadow.sm,
-                }}
-              >
+            {activity.map((a, i) => {
+              const navTarget =
+                a.type === "Offer" ? "offer-management" :
+                a.type === "Application" ? "applications" :
+                a.type === "Approval" ? "approval-requests" :
+                a.type === "Interview" ? "interview-panel" : "dashboard";
+
+              return (
+                <div
+                  key={i}
+                  onClick={() => navigate && navigate(navTarget)}
+                  className="card-hover"
+                  title={`Click to view ${a.type.toLowerCase()} details`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 14,
+                    padding: "12px 16px",
+                    borderRadius: radius.md,
+                    background: i % 2 === 0 ? "#FAFAFA" : "#ffffff",
+                    border: `1px solid ${T.border}70`,
+                    transition: transition.fast,
+                    boxShadow: shadow.sm,
+                    cursor: "pointer",
+                  }}
+                >
                 {/* Type Icon Badge Avatar */}
                 <div
                   style={{
@@ -1933,7 +2010,8 @@ export default function Dashboard({
                   </span>
                 </div>
               </div>
-            ))}
+            );
+          })}
           </div>
         </Card>
       </div>
