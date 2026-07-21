@@ -31,7 +31,18 @@ export default function ScreenRouter({ active, s, navigate, onGiveOffer }) {
 
   switch (active) {
     case "dashboard":
-      return <Dashboard approvalRequests={s.approvalRequests} />;
+      return (
+        <Dashboard
+          approvalRequests={s.approvalRequests}
+          jobPostings={s.jobPostings}
+          jobApplications={s.jobApplications}
+          generalApplications={s.generalApplications}
+          interviews={s.interviews}
+          offers={s.offers}
+          existingRoles={s.existingRoles}
+          navigate={navigate}
+        />
+      );
     case "existing-roles":
       return <ExistingRoles roles={s.existingRoles} setRoles={s.setExistingRoles} />;
     case "role-requests":
@@ -136,6 +147,16 @@ export default function ScreenRouter({ active, s, navigate, onGiveOffer }) {
         />
       );
     default:
-      return <Dashboard approvalRequests={s.approvalRequests} />;
+      return (
+        <Dashboard
+          approvalRequests={s.approvalRequests}
+          jobPostings={s.jobPostings}
+          jobApplications={s.jobApplications}
+          generalApplications={s.generalApplications}
+          interviews={s.interviews}
+          offers={s.offers}
+          navigate={navigate}
+        />
+      );
   }
 }
