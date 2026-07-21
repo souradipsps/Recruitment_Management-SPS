@@ -80,7 +80,7 @@ export function normalizeInterview(raw) {
 export async function fetchUpcomingInterviews() {
   const token = requireAuthToken();
 
-  const res = await fetch(`${BASE_URL}/interviews/`, {
+  const res = await fetch(`${BASE_URL}/interviews/upcoming/`, {
     headers: {
       "Authorization": `Bearer ${token}`,
       "Accept": "application/json",
@@ -94,16 +94,5 @@ export async function fetchUpcomingInterviews() {
   // Endpoint returns a bare array; tolerate a paginated { results: [...] } too.
   const list = Array.isArray(data) ? data : data?.results ?? [];
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const upcomingList = list.filter((raw) => {
-    const isScheduled = raw.status === "Scheduled";
-    if (!isScheduled) return false;
-    if (!raw.date) return false;
-    const interviewDate = new Date(`${raw.date}T00:00:00`);
-    return !isNaN(interviewDate.getTime()) && interviewDate >= today;
-  });
-
-  return upcomingList.map(normalizeInterview);
+  return list.map(normalizeInterview);
 }

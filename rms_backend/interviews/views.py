@@ -94,13 +94,15 @@ class InterviewViewSet(viewsets.ModelViewSet):
     def upcoming(self, request):
         today = timezone.now().date()
         if request.user.role == "candidate":
+            from django.db.models import Q
+            full_name = f"{request.user.first_name} {request.user.last_name}".strip()
             qs = Interview.objects.filter(
-                application__candidate=request.user,
-                status="Scheduled",
-                date__gte=today,
-            ).select_related("application", "application__candidate").prefetch_related("panel")
+                Q(application__candidate=request.user) | Q(candidate_name__iexact=full_name),
+                Q(status__in=["Scheduled", "Rescheduled"]) | Q(date__gte=today),
+            ).exclude(status__in=["Completed", "Cancelled"]).select_related("application", "application__candidate").prefetch_related("panel")
         else:
+            from django.db.models import Q
             qs = Interview.objects.filter(
-                status="Scheduled", date__gte=today
-            ).select_related("application", "application__candidate").prefetch_related("panel")
+                Q(status__in=["Scheduled", "Rescheduled"]) | Q(date__gte=today)
+            ).exclude(status__in=["Completed", "Cancelled"]).select_related("application", "application__candidate").prefetch_related("panel")
         return Response(InterviewSerializer(qs, many=True).data)

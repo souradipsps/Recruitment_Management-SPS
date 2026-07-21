@@ -5,6 +5,28 @@ from django.conf import settings
 from .models import Notification
 
 
+def format_time_ampm(t):
+    if not t:
+        return ""
+    if isinstance(t, str):
+        try:
+            from datetime import datetime
+            parsed_t = datetime.strptime(t, "%H:%M:%S").time()
+            t = parsed_t
+        except ValueError:
+            try:
+                parsed_t = datetime.strptime(t, "%H:%M").time()
+                t = parsed_t
+            except ValueError:
+                return t
+    
+    formatted = t.strftime("%I:%M %p")
+    if formatted.startswith("0"):
+        formatted = formatted[1:]
+    return formatted
+
+
+
 def get_interview_email_html(title, name, round_num, role, candidate_name, date, time, mode, meeting_link, intro_text=None, completed_scores_html=None):
     badge_class = "badge-online" if mode == "Online" else "badge-offline"
     
@@ -192,6 +214,8 @@ def send_interview_email_task(interview_id, is_reschedule=False):
     except Interview.DoesNotExist:
         return f"Interview with id {interview_id} does not exist"
 
+    formatted_time = format_time_ampm(interview.time)
+
     if is_reschedule:
         subject = f"Interview Rescheduled: {interview.role} - Round {interview.round}"
     else:
@@ -234,7 +258,7 @@ Your Round {interview.round} interview for the role of '{interview.role}' has be
 
 Updated Details:
 Date: {interview.date}
-Time: {interview.time}
+Time: {formatted_time}
 Mode: {interview.mode}
 {"Meeting Link: " + interview.meeting_link if interview.meeting_link else ""}
 
@@ -251,7 +275,7 @@ Your Round {interview.round} interview for the role of '{interview.role}' has be
 
 Details:
 Date: {interview.date}
-Time: {interview.time}
+Time: {formatted_time}
 Mode: {interview.mode}
 {"Meeting Link: " + interview.meeting_link if interview.meeting_link else ""}
 
@@ -270,7 +294,7 @@ South Point School Recruitment Team
             role=interview.role,
             candidate_name=interview.candidate_name,
             date=interview.date,
-            time=interview.time,
+            time=formatted_time,
             mode=interview.mode,
             meeting_link=interview.meeting_link,
             intro_text=intro_text,
@@ -295,7 +319,7 @@ The Round {interview.round} interview of {interview.candidate_name} for the role
 
 Updated Details:
 Date: {interview.date}
-Time: {interview.time}
+Time: {formatted_time}
 Mode: {interview.mode}
 {"Meeting Link: " + interview.meeting_link if interview.meeting_link else ""}
 
@@ -310,7 +334,7 @@ You have been assigned as a panelist for the Round {interview.round} interview o
 
 Details:
 Date: {interview.date}
-Time: {interview.time}
+Time: {formatted_time}
 Mode: {interview.mode}
 {"Meeting Link: " + interview.meeting_link if interview.meeting_link else ""}
 
@@ -327,7 +351,7 @@ South Point School Recruitment Team
             role=interview.role,
             candidate_name=interview.candidate_name,
             date=interview.date,
-            time=interview.time,
+            time=formatted_time,
             mode=interview.mode,
             meeting_link=interview.meeting_link,
             intro_text=intro_text,
@@ -356,6 +380,7 @@ def send_new_panelists_email_task(interview_id, new_panelist_ids):
     except Interview.DoesNotExist:
         return f"Interview with id {interview_id} does not exist"
 
+    formatted_time = format_time_ampm(interview.time)
     subject = f"Assigned as Panelist: {interview.role} - Round {interview.round}"
     
     panelists = Panelist.objects.filter(id__in=new_panelist_ids)
@@ -366,7 +391,7 @@ You have been assigned as a panelist for the Round {interview.round} interview o
 
 Details:
 Date: {interview.date}
-Time: {interview.time}
+Time: {formatted_time}
 Mode: {interview.mode}
 {"Meeting Link: " + interview.meeting_link if interview.meeting_link else ""}
 
@@ -381,7 +406,7 @@ South Point School Recruitment Team
             role=interview.role,
             candidate_name=interview.candidate_name,
             date=interview.date,
-            time=interview.time,
+            time=formatted_time,
             mode=interview.mode,
             meeting_link=interview.meeting_link,
             intro_text=intro_text,
@@ -411,6 +436,7 @@ def send_interview_reminder_task(interview_id):
     except Interview.DoesNotExist:
         return f"Interview with id {interview_id} does not exist"
 
+    formatted_time = format_time_ampm(interview.time)
     subject = f"Reminder: Upcoming Interview for {interview.role} - Round {interview.round}"
 
     # 1. Email to Candidate
@@ -449,7 +475,7 @@ This is a reminder that your Round {interview.round} interview for the role of '
 
 Details:
 Date: {interview.date}
-Time: {interview.time}
+Time: {formatted_time}
 Mode: {interview.mode}
 {"Meeting Link: " + interview.meeting_link if interview.meeting_link else ""}
 
@@ -465,7 +491,7 @@ South Point School Recruitment Team
             role=interview.role,
             candidate_name=interview.candidate_name,
             date=interview.date,
-            time=interview.time,
+            time=formatted_time,
             mode=interview.mode,
             meeting_link=interview.meeting_link,
         )
@@ -488,7 +514,7 @@ This is a reminder that you are assigned as a panelist for the upcoming Round {i
 
 Details:
 Date: {interview.date}
-Time: {interview.time}
+Time: {formatted_time}
 Mode: {interview.mode}
 {"Meeting Link: " + interview.meeting_link if interview.meeting_link else ""}
 
@@ -502,7 +528,7 @@ South Point School Recruitment Team
             role=interview.role,
             candidate_name=interview.candidate_name,
             date=interview.date,
-            time=interview.time,
+            time=formatted_time,
             mode=interview.mode,
             meeting_link=interview.meeting_link,
         )
@@ -592,6 +618,8 @@ def send_interview_completed_email_task(interview_id):
     except Interview.DoesNotExist:
         return f"Interview with id {interview_id} does not exist"
 
+    formatted_time = format_time_ampm(interview.time)
+
     # Find candidate
     candidate = interview.application.candidate if interview.application else None
     if not candidate:
@@ -666,7 +694,7 @@ South Point School Recruitment Team
         role=interview.role,
         candidate_name=interview.candidate_name,
         date=interview.date,
-        time=interview.time,
+        time=formatted_time,
         mode=interview.mode,
         meeting_link=interview.meeting_link,
         intro_text=intro_text,
