@@ -622,8 +622,10 @@ export default function Applications({
             style={{
               background: tab === t.key ? t.light : T.white,
               color: tab === t.key ? t.accent : T.inkLight,
-              border: `1.5px solid ${tab === t.key ? t.accent : T.border}`,
-              borderRight: i === 0 ? "none" : undefined,
+              borderTop: `1.5px solid ${tab === t.key ? t.accent : T.border}`,
+              borderBottom: `1.5px solid ${tab === t.key ? t.accent : T.border}`,
+              borderLeft: `1.5px solid ${tab === t.key ? t.accent : T.border}`,
+              borderRight: i === 0 ? "none" : `1.5px solid ${tab === t.key ? t.accent : T.border}`,
               borderRadius: i === 0 ? "10px 0 0 10px" : "0 10px 10px 0",
               padding: isMobile ? "8px 12px" : "10px 20px",
               fontSize: isMobile ? 12 : 13,
@@ -666,7 +668,7 @@ export default function Applications({
       {isMobile ? (
         <>
           <div style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, marginBottom: 8, textAlign: "center" }}>
-            Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, totalItems)} of {totalItems} applicant{totalItems !== 1 ? "s" : ""}
+            Showing {serverCount > 0 ? displayStartIndex + 1 : 0} - {displayEndIndex} of {serverCount} applicant{serverCount !== 1 ? "s" : ""}
           </div>
           <div
             ref={scrollRef}
@@ -701,7 +703,7 @@ export default function Applications({
                     cursor: "pointer", minHeight: 380,
                   }}>
                   <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", padding: "4px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.2)" }}>
-                    {startIndex + idx + 1} of {totalItems}
+                    {displayStartIndex + idx + 1} of {serverCount}
                   </div>
 
                   <div>
@@ -766,7 +768,7 @@ export default function Applications({
                 </div>
               );
             })}
-            {totalItems === 0 && (
+            {serverCount === 0 && (
               <div style={{ padding: "40px 24px", textAlign: "center", color: T.inkFaint, fontSize: 13 }}>No records found.</div>
             )}
           </div>
