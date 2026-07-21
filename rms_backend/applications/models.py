@@ -28,7 +28,7 @@ class JobApplication(models.Model):
     referral_emp_id = models.CharField(max_length=50, blank=True)
     referred_by     = models.CharField(max_length=200, blank=True)
     applied_date    = models.DateField(auto_now_add=True)
-    status          = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Applied")
+    status          = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Applied", db_index=True)
     admin_note      = models.TextField(blank=True)
     updated_at      = models.DateTimeField(auto_now=True)
 
@@ -56,7 +56,7 @@ class GeneralApplication(models.Model):
     experience     = models.CharField(max_length=50, blank=True)
     qualification  = models.CharField(max_length=200, blank=True)
     applied_date   = models.DateField(auto_now_add=True)
-    status         = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Applied")
+    status         = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Applied", db_index=True)
     admin_note     = models.TextField(blank=True)
 
     class Meta:

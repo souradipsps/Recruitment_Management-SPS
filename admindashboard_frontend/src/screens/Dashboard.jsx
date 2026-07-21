@@ -40,6 +40,7 @@ export default function Dashboard({
   interviews = [],
   offers = [],
   existingRoles = [],
+  stats = null,
   navigate,
 }) {
   const bp = useBreakpoint();
@@ -56,13 +57,46 @@ export default function Dashboard({
   const [selectedBudgetEmpType, setSelectedBudgetEmpType] = useState("all"); // "all" | "Full-time" | "Part-time"
   const [selectedBudgetExp, setSelectedBudgetExp] = useState("all"); // "all" | "1-2" | "2-4" | "3-5"
 
-  // Derived real data with fallbacks for clean presentation
-  const pendingCount = (approvalRequests || []).filter((r) => r.status === "Pending").length;
-  const activePostingsCount = (jobPostings || []).filter((p) => p.status === "Published" || p.status === "Active").length || 6;
-  const totalAppsCount = ((jobApplications || []).length + (generalApplications || []).length) || 47;
-  const scheduledInterviewsCount = (interviews || []).filter((i) => i.status === "Scheduled").length || 5;
-  const offersCount = (offers || []).length || 3;
-  const newJoinersCount = (offers || []).filter((o) => o.status === "Accepted" || o.status === "Joined").length || 2;
+  // Derived real data
+  const pendingCount = stats ? stats.pendingApprovals : (approvalRequests || []).filter((r) => r.status === "Pending").length;
+  const activePostingsCount = stats ? stats.openPositions : (jobPostings || []).filter((p) => p.status === "Published" || p.status === "Active").length;
+  const totalAppsCount = stats ? stats.totalApplicants : ((jobApplications || []).length + (generalApplications || []).length);
+  const scheduledInterviewsCount = stats ? stats.interviewsScheduled : (interviews || []).filter((i) => i.status === "Scheduled").length;
+  const offersCount = stats ? stats.offersReleased : (offers || []).length;
+  const newJoinersCount = stats ? stats.newJoiners : (offers || []).filter((o) => o.status === "Accepted" || o.status === "Joined").length;
+
+  // Real dynamic metadata for KPI cards
+  const now = new Date();
+  const currentMonthYearName = now.toLocaleString("default", { month: "long", year: "numeric" });
+
+  const postingsThisMonthCount = (jobPostings || []).filter((p) => {
+    if (!p.posted) return false;
+    const d = new Date(p.posted);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
+
+  const appsThisMonth = [...(jobApplications || []), ...(generalApplications || [])].filter((a) => {
+    if (!a.applied) return false;
+    const d = new Date(a.applied);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
+
+  const next7DaysCount = (interviews || []).filter((i) => {
+    if (i.status !== "Scheduled" || !i.date) return false;
+    const d = new Date(i.date);
+    const diffTime = d - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 && diffDays <= 7;
+  }).length;
+
+  const draftOffersCount = (offers || []).filter((o) => o.status === "Draft").length;
+  const sentOffersCount = (offers || []).filter((o) => o.status === "Sent" || o.status === "Offer Sent").length;
+
+  const offersThisMonth = (offers || []).filter((o) => {
+    if (!o.issued) return false;
+    const d = new Date(o.issued);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
 
   // Primary KPIs
   const kpis = [
@@ -72,7 +106,7 @@ export default function Dashboard({
       icon: "📋",
       color: T.primary,
       bg: T.primaryLight,
-      sub: "+2 active this month",
+      sub: postingsThisMonthCount > 0 ? `+${postingsThisMonthCount} active this month` : "No new postings",
       trend: "Active",
       nav: "job-postings",
     },
@@ -93,7 +127,7 @@ export default function Dashboard({
       color: T.teal,
       bg: T.tealLight,
       sub: "Across active job roles",
-      trend: "↑ 18%",
+      trend: appsThisMonth > 0 ? `+${appsThisMonth} this month` : "Steady",
       nav: "applications",
     },
     {
@@ -102,7 +136,7 @@ export default function Dashboard({
       icon: "🗓",
       color: T.violet,
       bg: T.violetLight,
-      sub: "Upcoming next 7 days",
+      sub: next7DaysCount > 0 ? `${next7DaysCount} next 7 days` : "No upcoming",
       trend: "Scheduled",
       nav: "interview-panel",
     },
@@ -112,8 +146,8 @@ export default function Dashboard({
       icon: "📨",
       color: T.green,
       bg: T.greenLight,
-      sub: "1 draft • 2 sent",
-      trend: "↑ 25%",
+      sub: `${draftOffersCount} draft • ${sentOffersCount} sent`,
+      trend: offersThisMonth > 0 ? `+${offersThisMonth} this month` : "Active",
       nav: "offer-management",
     },
     {
@@ -122,26 +156,61 @@ export default function Dashboard({
       icon: "🎉",
       color: T.primary,
       bg: T.primaryLight,
-      sub: "Joining June 2026",
+      sub: `Joining ${currentMonthYearName}`,
       trend: "Onboarding",
       nav: "onboarding",
     },
   ];
 
-
-
   // ── Chart.js Configurations ──────────────────────────────────────────────
 
-  // 1. Monthly Trends Chart (Applications vs Hires - Supporting dynamic graph views)
+  // 1. Monthly Trends Chart (Applications vs Hires - Dynamic from DB)
   const getMonthlyChartData = () => {
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const last6Months = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      last6Months.push({
+        name: monthNames[d.getMonth()],
+        year: d.getFullYear(),
+        monthIndex: d.getMonth(),
+      });
+    }
+
+    const labels = last6Months.map((m) => m.name);
+
+    // Count applications received in each month (from both job & general applications)
+    const appsData = last6Months.map((m) => {
+      const countJobApps = (jobApplications || []).filter((app) => {
+        if (!app.applied) return false;
+        const d = new Date(app.applied);
+        return d.getMonth() === m.monthIndex && d.getFullYear() === m.year;
+      }).length;
+      const countGenApps = (generalApplications || []).filter((app) => {
+        if (!app.applied) return false;
+        const d = new Date(app.applied);
+        return d.getMonth() === m.monthIndex && d.getFullYear() === m.year;
+      }).length;
+      return countJobApps + countGenApps;
+    });
+
+    // Count hires (offers accepted or joined)
+    const hiresData = last6Months.map((m) => {
+      return (offers || []).filter((o) => {
+        if (o.status !== "Accepted" && o.status !== "Joined") return false;
+        const d = o.joining ? new Date(o.joining) : (o.issued ? new Date(o.issued) : null);
+        return d && d.getMonth() === m.monthIndex && d.getFullYear() === m.year;
+      }).length;
+    });
+
     if (chartView === "hiresOnly") {
       return {
-        labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+        labels,
         datasets: [
           {
             type: "bar",
             label: "Hires Made (Monthly Bar)",
-            data: [1, 0, 3, 2, 4, 2],
+            data: hiresData,
             backgroundColor: "rgba(0, 139, 139, 0.85)",
             borderColor: T.teal,
             borderWidth: 1.5,
@@ -151,7 +220,7 @@ export default function Dashboard({
           {
             type: "line",
             label: "Hires Trend Target",
-            data: [1, 1, 2, 2, 3, 3],
+            data: hiresData.map((h) => Math.max(1, Math.round(h * 1.2))),
             borderColor: T.accentDark,
             borderWidth: 2,
             borderDash: [4, 4],
@@ -166,12 +235,12 @@ export default function Dashboard({
 
     if (chartView === "dual") {
       return {
-        labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+        labels,
         datasets: [
           {
             type: "bar",
             label: "Applications Received (Left Axis)",
-            data: [12, 8, 22, 15, 30, 47],
+            data: appsData,
             backgroundColor: "rgba(114, 16, 42, 0.85)",
             borderColor: T.primary,
             borderWidth: 1.5,
@@ -182,7 +251,7 @@ export default function Dashboard({
           {
             type: "line",
             label: "Hires Made (Right Scaled Axis)",
-            data: [1, 0, 3, 2, 4, 2],
+            data: hiresData,
             borderColor: T.teal,
             backgroundColor: "rgba(0, 139, 139, 0.2)",
             borderWidth: 3,
@@ -200,12 +269,12 @@ export default function Dashboard({
 
     // Default: "grouped" side-by-side Bar Graph for Applications and Hires Made
     return {
-      labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+      labels,
       datasets: [
         {
           type: "bar",
           label: "Applications Received",
-          data: [12, 8, 22, 15, 30, 47],
+          data: appsData,
           backgroundColor: "rgba(114, 16, 42, 0.85)",
           borderColor: T.primary,
           borderWidth: 1.5,
@@ -215,7 +284,7 @@ export default function Dashboard({
         {
           type: "bar",
           label: "Hires Made (Bar Graph)",
-          data: [1, 0, 3, 2, 4, 2],
+          data: hiresData,
           backgroundColor: "rgba(0, 139, 139, 0.9)",
           borderColor: T.teal,
           borderWidth: 1.5,
@@ -338,10 +407,10 @@ export default function Dashboard({
   const safeOffersCount = Math.min(offersCount, Math.max(1, Math.round(totalAppsCount * 0.10)));
 
   const funnelStages = [
-    { label: "Applied", count: totalAppsCount, color: "#0284C7", bg: T.skyLight },
-    { label: "Shortlisted", count: shortlistedCount, color: "#7C3AED", bg: T.violetLight },
-    { label: "Selected", count: selectedCount, color: "#0D9488", bg: T.tealLight },
-    { label: "Offered", count: safeOffersCount, color: "#059669", bg: T.greenLight },
+    { label: "Applied", count: stats ? stats.pipeline.applied : totalAppsCount, color: "#0284C7", bg: T.skyLight },
+    { label: "Shortlisted", count: stats ? stats.pipeline.shortlisted : shortlistedCount, color: "#7C3AED", bg: T.violetLight },
+    { label: "Selected", count: stats ? stats.pipeline.selected : selectedCount, color: "#0D9488", bg: T.tealLight },
+    { label: "Offered", count: stats ? stats.pipeline.offered : safeOffersCount, color: "#059669", bg: T.greenLight },
   ];
 
   const funnelDoughnutData = {
@@ -511,7 +580,7 @@ export default function Dashboard({
   const deptChartOptions = getDeptChartOptions();
 
   // Dynamic Role-Wise Department Recruitment Budget Dataset derived from Existing Roles
-  const rawRolesList = (existingRoles && existingRoles.length > 0) ? existingRoles : EXISTING_ROLES;
+  const rawRolesList = existingRoles || [];
 
   // Deduplicate roles by ID or role name to eliminate duplicate table rows
   const uniqueRolesMap = new Map();
@@ -821,57 +890,121 @@ export default function Dashboard({
 
   const budgetChartOptions = getBudgetChartOptions();
 
-  // Live Activity Log with rich metadata for premium UI
-  const activity = [
-    {
-      id: "OFR-2026-0002",
-      icon: "📜",
-      title: "Offer Accepted",
-      detail: "accepted by Sonal Verma • Onboarding initiated",
-      time: "2h ago",
-      type: "Offer",
-      dot: T.teal,
-      bg: T.tealLight,
-    },
-    {
-      id: "APP-2026-0006",
-      icon: "👤",
-      title: "Application Shortlisted",
-      detail: "Physics Teacher candidate shortlisted for Round 2",
-      time: "4h ago",
-      type: "Application",
-      dot: T.primary,
-      bg: T.primaryLight,
-    },
-    {
-      id: "JR-2026-0003",
-      icon: "🛡️",
-      title: "Requisition Submitted",
-      detail: "Senior Math Teacher position submitted for Principal approval",
-      time: "Yesterday",
-      type: "Approval",
-      dot: T.accentDark,
-      bg: T.accentLight,
-    },
-    {
-      id: "INT-2026-0012",
-      icon: "🎙️",
-      title: "Panel Assigned",
-      detail: "Interview Panel assigned for Academic Coordinator interviews",
-      time: "2 days ago",
-      type: "Interview",
-      dot: T.violet,
-      bg: T.violetLight,
-    },
-  ];
+  // Live Dynamic Activity Log computed from backend data lists
+  const getActivityLog = () => {
+    const list = [];
 
-  // Upcoming Interviews List
+    // 1. Applications (Job & General)
+    (jobApplications || []).forEach((app) => {
+      if (app.applied) {
+        list.push({
+          id: app.id,
+          rawDate: new Date(app.applied),
+          icon: "👤",
+          title: "Job Application",
+          detail: `${app.name} applied for ${app.role}`,
+          type: "Application",
+          dot: T.primary,
+          bg: T.primaryLight,
+        });
+      }
+    });
+
+    (generalApplications || []).forEach((app) => {
+      if (app.applied) {
+        list.push({
+          id: app.id,
+          rawDate: new Date(app.applied),
+          icon: "👤",
+          title: "General Profile",
+          detail: `${app.name} submitted a general profile`,
+          type: "Application",
+          dot: T.primary,
+          bg: T.primaryLight,
+        });
+      }
+    });
+
+    // 2. Interviews
+    (interviews || []).forEach((int) => {
+      const dateStr = int.date ? `${int.date}${int.time ? 'T' + int.time : ''}` : null;
+      const parsedDate = dateStr ? new Date(dateStr) : null;
+      if (parsedDate && !isNaN(parsedDate.getTime())) {
+        list.push({
+          id: int.id,
+          rawDate: parsedDate,
+          icon: "🎙️",
+          title: `Interview ${int.status}`,
+          detail: `Round ${int.round} for ${int.candidate} (${int.role})`,
+          type: "Interview",
+          dot: T.violet,
+          bg: T.violetLight,
+        });
+      }
+    });
+
+    // 3. Offers
+    (offers || []).forEach((o) => {
+      if (o.issued) {
+        list.push({
+          id: o.id,
+          rawDate: new Date(o.issued),
+          icon: "📜",
+          title: `Offer ${o.status}`,
+          detail: `For ${o.candidate} (${o.role})`,
+          type: "Offer",
+          dot: o.status === "Accepted" ? T.teal : T.accentDark,
+          bg: o.status === "Accepted" ? T.tealLight : T.accentLight,
+        });
+      }
+    });
+
+    // 4. Approval Requests (Actions from history)
+    (approvalRequests || []).forEach((r) => {
+      (r.history || []).forEach((h) => {
+        if (h.date) {
+          list.push({
+            id: r.id,
+            rawDate: new Date(h.date),
+            icon: "🛡️",
+            title: `Requisition ${h.act}`,
+            detail: `${r.role} (${r.dept}) ${h.note ? `• ${h.note}` : `by ${h.by}`}`,
+            type: "Approval",
+            dot: T.accentDark,
+            bg: T.accentLight,
+          });
+        }
+      });
+    });
+
+    // Sort by rawDate desc
+    list.sort((a, b) => b.rawDate - a.rawDate);
+
+    // Format display time
+    return list.slice(0, 4).map((item) => {
+      const diff = new Date() - item.rawDate;
+      const mins = Math.floor(diff / 60000);
+      const hrs = Math.floor(mins / 60);
+      const days = Math.floor(hrs / 24);
+      let timeStr = "";
+      if (mins < 1) timeStr = "Just now";
+      else if (mins < 60) timeStr = `${mins}m ago`;
+      else if (hrs < 24) timeStr = `${hrs}h ago`;
+      else if (days === 1) timeStr = "Yesterday";
+      else timeStr = `${days} days ago`;
+
+      return {
+        ...item,
+        time: timeStr,
+      };
+    });
+  };
+
+  const activity = getActivityLog();
+
+  // Upcoming Interviews List (no fallbacks to dummy data)
   const upcomingList = (interviews || []).filter((i) => i.status === "Scheduled").slice(0, 3);
-  const sampleUpcoming = upcomingList.length > 0 ? upcomingList : [
-    { id: "INT-101", candidate: "Dr. Ananya Sharma", role: "Physics Teacher", date: "June 22, 2026", time: "10:30 AM", panel: ["Dr. Roy", "Ms. Nisha"] },
-    { id: "INT-102", candidate: "Rahul Verma", role: "Computer Science Teacher", date: "June 23, 2026", time: "02:00 PM", panel: ["Mr. Patel"] },
-    { id: "INT-103", candidate: "Priya Das", role: "Academic Coordinator", date: "June 25, 2026", time: "11:00 AM", panel: ["Dr. Roy", "Mr. Patel"] },
-  ];
+  const sampleUpcoming = upcomingList;
 
   const kpiCols = isMobile ? "repeat(2,1fr)" : isTablet ? "repeat(3,1fr)" : "repeat(6,1fr)";
   const twoCol = isMobile ? "1fr" : "1fr 1fr";
@@ -1498,7 +1631,14 @@ export default function Dashboard({
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1 }}>
-              {sampleUpcoming.map((u, i) => (
+              {sampleUpcoming.length === 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", padding: "40px 20px", color: T.inkFaint, textAlign: "center" }}>
+                  <span style={{ fontSize: 32, marginBottom: 8 }}>🗓️</span>
+                  <div style={{ fontSize: font.sm, fontWeight: font.bold, color: T.inkMid }}>No Upcoming Interviews</div>
+                  <div style={{ fontSize: font.xs, marginTop: 4 }}>All scheduled interviews have been conducted.</div>
+                </div>
+              ) : (
+                sampleUpcoming.map((u, i) => (
                 <div
                   key={u.id || i}
                   onClick={() => navigate && navigate("interview-panel")}
@@ -1566,7 +1706,8 @@ export default function Dashboard({
                     )}
                   </div>
                 </div>
-              ))}
+              ))
+              )}
             </div>
           </Card>
         </div>
@@ -1922,7 +2063,14 @@ export default function Dashboard({
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {activity.map((a, i) => {
+            {activity.length === 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", color: T.inkFaint, textAlign: "center" }}>
+                <span style={{ fontSize: 32, marginBottom: 8 }}>⚡</span>
+                <div style={{ fontSize: font.sm, fontWeight: font.bold, color: T.inkMid }}>No Recent Activity</div>
+                <div style={{ fontSize: font.xs, marginTop: 4 }}>System actions and audits will appear here.</div>
+              </div>
+            ) : (
+              activity.map((a, i) => {
               const navTarget =
                 a.type === "Offer" ? "offer-management" :
                 a.type === "Application" ? "applications" :
@@ -2011,7 +2159,7 @@ export default function Dashboard({
                 </div>
               </div>
             );
-          })}
+          }))}
           </div>
         </Card>
       </div>

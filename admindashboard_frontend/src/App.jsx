@@ -12,6 +12,7 @@ import { fetchPanelists } from "./api/panelistsApi";
 import { fetchInterviews } from "./api/interviewsApi";
 import { fetchOffers, createOffer } from "./api/offersApi";
 import { logout, AUTH_EXPIRED_EVENT } from "./api/authApi";
+import { fetchDashboardStats } from "./api/dashboardApi";
 import { isAdmin } from "./authRules";
 
 import Auth from "./screens/Auth";
@@ -47,27 +48,73 @@ export default function App() {
   // Load all API-backed data once the user is authenticated. Gated on currentUser
   // so the fetches run with a valid token from the login flow (and re-run on login,
   // not before). The token itself is read dynamically per request via authApi.
+  // 1. Requisitions & Approvals: loaded when viewing Requisitions, Approvals, Postings, or Application screens
   useEffect(() => {
     if (!currentUser) return;
-    let active = true;
-    const load = (fn, setter, label) =>
-      fn()
-        .then((data) => { if (active) setter(data); })
-        .catch((err) => console.error(`Failed to load ${label}:`, err));
+    const reqScreens = ["role-requests", "job-requests", "approval-requests", "job-postings", "applications"];
+    if (reqScreens.includes(active)) {
+      fetchJobRequests().then(setJobRequests).catch((err) => console.error("Failed to load job requests:", err));
+      fetchRoleRequests().then(setRoleRequests).catch((err) => console.error("Failed to load role requests:", err));
+      fetchApprovals().then(setApprovalRequests).catch((err) => console.error("Failed to load approvals:", err));
+    }
+  }, [active, currentUser]);
 
-    load(fetchJobRequests, setJobRequests, "job requests");
-    load(fetchApprovals, setApprovalRequests, "approvals");
-    load(fetchRoles, setExistingRoles, "roles");
-    load(fetchJobPostings, setJobPostings, "job postings");
-    load(fetchRoleRequests, setRoleRequests, "role requests");
-    load(fetchApplications, setJobApplications, "applications");
-    load(fetchGeneralApplications, setGeneralApplications, "general applications");
-    load(fetchPanelists, setPanelists, "panelists");
-    load(fetchInterviews, setInterviews, "interviews");
-    load(fetchOffers, setOffers, "offers");
+  // 2. Existing Roles: loaded when viewing Dashboard, Requisitions, Postings, or Roles screens
+  useEffect(() => {
+    if (!currentUser) return;
+    const roleScreens = ["dashboard", "existing-roles", "role-requests", "job-requests", "approval-requests", "job-postings"];
+    if (roleScreens.includes(active)) {
+      fetchRoles().then(setExistingRoles).catch((err) => console.error("Failed to load roles:", err));
+    }
+  }, [active, currentUser]);
 
-    return () => { active = false; };
-  }, [currentUser]);
+  // 3. Job Postings: loaded when viewing Dashboard, Requisitions, Postings, Applications, Onboarding, or Panels
+  useEffect(() => {
+    if (!currentUser) return;
+    const postingScreens = ["dashboard", "job-requests", "approval-requests", "job-postings", "applications", "interview-panel", "panelist", "offer-management", "onboarding"];
+    if (postingScreens.includes(active)) {
+      fetchJobPostings().then(setJobPostings).catch((err) => console.error("Failed to load job postings:", err));
+    }
+  }, [active, currentUser]);
+
+  // 4. Applications (Job + General): loaded when viewing Dashboard, Applications, Panels, or Onboarding
+  useEffect(() => {
+    if (!currentUser) return;
+    const appScreens = ["dashboard", "applications", "interview-panel", "panelist", "onboarding"];
+    if (appScreens.includes(active)) {
+      fetchApplications().then(setJobApplications).catch((err) => console.error("Failed to load applications:", err));
+      fetchGeneralApplications().then(setGeneralApplications).catch((err) => console.error("Failed to load general applications:", err));
+    }
+  }, [active, currentUser]);
+
+  // 5. Interviews & Panelists: loaded when viewing Dashboard, Applications, Panels, or Offers
+  useEffect(() => {
+    if (!currentUser) return;
+    const interviewScreens = ["dashboard", "applications", "interview-panel", "panelist", "offer-management"];
+    if (interviewScreens.includes(active)) {
+      fetchInterviews().then(setInterviews).catch((err) => console.error("Failed to load interviews:", err));
+      fetchPanelists().then(setPanelists).catch((err) => console.error("Failed to load panelists:", err));
+    }
+  }, [active, currentUser]);
+
+  // 6. Offers: loaded when viewing Dashboard, Panels, Offers, or Onboarding
+  useEffect(() => {
+    if (!currentUser) return;
+    const offerScreens = ["dashboard", "interview-panel", "offer-management", "onboarding"];
+    if (offerScreens.includes(active)) {
+      fetchOffers().then(setOffers).catch((err) => console.error("Failed to load offers:", err));
+    }
+  }, [active, currentUser]);
+
+  // Load and refresh dashboard stats dynamically when active screen changes or on mount
+  const [dashboardStats, setDashboardStats] = useState(null);
+  useEffect(() => {
+    if (active === "dashboard" && currentUser) {
+      fetchDashboardStats()
+        .then(setDashboardStats)
+        .catch((err) => console.error("Failed to load dashboard stats:", err));
+    }
+  }, [active, currentUser]);
 
   // Panelists only ever have one destination (the Panelist screen) — skip the
   // module picker entirely and drop them straight in, instead of making them
@@ -179,6 +226,7 @@ export default function App() {
     panelists, setPanelists,
     selectedPanelists,
     currentUser,
+    dashboardStats,
   };
 
   const sidebarBg = `linear-gradient(180deg, ${T.primary} 0%, ${T.primaryDark} 100%)`;

@@ -47,7 +47,7 @@ class Interview(models.Model):
     )
     candidate_name = models.CharField(max_length=200)
     role           = models.CharField(max_length=200)
-    date           = models.DateField(null=True, blank=True)
+    date           = models.DateField(null=True, blank=True, db_index=True)
     time           = models.TimeField(null=True, blank=True)
     panel          = models.ManyToManyField(Panelist, blank=True, related_name="interviews")
     score          = models.PositiveIntegerField(null=True, blank=True)
@@ -55,7 +55,7 @@ class Interview(models.Model):
         max_length=20, choices=RECOMMENDATION_CHOICES, blank=True
     )
     feedback       = models.TextField(blank=True)
-    status         = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Pending")
+    status         = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Pending", db_index=True)
     mode           = models.CharField(max_length=20, choices=MODE_CHOICES, default="Online")
     meeting_link   = models.URLField(blank=True)
     round          = models.PositiveIntegerField(default=1)
