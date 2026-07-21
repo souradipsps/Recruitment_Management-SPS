@@ -38,3 +38,17 @@ class CachedJWTAuthentication(JWTAuthentication):
                 cache.set(cache_key, user, timeout=300)  # Cache for 5 minutes
         return user
 
+
+from rest_framework.pagination import PageNumberPagination
+
+class ConditionalPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 1000
+
+    def paginate_queryset(self, queryset, request, view=None):
+        if request.query_params.get('paginate') == 'true':
+            return super().paginate_queryset(queryset, request, view)
+        return None
+
+

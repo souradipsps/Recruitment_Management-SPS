@@ -77,11 +77,17 @@ export default function JobRequests(props) {
           scrollRef={s.scrollRef}
           currentCardIndex={s.currentCardIndex}
           setCurrentCardIndex={s.setCurrentCardIndex}
+          startIndex={s.startIndex}
+          totalItems={s.totalItems}
+          endIndex={s.endIndex}
         />
       ) : (
         <JobRequestTable
           filteredRequests={s.filteredRequests}
           onRowClick={(index) => s.openView(s.filteredRequests[index])}
+          totalPages={s.totalPages}
+          activePage={s.activePage}
+          setCurrentPage={s.setCurrentPage}
         />
       )}
 

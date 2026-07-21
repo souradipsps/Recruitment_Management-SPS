@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { emptyForm } from "./jobRequestUtils";
 import { createJobRequest, updateJobRequestStatus, updateJobRequestFields } from "../../api/jobRequestsApi";
 import { fetchApprovals } from "../../api/approvalsApi";
@@ -19,6 +19,11 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
   const [deptFilter, setDeptFilter] = useState("All");
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const scrollRef = useRef(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, deptFilter, search]);
 
   const filteredRequests = jobRequests
     .filter((r) => statusFilter === "All" || r.status === statusFilter)
@@ -31,6 +36,14 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
         (String(r.id) || "").toLowerCase().includes(query)
       );
     });
+
+  const ITEMS_PER_PAGE = 20;
+  const totalItems = filteredRequests.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const activePage = Math.min(currentPage, Math.max(totalPages, 1));
+  const startIndex = (activePage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const displayRequests = filteredRequests.slice(startIndex, endIndex);
 
   const counts = STATUSES.reduce((acc, status) => {
     const baseRequests = deptFilter === "All" ? jobRequests : jobRequests.filter((r) => r.department === deptFilter);
@@ -439,7 +452,14 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     search,
     setSearch,
     counts,
-    filteredRequests,
+    filteredRequests: displayRequests,
+    originalFilteredRequests: filteredRequests,
+    totalPages,
+    activePage,
+    startIndex,
+    endIndex,
+    totalItems,
+    setCurrentPage,
     deptFilter,
     setDeptFilter,
     filterDeptOptions,

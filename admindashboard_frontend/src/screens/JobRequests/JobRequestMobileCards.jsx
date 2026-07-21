@@ -2,13 +2,13 @@ import { T } from "../../theme";
 import { statusVariant } from "../../theme";
 import { Badge } from "../../components/ui";
 
-export default function JobRequestMobileCards({ filteredRequests, onView, scrollRef, currentCardIndex, setCurrentCardIndex }) {
+export default function JobRequestMobileCards({ filteredRequests, onView, scrollRef, currentCardIndex, setCurrentCardIndex, startIndex = 0, totalItems = 0, endIndex = 0 }) {
   return (
     <div style={{ marginBottom: 4 }}>
       <div style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, marginBottom: 8, textAlign: "center" }}>
-        {filteredRequests.length} request{filteredRequests.length !== 1 ? "s" : ""}
+        Showing {totalItems > 0 ? startIndex + 1 : 0} - {endIndex} of {totalItems} requests
       </div>
-
+ 
       <div
         ref={scrollRef}
         onScroll={(e) => {
@@ -53,7 +53,7 @@ export default function JobRequestMobileCards({ filteredRequests, onView, scroll
               }}
             >
               <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", padding: "4px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.2)" }}>
-                {idx + 1} of {filteredRequests.length}
+                {startIndex + idx + 1} of {totalItems}
               </div>
 
               <div>

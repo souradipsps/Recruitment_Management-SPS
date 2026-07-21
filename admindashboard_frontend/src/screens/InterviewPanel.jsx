@@ -44,11 +44,26 @@ export default function InterviewPanel({
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
 
+  const getExistingOffer = (candidateName, candidateRole) => {
+    return (offers || []).find((o) => {
+      const oCand = (o.candidate || "").trim().toLowerCase();
+      const cCand = (candidateName || "").trim().toLowerCase();
+      const oRole = (o.role || "").trim().toLowerCase();
+      const cRole = (candidateRole || "").trim().toLowerCase();
+      return oCand === cCand && oRole === cRole;
+    });
+  };
+
   const [search, setSearch] = useState("");
   const [selectedPostingId, setSelectedPostingId] = useState(null);
   const [roundFilter, setRoundFilter] = useState(1);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const scrollRef = useRef(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedPostingId, roundFilter]);
   const [evalInterview, setEvalInterview] = useState(null);
   const [inlineEvalKey, setInlineEvalKey] = useState(null);
   const [scores, setScores] = useState({});
@@ -292,7 +307,18 @@ export default function InterviewPanel({
       return { ...c, displayRound: c.activeRound };
     });
 
-  const selectableCandidates = filteredCandidates.filter((c) => c.displayRound === c.activeRound);
+  const ITEMS_PER_PAGE = 20;
+  const totalItems = filteredCandidates.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const activePage = Math.min(currentPage, Math.max(totalPages, 1));
+  const startIndex = (activePage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const displayCandidates = filteredCandidates.slice(startIndex, endIndex);
+
+  const selectableCandidates = filteredCandidates.filter((c) => {
+    const existingOffer = getExistingOffer(c.name, c.role);
+    return c.displayRound === c.activeRound && !existingOffer;
+  });
 
   const isAllSelected =
     selectableCandidates.length > 0 &&
@@ -300,6 +326,8 @@ export default function InterviewPanel({
 
   const toggleSelectCandidate = (c) => {
     if (c.displayRound < c.activeRound) return; // ignore toggling for disabled/previous rounds
+    const existingOffer = getExistingOffer(c.name, c.role);
+    if (existingOffer) return; // ignore if they already have an offer
     const key = candidateKey(c);
     setSelectedCandidateKeys((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
@@ -477,7 +505,7 @@ export default function InterviewPanel({
   };
 
   const handleDeclineOfferInPanel = async (candidateName, candidateRole) => {
-    const existing = (offers || []).find((o) => o.candidate === candidateName && o.role === candidateRole);
+    const existing = getExistingOffer(candidateName, candidateRole);
     if (!existing) return;
     try {
       if (existing.backendId != null) {
@@ -1219,7 +1247,7 @@ export default function InterviewPanel({
             <>
               {/* Candidate count */}
               <div style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, marginBottom: 8, textAlign: "center" }}>
-                {filteredCandidates.length} shortlisted candidate{filteredCandidates.length !== 1 ? "s" : ""}
+                Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, totalItems)} of {totalItems} candidates
               </div>
 
               {/* Snap scroll container */}
@@ -1243,12 +1271,12 @@ export default function InterviewPanel({
                   margin: "0 -16px",
                 }}
               >
-                {filteredCandidates.map((c, idx) => {
+                {displayCandidates.map((c, idx) => {
                   const i = c.interview;
                   const rnd = c.displayRound;
                   const isScheduled = !!i.date;
                   const isPreviousRound = c.displayRound < c.activeRound;
-                  const existingOffer = (offers || []).find((o) => o.candidate === c.name && o.role === c.role);
+                  const existingOffer = getExistingOffer(c.name, c.role);
                   const cardBackground = "linear-gradient(135deg, #72102a 0%, #3a0010 100%)";
                   return (
                     <div
@@ -1271,7 +1299,7 @@ export default function InterviewPanel({
                     >
                       {/* Pagination counter */}
                       <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", padding: "4px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.2)" }}>
-                        {idx + 1} of {filteredCandidates.length}
+                        {startIndex + idx + 1} of {totalItems}
                       </div>
 
                       <div>
@@ -1536,7 +1564,7 @@ export default function InterviewPanel({
 
               {/* Dot indicators */}
               <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 12, paddingBottom: 8 }}>
-                {filteredCandidates.map((_, idx) => (
+                {displayCandidates.map((_, idx) => (
                   <div
                     key={idx}
                     onClick={() => scrollRef.current?.scrollTo({ left: (idx * scrollRef.current.clientWidth), behavior: "smooth" })}
@@ -1606,7 +1634,7 @@ export default function InterviewPanel({
                 style={{ maxWidth: 360, flex: 1, minWidth: 0 }}
               />
               <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, whiteSpace: "nowrap" }}>
-                {filteredCandidates.length} of {candidatesWithInterviews.length} shortlisted
+                Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, totalItems)} of {totalItems} shortlisted
               </span>
             </div>
           </div>
@@ -1637,12 +1665,12 @@ export default function InterviewPanel({
                 </tr>
               </thead>
               <tbody>
-                {filteredCandidates.map((c) => {
+                {displayCandidates.map((c) => {
                   const i = c.interview;
                   const rnd = c.displayRound;
                   const isPreviousRound = c.displayRound < c.activeRound;
                   const isChecked = selectedCandidateKeys.includes(candidateKey(c));
-                  const existingOffer = (offers || []).find((o) => o.candidate === c.name && o.role === c.role);
+                  const existingOffer = getExistingOffer(c.name, c.role);
 
                   return (
                     <React.Fragment key={candidateKey(c)}>
@@ -2073,7 +2101,7 @@ export default function InterviewPanel({
                   );
                 })}
 
-                {filteredCandidates.length === 0 && (
+                {totalItems === 0 && (
                   <tr>
                     <td colSpan={8} style={{ padding: "40px 24px", textAlign: "center", color: T.inkFaint, fontSize: 14 }}>
                       No candidates found matching the filters.
@@ -2083,6 +2111,60 @@ export default function InterviewPanel({
               </tbody>
             </table>
           </div>
+
+          {/* Desktop/Mobile Pagination Control */}
+          {totalPages > 1 && (
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              padding: "16px 20px",
+              borderTop: `1px solid ${T.border}`,
+            }}>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={activePage === 1}
+                style={{
+                  background: T.white,
+                  color: activePage === 1 ? T.inkFaint : T.primary,
+                  border: `1.5px solid ${activePage === 1 ? T.border : T.primary}`,
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: activePage === 1 ? "not-allowed" : "pointer",
+                  opacity: activePage === 1 ? 0.5 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                &larr; Previous 20
+              </button>
+
+              <span style={{ fontSize: 13, color: T.inkMid, fontWeight: 600 }}>
+                Page {activePage} of {totalPages}
+              </span>
+
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={activePage === totalPages}
+                style={{
+                  background: activePage === totalPages ? T.white : T.primary,
+                  color: activePage === totalPages ? T.inkFaint : T.white,
+                  border: `1.5px solid ${activePage === totalPages ? T.border : T.primary}`,
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: activePage === totalPages ? "not-allowed" : "pointer",
+                  opacity: activePage === totalPages ? 0.5 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                Next 20 &rarr;
+              </button>
+            </div>
+          )}
         </Card>
       )}
 

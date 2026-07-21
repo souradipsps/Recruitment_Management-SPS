@@ -58,6 +58,11 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
   const [modalSaving, setModalSaving] = useState(false);
   const [modalError, setModalError] = useState("");
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, search]);
   const scrollRef = useRef(null);
   useEffect(() => {
     const scrollContainer = document.querySelector(".animate-fade-in-up");
@@ -92,6 +97,14 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
         (String(r.id) || "").toLowerCase().includes(query)
       );
     });
+
+  const ITEMS_PER_PAGE = 20;
+  const totalItems = filteredRequests.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const activePage = Math.min(currentPage, Math.max(totalPages, 1));
+  const startIndex = (activePage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const displayRequests = filteredRequests.slice(startIndex, endIndex);
 
   const counts = statuses.reduce((acc, status) => {
     acc[status] = status === "All"
@@ -886,7 +899,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
       {isMobile ? (
         <div style={{ marginBottom: 4 }}>
           <div style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, marginBottom: 8, textAlign: "center" }}>
-            {filteredRequests.length} request{filteredRequests.length !== 1 ? "s" : ""}
+            Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, totalItems)} of {totalItems} requests
           </div>
 
           <div
@@ -909,7 +922,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
               margin: "0 -16px",
             }}
           >
-            {filteredRequests.map((r, idx) => {
+            {displayRequests.map((r, idx) => {
               const cardBackground = "linear-gradient(135deg, #72102a 0%, #3a0010 100%)";
               return (
                 <div
@@ -933,7 +946,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                   }}
                 >
                   <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", padding: "4px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.2)" }}>
-                    {idx + 1} of {filteredRequests.length}
+                    {startIndex + idx + 1} of {totalItems}
                   </div>
 
                   <div>
@@ -1022,7 +1035,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
 
           {filteredRequests.length > 0 && (
             <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10, paddingBottom: 8 }}>
-              {filteredRequests.map((_, i) => (
+              {displayRequests.map((_, i) => (
                 <div
                   key={i}
                   onClick={() => scrollRef.current?.scrollTo({ left: (i * scrollRef.current.clientWidth), behavior: "smooth" })}
@@ -1043,13 +1056,13 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
         <Card>
           <Table
             onRowClick={(index) => {
-              setSelectedRequest(filteredRequests[index]);
-              setOriginalRequest(filteredRequests[index]);
+              setSelectedRequest(displayRequests[index]);
+              setOriginalRequest(displayRequests[index]);
               setModalError("");
               setShowViewModal(true);
             }}
             cols={["Request ID", "Department", "Role", "Employee Type", "Experience", "Salary Range", "Justification", "Status"]}
-            rows={filteredRequests.map((r) => {
+            rows={displayRequests.map((r) => {
               const ss = getStatusStyle(r.status);
               return [
                 <Mono v={typeof r.id === "string" ? r.id.substring(0, 18) : String(r.id)} />,
@@ -1063,6 +1076,60 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
               ];
             })}
           />
+
+          {/* Desktop/Mobile Pagination Control */}
+          {totalPages > 1 && (
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              padding: "16px 20px",
+              borderTop: `1px solid ${T.border}`,
+            }}>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={activePage === 1}
+                style={{
+                  background: T.white,
+                  color: activePage === 1 ? T.inkFaint : T.primary,
+                  border: `1.5px solid ${activePage === 1 ? T.border : T.primary}`,
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: activePage === 1 ? "not-allowed" : "pointer",
+                  opacity: activePage === 1 ? 0.5 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                &larr; Previous 20
+              </button>
+
+              <span style={{ fontSize: 13, color: T.inkMid, fontWeight: 600 }}>
+                Page {activePage} of {totalPages}
+              </span>
+
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={activePage === totalPages}
+                style={{
+                  background: activePage === totalPages ? T.white : T.primary,
+                  color: activePage === totalPages ? T.inkFaint : T.white,
+                  border: `1.5px solid ${activePage === totalPages ? T.border : T.primary}`,
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: activePage === totalPages ? "not-allowed" : "pointer",
+                  opacity: activePage === totalPages ? 0.5 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                Next 20 &rarr;
+              </button>
+            </div>
+          )}
         </Card>
       )}
 

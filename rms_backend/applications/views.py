@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from users.permissions import IsHRAdmin, IsCandidate
+from users.utils import ConditionalPagination
 from notifications.models import Notification
 from .models import JobApplication, GeneralApplication
 from .serializers import (
@@ -17,6 +18,9 @@ class JobApplicationViewSet(viewsets.ModelViewSet):
     HR Admins: can view all, update status.
     """
     serializer_class = JobApplicationSerializer
+    pagination_class = ConditionalPagination
+    filterset_fields = ["status", "posting"]
+    search_fields = ["candidate__first_name", "candidate__last_name", "candidate__email", "role"]
 
     def get_queryset(self):
         user = self.request.user
@@ -64,6 +68,9 @@ class GeneralApplicationViewSet(viewsets.ModelViewSet):
     Admin Dashboard → Applications tab (General).
     """
     serializer_class = GeneralApplicationSerializer
+    pagination_class = ConditionalPagination
+    filterset_fields = ["status"]
+    search_fields = ["candidate__first_name", "candidate__last_name", "candidate__email", "preferred_role"]
 
     def get_queryset(self):
         user = self.request.user

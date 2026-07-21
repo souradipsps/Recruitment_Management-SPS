@@ -30,14 +30,31 @@ export const normalizeApplication = (r) => ({
 });
 
 // GET /api/applications/ -> normalized array (admin: all job-posting applications).
-export async function fetchApplications() {
-  const res = await authFetch(API_URL, { headers: authHeaders() });
+export async function fetchApplications(page = 1, pageSize = 20, paginate = false, search = "", status = "", posting = "") {
+  const params = new URLSearchParams();
+  if (paginate) {
+    params.append("paginate", "true");
+    params.append("page", String(page));
+    params.append("page_size", String(pageSize));
+  }
+  if (search) params.append("search", search);
+  if (status && status !== "All") params.append("status", status);
+  if (posting) params.append("posting", String(posting));
+
+  const queryString = params.toString() ? `?${params.toString()}` : "";
+  const res = await authFetch(`${API_URL}${queryString}`, { headers: authHeaders() });
 
   if (!res.ok) {
     throw new Error(`Failed to load applications (${res.status} ${res.statusText})`);
   }
 
   const data = await res.json();
+  if (paginate) {
+    return {
+      results: (data.results || []).map(normalizeApplication),
+      count: data.count || 0
+    };
+  }
   const list = Array.isArray(data) ? data : data.results || []; // handle DRF pagination
   return list.map(normalizeApplication);
 }
@@ -162,14 +179,30 @@ export const normalizeGeneralApplication = (r) => ({
 });
 
 // GET /api/general-applications/ -> normalized array (admin: all general/profile applications).
-export async function fetchGeneralApplications() {
-  const res = await authFetch(GENERAL_API_URL, { headers: authHeaders() });
+export async function fetchGeneralApplications(page = 1, pageSize = 20, paginate = false, search = "", status = "") {
+  const params = new URLSearchParams();
+  if (paginate) {
+    params.append("paginate", "true");
+    params.append("page", String(page));
+    params.append("page_size", String(pageSize));
+  }
+  if (search) params.append("search", search);
+  if (status && status !== "All") params.append("status", status);
+
+  const queryString = params.toString() ? `?${params.toString()}` : "";
+  const res = await authFetch(`${GENERAL_API_URL}${queryString}`, { headers: authHeaders() });
 
   if (!res.ok) {
     throw new Error(`Failed to load general applications (${res.status} ${res.statusText})`);
   }
 
   const data = await res.json();
+  if (paginate) {
+    return {
+      results: (data.results || []).map(normalizeGeneralApplication),
+      count: data.count || 0
+    };
+  }
   const list = Array.isArray(data) ? data : data.results || []; // handle DRF pagination
   return list.map(normalizeGeneralApplication);
 }

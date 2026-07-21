@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { T, statusVariant } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
 import { Card, SectionTitle, Table, Mono, Badge, Input, Btn, Modal, ModalHeader, Select, FormField } from "../components/ui";
-import { updateApplicationStatus, updateGeneralApplicationStatus, createShortlistInterview, deleteInterview } from "../api/applicationsApi";
+import { updateApplicationStatus, updateGeneralApplicationStatus, createShortlistInterview, deleteInterview, fetchApplications, fetchGeneralApplications } from "../api/applicationsApi";
 
 const STATUS_OPTIONS = [
   { value: "Shortlisted", label: "Shortlisted" },
@@ -148,13 +148,49 @@ export default function Applications({
   const filtered = isJob ? filteredJobApplications : filteredGenApplications;
   const data = isJob ? baseJobData : baseGenData;
 
-  const ITEMS_PER_PAGE = 10;
-  const totalItems = filtered.length;
-  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
-  const activePage = Math.min(currentPage, Math.max(totalPages, 1));
-  const startIndex = (activePage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const displayFiltered = filtered.slice(startIndex, endIndex);
+  const [serverData, setServerData] = useState([]);
+  const [serverCount, setServerCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+
+    const loadData = async () => {
+      try {
+        const postingId = selectedPostingId;
+        const postingObj = jobPostings.find(p => p.id === postingId);
+        const backendPostingId = postingObj?.backendId || "";
+
+        if (isJob) {
+          const res = await fetchApplications(currentPage, 10, true, search, filter, backendPostingId);
+          if (active) {
+            setServerData(res.results);
+            setServerCount(res.count);
+          }
+        } else {
+          const res = await fetchGeneralApplications(currentPage, 10, true, search, filter);
+          if (active) {
+            setServerData(res.results);
+            setServerCount(res.count);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load paginated applications:", err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    loadData();
+    return () => { active = false; };
+  }, [tab, currentPage, search, filter, selectedPostingId, jobApplications, generalApplications]);
+
+  const totalPages = Math.ceil(serverCount / 10);
+  const activePage = currentPage;
+  const displayFiltered = serverData;
+  const displayStartIndex = (currentPage - 1) * 10;
+  const displayEndIndex = displayStartIndex + displayFiltered.length;
 
   const counts = statuses.slice(1).reduce((acc, s) => {
     acc[s] = data.filter((a) => a.status === s).length;
@@ -805,70 +841,88 @@ export default function Applications({
               style={{ maxWidth: 360, flex: 1, minWidth: 0 }}
             />
             <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, whiteSpace: "nowrap" }}>
-              Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, totalItems)} of {totalItems}
+              Showing {serverCount > 0 ? displayStartIndex + 1 : 0} - {displayEndIndex} of {serverCount}
             </span>
           </div>
 
-          {isJob ? (
-            <Table
-              cols={["App ID", "Candidate", "Role", "Job Post", "Experience", "Qualification", "Referred By", "Applied Date", "Status", "Actions"]}
-              onRowClick={(index) => setSelectedApp(displayFiltered[index])}
-              onRowDoubleClick={isMobile ? (index) => updateStatus(displayFiltered[index], "Shortlisted") : undefined}
-              rows={displayFiltered.map((a) => [
-                <Mono v={a.id} />,
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  {avatar(a.name)}
-                  <div><strong>{a.name}</strong><div style={{ fontSize: 11, color: T.inkFaint }}>{a.email}</div></div>
-                </div>,
-                a.role,
-                <span style={{ fontSize: 12, color: T.inkMid }}>{getJobPostingDisplayId(a.jobPostingId)}</span>,
-                a.exp,
-                a.qualification || "—",
-                <span style={{ fontWeight: 600, color: a.referredBy && a.referredBy !== "None" ? T.accentDark : T.inkLight }}>{a.referredBy || "—"}</span>,
-                a.applied,
-                <Badge label={a.status} variant={statusVariant(a.status)} />,
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {a.status === "Shortlisted" ? (
-                    <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Applied"); }} style={actionBtnStyle("reject")} className="btn-remove-shortlist">Remove from Shortlist</button>
-                  ) : (
-                    <>
-                      <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Shortlisted"); }} style={actionBtnStyle("shortlist")} className="btn-shortlist">Shortlist</button>
-                      <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Rejected"); }} style={actionBtnStyle("reject")} className="btn-reject">Reject</button>
-                    </>
-                  )}
-                </div>,
-              ])}
-            />
-          ) : (
-            <Table
-              cols={["App ID", "Candidate", "Preferred Role", "Location", "Experience", "Qualification", "Applied Date", "Status", "Actions"]}
-              onRowClick={(index) => setSelectedApp(displayFiltered[index])}
-              onRowDoubleClick={isMobile ? (index) => updateStatus(displayFiltered[index], "Shortlisted") : undefined}
-              rows={displayFiltered.map((a) => [
-                <Mono v={a.id} />,
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  {avatar(a.name)}
-                  <div><strong>{a.name}</strong><div style={{ fontSize: 11, color: T.inkFaint }}>{a.email}</div></div>
-                </div>,
-                formatPreferredRole(a.preferredRole),
-                <span style={{ fontSize: 12, color: T.inkMid }}>{a.location || "—"}</span>,
-                a.exp,
-                a.qualification || "—",
-                a.applied,
-                <Badge label={a.status} variant={statusVariant(a.status)} />,
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {a.status === "Shortlisted" ? (
-                    <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Applied"); }} style={actionBtnStyle("reject")} className="btn-remove-shortlist">Remove from Shortlist</button>
-                  ) : (
-                    <>
-                      <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Shortlisted"); }} style={actionBtnStyle("shortlist")} className="btn-shortlist">Shortlist</button>
-                      <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Rejected"); }} style={actionBtnStyle("reject")} className="btn-reject">Reject</button>
-                    </>
-                  )}
-                </div>,
-              ])}
-            />
-          )}
+          <div style={{ position: "relative", opacity: loading ? 0.6 : 1, transition: "opacity 0.15s" }}>
+            {loading && (
+              <div style={{
+                position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+                background: "rgba(255, 255, 255, 0.35)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                zIndex: 10
+              }}>
+                <div className="spinner-mini" style={{
+                  width: 32, height: 32,
+                  borderRadius: "50%",
+                  border: "2.5px solid #72102a15",
+                  borderTop: "2.5px solid #72102a",
+                  animation: "spin 0.8s linear infinite"
+                }} />
+              </div>
+            )}
+            {isJob ? (
+              <Table
+                cols={["App ID", "Candidate", "Role", "Job Post", "Experience", "Qualification", "Referred By", "Applied Date", "Status", "Actions"]}
+                onRowClick={(index) => setSelectedApp(displayFiltered[index])}
+                onRowDoubleClick={isMobile ? (index) => updateStatus(displayFiltered[index], "Shortlisted") : undefined}
+                rows={displayFiltered.map((a) => [
+                  <Mono v={a.id} />,
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    {avatar(a.name)}
+                    <div><strong>{a.name}</strong><div style={{ fontSize: 11, color: T.inkFaint }}>{a.email}</div></div>
+                  </div>,
+                  a.role,
+                  <span style={{ fontSize: 12, color: T.inkMid }}>{getJobPostingDisplayId(a.jobPostingId)}</span>,
+                  a.exp,
+                  a.qualification || "—",
+                  <span style={{ fontWeight: 600, color: a.referredBy && a.referredBy !== "None" ? T.accentDark : T.inkLight }}>{a.referredBy || "—"}</span>,
+                  a.applied,
+                  <Badge label={a.status} variant={statusVariant(a.status)} />,
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {a.status === "Shortlisted" ? (
+                      <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Applied"); }} style={actionBtnStyle("reject")} className="btn-remove-shortlist">Remove from Shortlist</button>
+                    ) : (
+                      <>
+                        <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Shortlisted"); }} style={actionBtnStyle("shortlist")} className="btn-shortlist">Shortlist</button>
+                        <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Rejected"); }} style={actionBtnStyle("reject")} className="btn-reject">Reject</button>
+                      </>
+                    )}
+                  </div>,
+                ])}
+              />
+            ) : (
+              <Table
+                cols={["App ID", "Candidate", "Preferred Role", "Location", "Experience", "Qualification", "Applied Date", "Status", "Actions"]}
+                onRowClick={(index) => setSelectedApp(displayFiltered[index])}
+                onRowDoubleClick={isMobile ? (index) => updateStatus(displayFiltered[index], "Shortlisted") : undefined}
+                rows={displayFiltered.map((a) => [
+                  <Mono v={a.id} />,
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    {avatar(a.name)}
+                    <div><strong>{a.name}</strong><div style={{ fontSize: 11, color: T.inkFaint }}>{a.email}</div></div>
+                  </div>,
+                  formatPreferredRole(a.preferredRole),
+                  <span style={{ fontSize: 12, color: T.inkMid }}>{a.location || "—"}</span>,
+                  a.exp,
+                  a.qualification || "—",
+                  a.applied,
+                  <Badge label={a.status} variant={statusVariant(a.status)} />,
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {a.status === "Shortlisted" ? (
+                      <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Applied"); }} style={actionBtnStyle("reject")} className="btn-remove-shortlist">Remove from Shortlist</button>
+                    ) : (
+                      <>
+                        <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Shortlisted"); }} style={actionBtnStyle("shortlist")} className="btn-shortlist">Shortlist</button>
+                        <button onClick={(e) => { e.stopPropagation(); updateStatus(a, "Rejected"); }} style={actionBtnStyle("reject")} className="btn-reject">Reject</button>
+                      </>
+                    )}
+                  </div>,
+                ])}
+              />
+            )}
+          </div>
 
           {/* Desktop Pagination Control */}
           {totalPages > 1 && (

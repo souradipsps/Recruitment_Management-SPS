@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { T } from "../../theme";
 import { useBreakpoint } from "../../hooks";
 import { Card, SectionTitle, Input, Select } from "../../components/ui";
@@ -16,6 +16,11 @@ export default function ExistingRoles({ roles, setRoles }) {
   const [search, setSearch] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [statusError, setStatusError] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [deptFilter, statusFilter, search]);
 
   const depts = ["All", ...new Set(roles.map((r) => r.dept))];
   const statuses = ["All", "Active", "Inactive"];
@@ -52,6 +57,14 @@ export default function ExistingRoles({ roles, setRoles }) {
         r.dept.toLowerCase().includes(search.toLowerCase()) ||
         String(r.id).toLowerCase().includes(search.toLowerCase())
     );
+
+  const ITEMS_PER_PAGE = 20;
+  const totalItems = filtered.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const activePage = Math.min(currentPage, Math.max(totalPages, 1));
+  const startIndex = (activePage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const displayFiltered = filtered.slice(startIndex, endIndex);
 
   const totalRoles = roles.length;
   const activeRoles = roles.filter((r) => r.currentStatus === "Active").length;
@@ -128,17 +141,73 @@ export default function ExistingRoles({ roles, setRoles }) {
               ))}
             </div>
           </div>
-          <span style={{ fontSize: 12, color: T.inkFaint, marginLeft: "auto" }}>{filtered.length} roles</span>
+          <span style={{ fontSize: 12, color: T.inkFaint, marginLeft: "auto" }}>
+            Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, totalItems)} of {totalItems} roles
+          </span>
         </div>
 
         {/* Roles list/table */}
         <RolesTable
           cols={["Role ID", "Department", "Role Name", "Experience", "Salary Range", "Type", "Status", "Action"]}
-          rows={filtered}
+          rows={displayFiltered}
           onStatusChange={handleStatusChange}
           onDelete={handleDeleteRole}
           bp={bp}
         />
+
+        {/* Desktop Pagination Control */}
+        {totalPages > 1 && (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            padding: "16px 20px",
+            borderTop: `1px solid ${T.border}`,
+          }}>
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={activePage === 1}
+              style={{
+                background: T.white,
+                color: activePage === 1 ? T.inkFaint : T.primary,
+                border: `1.5px solid ${activePage === 1 ? T.border : T.primary}`,
+                borderRadius: 8,
+                padding: "8px 16px",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: activePage === 1 ? "not-allowed" : "pointer",
+                opacity: activePage === 1 ? 0.5 : 1,
+                transition: "all 0.15s",
+              }}
+            >
+              &larr; Previous 20
+            </button>
+
+            <span style={{ fontSize: 13, color: T.inkMid, fontWeight: 600 }}>
+              Page {activePage} of {totalPages}
+            </span>
+
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={activePage === totalPages}
+              style={{
+                background: activePage === totalPages ? T.white : T.primary,
+                color: activePage === totalPages ? T.inkFaint : T.white,
+                border: `1.5px solid ${activePage === totalPages ? T.border : T.primary}`,
+                borderRadius: 8,
+                padding: "8px 16px",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: activePage === totalPages ? "not-allowed" : "pointer",
+                opacity: activePage === totalPages ? 0.5 : 1,
+                transition: "all 0.15s",
+              }}
+            >
+              Next 20 &rarr;
+            </button>
+          </div>
+        )}
       </Card>
 
       {/* Delete confirmation modal */}

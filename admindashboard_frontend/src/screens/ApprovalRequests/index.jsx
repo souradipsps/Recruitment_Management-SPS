@@ -35,6 +35,11 @@ export default function ApprovalRequests({
   const [typeFilter, setTypeFilter] = useState("All");
   const [search, setSearch]         = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+ 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, typeFilter, search]);
 
   // Lock body scroll when modal is open.
   useEffect(() => {
@@ -71,6 +76,14 @@ export default function ApprovalRequests({
       );
     });
 
+  const ITEMS_PER_PAGE = 20;
+  const totalItems = filtered.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const activePage = Math.min(currentPage, Math.max(totalPages, 1));
+  const startIndex = (activePage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const displayFiltered = filtered.slice(startIndex, endIndex);
+ 
   const pendingRequests = requests.filter((r) => r.status === "Pending");
   const pendingCount = pendingRequests.length;
 
@@ -166,16 +179,70 @@ export default function ApprovalRequests({
           isMobile={isMobile}
         />
 
-        {filtered.length === 0 ? (
+        {totalItems === 0 ? (
           <div style={{ padding: "48px 24px", textAlign: "center" }}>
             <div style={{ fontSize: 32, marginBottom: 10 }}>📋</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 4 }}>No requests found</div>
             <div style={{ fontSize: 13, color: T.inkLight }}>No requests match the selected filters.</div>
           </div>
         ) : isMobile ? (
-          <ApprovalListMobile filtered={filtered} openModal={openModal} performAction={performAction} isActionPending={isActionPending} />
+          <ApprovalListMobile filtered={displayFiltered} openModal={openModal} performAction={performAction} isActionPending={isActionPending} />
         ) : (
-          <ApprovalListDesktop filtered={filtered} openModal={openModal} performAction={performAction} isActionPending={isActionPending} />
+          <ApprovalListDesktop filtered={displayFiltered} openModal={openModal} performAction={performAction} isActionPending={isActionPending} />
+        )}
+ 
+        {/* Desktop/Mobile Pagination Control */}
+        {totalPages > 1 && (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            padding: "16px 20px",
+            borderTop: `1px solid ${T.border}`,
+          }}>
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={activePage === 1}
+              style={{
+                background: T.white,
+                color: activePage === 1 ? T.inkFaint : T.primary,
+                border: `1.5px solid ${activePage === 1 ? T.border : T.primary}`,
+                borderRadius: 8,
+                padding: "8px 16px",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: activePage === 1 ? "not-allowed" : "pointer",
+                opacity: activePage === 1 ? 0.5 : 1,
+                transition: "all 0.15s",
+              }}
+            >
+              &larr; Previous 20
+            </button>
+ 
+            <span style={{ fontSize: 13, color: T.inkMid, fontWeight: 600 }}>
+              Page {activePage} of {totalPages}
+            </span>
+ 
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={activePage === totalPages}
+              style={{
+                background: activePage === totalPages ? T.white : T.primary,
+                color: activePage === totalPages ? T.inkFaint : T.white,
+                border: `1.5px solid ${activePage === totalPages ? T.border : T.primary}`,
+                borderRadius: 8,
+                padding: "8px 16px",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: activePage === totalPages ? "not-allowed" : "pointer",
+                opacity: activePage === totalPages ? 0.5 : 1,
+                transition: "all 0.15s",
+              }}
+            >
+              Next 20 &rarr;
+            </button>
+          </div>
         )}
       </Card>
     </div>

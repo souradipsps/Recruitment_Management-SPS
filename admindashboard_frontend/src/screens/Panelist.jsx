@@ -98,6 +98,11 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
   const [filterActiveIndex, setFilterActiveIndex] = useState(0);
   const [isSubmittingEval, setIsSubmittingEval] = useState(false);
   const [confirmData, setConfirmData] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, selectedJobId]);
   const [upcomingInterviews, setUpcomingInterviews] = useState([]);
   const scrollRef = useRef(null);
 
@@ -173,6 +178,14 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
   const filteredInterviews = selectedRole
     ? statusFilteredInterviews.filter((i) => i.role === selectedRole)
     : statusFilteredInterviews;
+
+  const ITEMS_PER_PAGE = 20;
+  const totalItems = filteredInterviews.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const activePage = Math.min(currentPage, Math.max(totalPages, 1));
+  const startIndex = (activePage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const displayInterviews = filteredInterviews.slice(startIndex, endIndex);
 
   const upcomingCount = myUpcoming.length;
   const evaluatedCount = scheduledInterviews.filter((i) => i.evaluations?.length > 0).length;
@@ -527,7 +540,9 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: T.ink }}>
           {statusFilter === "All" ? "All Interviews" : statusFilter === "Pending" ? "Pending Interviews" : statusFilter === "Completed" ? "Completed Interviews" : "Cancelled Interviews"}
-          <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, marginLeft: 8 }}>({filteredInterviews.length})</span>
+          <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, marginLeft: 8 }}>
+            (Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, totalItems)} of {totalItems})
+          </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: T.inkLight }}>Status:</span>
@@ -562,7 +577,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
       ) : (
         <>
           <div ref={scrollRef} onScroll={(e) => { if (isMobile) { const scrollLeft = e.currentTarget.scrollLeft; const cardWidth = e.currentTarget.clientWidth; const newIndex = Math.round(scrollLeft / cardWidth); setCurrentCardIndex(newIndex); } }} className="carousel-scroll" style={{ display: "flex", flexDirection: isMobile ? "row" : "column", alignItems: isMobile ? "flex-start" : undefined, gap: 20, overflowX: isMobile ? "auto" : undefined, overflowY: isMobile ? "hidden" : undefined, scrollSnapType: isMobile ? "x mandatory" : undefined, WebkitOverflowScrolling: isMobile ? "touch" : undefined, paddingBottom: isMobile ? 20 : undefined, marginBottom: isMobile ? 10 : undefined, paddingLeft: isMobile ? 12 : undefined, paddingRight: isMobile ? 12 : undefined, margin: isMobile ? "0 -12px" : undefined }}>
-            {filteredInterviews.map((interview, idx) => {
+            {displayInterviews.map((interview, idx) => {
               const cardKey = `${interview.candidate}-${interview.role}-${interview.round}`;
               const evaluations = getDisplayEvaluations(interview);
               const totalScore = computeTotalScore(evaluations);
@@ -585,7 +600,7 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
                       </div>
                     )}
 
-                    <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", padding: "4px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.2)" }}>{idx + 1} of {filteredInterviews.length}</div>
+                    <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", padding: "4px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.2)" }}>{startIndex + idx + 1} of {totalItems}</div>
 
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -972,11 +987,68 @@ export default function Panelist({ interviews = [], setInterviews, jobPostings =
             })}
           </div>
 
-          {isMobile && filteredInterviews.length > 0 && (
+          {isMobile && displayInterviews.length > 0 && (
             <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10, paddingBottom: 8 }}>
-              {filteredInterviews.map((_, i) => (
+              {displayInterviews.map((_, i) => (
                 <div key={i} onClick={() => scrollRef.current?.scrollTo({ left: (i * scrollRef.current.clientWidth), behavior: "smooth" })} style={{ width: 8, height: 8, borderRadius: "50%", background: currentCardIndex === i ? T.primary : T.border, cursor: "pointer", transition: "all 0.3s" }} />
               ))}
+            </div>
+          )}
+
+          {/* Desktop/Mobile Pagination Control */}
+          {totalPages > 1 && (
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              padding: "16px 20px",
+              marginTop: 20,
+              borderTop: `1px solid ${T.border}`,
+              background: T.white,
+              borderRadius: 16,
+            }}>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={activePage === 1}
+                style={{
+                  background: T.white,
+                  color: activePage === 1 ? T.inkFaint : T.primary,
+                  border: `1.5px solid ${activePage === 1 ? T.border : T.primary}`,
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: activePage === 1 ? "not-allowed" : "pointer",
+                  opacity: activePage === 1 ? 0.5 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                &larr; Previous 20
+              </button>
+
+              <span style={{ fontSize: 13, color: T.inkMid, fontWeight: 600 }}>
+                Page {activePage} of {totalPages}
+              </span>
+
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={activePage === totalPages}
+                style={{
+                  background: activePage === totalPages ? T.white : T.primary,
+                  color: activePage === totalPages ? T.inkFaint : T.white,
+                  border: `1.5px solid ${activePage === totalPages ? T.border : T.primary}`,
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: activePage === totalPages ? "not-allowed" : "pointer",
+                  opacity: activePage === totalPages ? 0.5 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                Next 20 &rarr;
+              </button>
             </div>
           )}
         </>

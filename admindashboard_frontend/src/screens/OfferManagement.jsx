@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { T, font } from "../theme";
 import { statusVariant } from "../theme";
 import { useBreakpoint, useHorizontalScroll } from "../hooks";
@@ -39,6 +39,11 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [], i
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [filterActiveIndex, setFilterActiveIndex] = useState(0);
   const scrollRef = useRef(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedPostingId]);
 
   const formatDateAndTime = (dateStr, timeStr) => {
     if (!dateStr) return "—";
@@ -120,6 +125,14 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [], i
   const filteredOffers = selectedPostingId
     ? offers.filter((o) => o.role === selectedRole)
     : offers;
+
+  const ITEMS_PER_PAGE = 20;
+  const totalItems = filteredOffers.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const activePage = Math.min(currentPage, Math.max(totalPages, 1));
+  const startIndex = (activePage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const displayOffers = filteredOffers.slice(startIndex, endIndex);
 
   const counts = ["Draft", "Sent", "Accepted", "Rejected", "Expired"].reduce((acc, s) => {
     acc[s] = filteredOffers.filter((o) => o.status === s).length;
@@ -302,16 +315,17 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [], i
       {isMobile ? (
         <div style={{ marginBottom: 4 }}>
           <div style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, marginBottom: 8, textAlign: "center" }}>
-            {filteredOffers.length} of {offers.length} offers
+            Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, totalItems)} of {totalItems} offers ({offers.length} total)
           </div>
 
-          <div ref={scrollRef} onScroll={(e) => { const scrollLeft = e.currentTarget.scrollLeft; const cardWidth = e.currentTarget.clientWidth; const newIndex = Math.round(scrollLeft / cardWidth); setCurrentCardIndex(newIndex); }} style={{ display: "flex", overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none", gap: 16, padding: "0 16px 20px", margin: "0 -16px" }}>
-            {filteredOffers.map((o, idx) => {
+          <div ref={scrollRef} onScroll={(e) => { const scrollLeft = e.currentTarget.scrollLeft; const cardWidth = e.currentTarget.clientWidth; const newIndex = Math.round(scrollLeft / cardWidth); setCurrentCardIndex(newIndex); }} style={{ display: "flex", overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none", gap: 16, padding: "0 16px 20px", margin: "0 -16px", scrollSnapType: "x mandatory" }}>
+            {displayOffers.map((o, idx) => {
+              const details = (jobPostings || []).find((p) => p.role === o.role);
               const score = getInterviewScore(interviews, o.candidate, o.role);
               const cardBackground = "linear-gradient(135deg, #72102a 0%, #3a0010 100%)";
               return (
-                <div key={o.id} onClick={() => setSelectedOfferForModal(o)} style={{ flexShrink: 0, minWidth: "calc(100% - 32px)", borderRadius: 20, background: cardBackground, color: "#fff", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: 24, position: "relative", boxShadow: "0 14px 40px rgba(0,0,0,0.25)", cursor: "pointer", minHeight: 380 }}>
-                  <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", padding: "4px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.2)" }}>{idx + 1} of {filteredOffers.length}</div>
+                <div key={o.id} onClick={() => setSelectedOfferForModal(o)} style={{ flexShrink: 0, minWidth: "calc(100% - 32px)", scrollSnapAlign: "center", borderRadius: 20, background: cardBackground, color: "#fff", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: 24, position: "relative", boxShadow: "0 14px 40px rgba(0,0,0,0.25)", cursor: "pointer", minHeight: 380 }}>
+                  <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", padding: "4px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.2)" }}>{startIndex + idx + 1} of {totalItems}</div>
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                       <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: "#fff", flexShrink: 0 }}>📄</div>
@@ -402,7 +416,7 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [], i
 
           {filteredOffers.length > 0 && (
             <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10, paddingBottom: 8 }}>
-              {filteredOffers.map((_, i) => (
+              {displayOffers.map((_, i) => (
                 <div key={i} onClick={() => scrollRef.current?.scrollTo({ left: (i * scrollRef.current.clientWidth), behavior: "smooth" })} style={{ width: 8, height: 8, borderRadius: "50%", background: currentCardIndex === i ? T.primary : T.border, cursor: "pointer", transition: "all 0.3s" }} />
               ))}
             </div>
@@ -411,12 +425,14 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [], i
       ) : (
         <Card>
           <div style={{ padding: "12px 14px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "flex-end" }}>
-            <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, whiteSpace: "nowrap" }}>{filteredOffers.length} of {offers.length} offers</span>
+            <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, whiteSpace: "nowrap" }}>
+              Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, totalItems)} of {totalItems} offers ({offers.length} total)
+            </span>
           </div>
           <Table
             cols={["Offer ID", "Candidate", "Role", "Score", "Status", "Generate", "Actions"]}
-            onRowClick={(i) => setSelectedOfferForModal(filteredOffers[i])}
-            rows={filteredOffers.map((o) => {
+            onRowClick={(i) => setSelectedOfferForModal(displayOffers[i])}
+            rows={displayOffers.map((o) => {
               const interviewScore = getInterviewScore(interviews, o.candidate, o.role);
               const score = (
                 <div style={{ display: "flex", justifyContent: "flex-start", width: "100%" }} onClick={(e) => e.stopPropagation()}>
@@ -449,6 +465,60 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [], i
               ];
             })}
           />
+
+          {/* Desktop/Mobile Pagination Control */}
+          {totalPages > 1 && (
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              padding: "16px 20px",
+              borderTop: `1px solid ${T.border}`,
+            }}>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={activePage === 1}
+                style={{
+                  background: T.white,
+                  color: activePage === 1 ? T.inkFaint : T.primary,
+                  border: `1.5px solid ${activePage === 1 ? T.border : T.primary}`,
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: activePage === 1 ? "not-allowed" : "pointer",
+                  opacity: activePage === 1 ? 0.5 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                &larr; Previous 20
+              </button>
+
+              <span style={{ fontSize: 13, color: T.inkMid, fontWeight: 600 }}>
+                Page {activePage} of {totalPages}
+              </span>
+
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={activePage === totalPages}
+                style={{
+                  background: activePage === totalPages ? T.white : T.primary,
+                  color: activePage === totalPages ? T.inkFaint : T.white,
+                  border: `1.5px solid ${activePage === totalPages ? T.border : T.primary}`,
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: activePage === totalPages ? "not-allowed" : "pointer",
+                  opacity: activePage === totalPages ? 0.5 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                Next 20 &rarr;
+              </button>
+            </div>
+          )}
         </Card>
       )}
 

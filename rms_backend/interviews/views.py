@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from users.permissions import IsHRAdmin
+from users.utils import ConditionalPagination
 # pyrefly: ignore [missing-import]
 from .models import Panelist, Interview
 # pyrefly: ignore [missing-import]
@@ -30,6 +31,7 @@ class PanelistViewSet(viewsets.ModelViewSet):
 
 class InterviewViewSet(viewsets.ModelViewSet):
     serializer_class = InterviewSerializer
+    pagination_class = ConditionalPagination
 
     def get_queryset(self):
         # Dynamically trigger automated reminders check to support environments without Celery Beat

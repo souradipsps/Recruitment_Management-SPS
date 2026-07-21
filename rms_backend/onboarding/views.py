@@ -6,10 +6,11 @@ from rest_framework.permissions import IsAuthenticated
 from users.permissions import IsHRAdmin
 from .models import Offer, OnboardingRecord
 from .serializers import OfferSerializer, OnboardingSerializer, OnboardingTaskSerializer
-from users.utils import auto_id
+from users.utils import auto_id, ConditionalPagination
 
 class OfferViewSet(viewsets.ModelViewSet):
     serializer_class = OfferSerializer
+    pagination_class = ConditionalPagination
 
     def get_queryset(self):
         user = self.request.user
@@ -81,6 +82,7 @@ class OfferViewSet(viewsets.ModelViewSet):
 
 class OnboardingViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
+    pagination_class = ConditionalPagination
 
     # Same doc-key <-> file-field mapping the frontend uses (see
     # careerpage_frontend's offersService.js / CandidateDashboard.jsx).
