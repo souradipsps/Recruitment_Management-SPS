@@ -101,32 +101,66 @@ export async function signupUser({ name, lastName, email, phone, password, confi
 
 /**
  * Send a password-reset OTP to the given email.
+ * POST /api/auth/password-reset/send-otp/
  * @param {{ email: string }} data
  * @returns {Promise<{ success: true }>}
  */
 export async function sendPasswordResetOtp({ email }) {
-  // TODO: POST `${BASE_URL}/auth/forgot-password`
+  const res = await fetch(`${BASE_URL}/auth/password-reset/send-otp/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseApiError(data, "Could not send OTP. Please try again."));
+  }
   return { success: true };
 }
 
 /**
  * Verify the OTP the candidate received by email.
+ * POST /api/auth/password-reset/verify-otp/
  * @param {{ email: string, otp: string }} data
  * @returns {Promise<{ success: true }>}
  */
 export async function verifyPasswordResetOtp({ email, otp }) {
-  // TODO: POST `${BASE_URL}/auth/verify-otp`
-  // Demo mode accepts any 6-digit OTP (validated in the form).
+  const res = await fetch(`${BASE_URL}/auth/password-reset/verify-otp/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, otp }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseApiError(data, "Invalid OTP. Please try again."));
+  }
   return { success: true };
 }
 
 /**
  * Set a new password after OTP verification.
- * @param {{ email: string, otp: string, newPassword: string }} data
+ * POST /api/auth/password-reset/reset/
+ * @param {{ email: string, otp: string, newPassword: string, confirmPassword: string }} data
  * @returns {Promise<{ success: true }>}
  */
-export async function resetPassword({ email, otp, newPassword }) {
-  // TODO: POST `${BASE_URL}/auth/reset-password`
+export async function resetPassword({ email, otp, newPassword, confirmPassword }) {
+  const res = await fetch(`${BASE_URL}/auth/password-reset/reset/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email,
+      otp,
+      new_password: newPassword,
+      confirm_password: confirmPassword ?? newPassword,
+    }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseApiError(data, "Could not reset password. Please try again."));
+  }
   return { success: true };
 }
 
@@ -179,3 +213,33 @@ export async function verifyChangeEmailOtp({ email, otp }) {
   }
   return data;
 }
+
+/**
+ * Change the password for the currently logged-in candidate.
+ * POST /api/auth/change-password/
+ * @param {{ oldPassword: string, newPassword: string }} data
+ * @returns {Promise<{ message: string }>}
+ */
+export async function changePassword({ oldPassword, newPassword }) {
+  const token = localStorage.getItem("accessToken");
+  if (!token) throw new Error("You must be logged in to change your password. Please log in and try again.");
+
+  const res = await fetch(`${BASE_URL}/auth/change-password/`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      old_password: oldPassword,
+      new_password: newPassword,
+    }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseApiError(data, "Could not change password. Please verify your current password."));
+  }
+  return data;
+}
+

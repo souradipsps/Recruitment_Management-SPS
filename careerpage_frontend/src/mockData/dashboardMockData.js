@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, FileText, Upload, Bell, Video, ClipboardCheck
+  LayoutDashboard, FileText, Upload, Bell, Video, ClipboardCheck, KeyRound
 } from "lucide-react";
 
 export const capitalizeWords = (str) => {

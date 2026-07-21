@@ -1,5 +1,5 @@
 import React from "react";
-import { LogOut } from "lucide-react";
+import { LogOut, KeyRound } from "lucide-react";
 import { navItems } from "../../../../mockData/dashboardMockData";
 import "../css/layout/DashboardSidebar.css";
 
@@ -124,8 +124,14 @@ export function DashboardSidebar({
             ))}
           </nav>
 
-          {/* Logout */}
-          <div className="ds-logout-wrap">
+          {/* Change Password & Logout */}
+          <div className="ds-logout-wrap flex flex-col gap-1">
+            <button
+              onClick={() => handleTabClick("security")}
+              className={`ds-nav-btn ${activeTab === "security" ? "ds-nav-btn--active" : "ds-nav-btn--inactive"}`}
+            >
+              <KeyRound size={16} /> Change Password
+            </button>
             <button
               onClick={handleLogoutClick}
               className="ds-logout-btn"
@@ -138,3 +144,5 @@ export function DashboardSidebar({
     </aside>
   );
 }
+
+
