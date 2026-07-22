@@ -152,6 +152,7 @@ export default function ScreenRouter({ active, s, navigate, onGiveOffer }) {
             onGiveOffer={onGiveOffer}
             offers={s.offers}
             setOffers={s.setOffers}
+            existingRoles={s.existingRoles}
           />
         );
       case "panelist":
@@ -165,7 +166,7 @@ export default function ScreenRouter({ active, s, navigate, onGiveOffer }) {
           />
         );
       case "offer-management":
-        return <OfferManagement offers={s.offers} setOffers={s.setOffers} jobPostings={s.jobPostings} interviews={s.interviews} panelists={s.panelists} />;
+        return <OfferManagement offers={s.offers} setOffers={s.setOffers} jobPostings={s.jobPostings} interviews={s.interviews} panelists={s.panelists} existingRoles={s.existingRoles} />;
       case "onboarding":
         return (
           <Onboarding

@@ -53,6 +53,7 @@ export function normalizeOffer(raw) {
     offerId: raw.offer_id || `OFR-${raw.id}`,
     candidateName: raw.candidate_name || "",
     role: raw.role || "",
+    existing_role: raw.existing_role || null,
     department: raw.department || "",
     salary: raw.ctc || "",
     issuedDate: formatDate(raw.issued_date),
@@ -194,6 +195,7 @@ function normalizeOnboardingRecord(raw) {
 
   return {
     backendId: raw.id,
+    existing_role: raw.existing_role || null,
     docsUploaded: !!raw.task_docs_upload,
     docsVerified: !!raw.task_docs_verify,
     backgroundCheckDone: !!raw.task_bgc,

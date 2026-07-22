@@ -81,3 +81,18 @@ class CandidateProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CandidateProfile
         exclude = ["user", "created_at", "updated_at"]
+
+    def update(self, instance, validated_data):
+        roles_interested = validated_data.get("roles_interested")
+        profile = super().update(instance, validated_data)
+
+        if roles_interested is not None:
+            from jobs.models import ExistingRole
+            matched_roles = []
+            for rname in roles_interested:
+                matched = ExistingRole.objects.filter(role__iexact=rname.strip()).first()
+                if matched:
+                    matched_roles.append(matched)
+            profile.interested_roles.set(matched_roles)
+
+        return profile

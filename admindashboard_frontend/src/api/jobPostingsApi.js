@@ -9,6 +9,7 @@ export const normalizeJobPosting = (p) => ({
   id: p.posting_id || String(p.id),  // human id shown in the table (e.g. "JP-2026-0001")
   backendId: p.id,                   // numeric pk, used for publish/unpublish/delete
   role: p.role || "",
+  existing_role: p.existing_role || null,
   department: p.department || "",
   channel: p.channel || "",
   status: p.status || "Unpublished",

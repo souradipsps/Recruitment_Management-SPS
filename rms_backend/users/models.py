@@ -100,6 +100,9 @@ class CandidateProfile(models.Model):
     extracurricular_degree_name   = models.CharField(max_length=200, blank=True)
     years_of_experience = models.CharField(max_length=20, choices=EXPERIENCE_CHOICES, blank=True)
     roles_interested    = models.JSONField(default=list, blank=True)
+    interested_roles    = models.ManyToManyField(
+        "jobs.ExistingRole", blank=True, related_name="interested_candidates"
+    )
     skills              = models.JSONField(default=list, blank=True)
     salary_expectation  = models.CharField(max_length=100, blank=True)
     linkedin_profile    = models.URLField(blank=True)

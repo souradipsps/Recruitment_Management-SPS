@@ -47,6 +47,10 @@ class Interview(models.Model):
     )
     candidate_name = models.CharField(max_length=200)
     role           = models.CharField(max_length=200)
+    existing_role  = models.ForeignKey(
+        "jobs.ExistingRole", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="interviews"
+    )
     date           = models.DateField(null=True, blank=True, db_index=True)
     time           = models.TimeField(null=True, blank=True)
     panel          = models.ManyToManyField(Panelist, blank=True, related_name="interviews")

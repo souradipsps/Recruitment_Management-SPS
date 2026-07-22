@@ -30,7 +30,6 @@ export function SignupForm({ onSignupSuccess, onClose, onSwitchTab, onFormSubmit
     setSuccess(false);
     if (onSignupSuccess) {
       onSignupSuccess({ name: signup.name, lastName: signup.lastName, email: signup.email, phone: signup.phone });
-      onClose();
     } else {
       onSwitchTab("login");
     }

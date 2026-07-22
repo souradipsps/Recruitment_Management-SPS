@@ -1,9 +1,11 @@
+import { lazy, Suspense } from "react";
 import { AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
 import { LoginModal } from "./modals/LoginModal";
-import { ApplyModal } from "./modals/ApplyModal";
-import JobApplicationModal from "./modals/JobApplicationModal";
-import { CandidateDashboard } from "../dashboard/CandidateDashboard";
+
+const ApplyModal = lazy(() => import("./modals/ApplyModal").then(m => ({ default: m.ApplyModal })));
+const JobApplicationModal = lazy(() => import("./modals/JobApplicationModal"));
+const CandidateDashboard = lazy(() => import("../dashboard/CandidateDashboard").then(m => ({ default: m.CandidateDashboard })));
 import {
   buildApplicationFormProfile,
   applyProfessionalData,
@@ -47,7 +49,7 @@ export default function AppModals({ app }) {
   } = app;
 
   return (
-    <>
+    <Suspense fallback={null}>
       <AnimatePresence>
         {deferredView === "login" && (
           <LoginModal
@@ -96,14 +98,18 @@ export default function AppModals({ app }) {
                 })
                 .catch(() => {});
             }}
+            tab={loginTab}
+            onClose={() => navigate(routes.home)}
+            onLoginSuccess={(userName, tokenData) => {
+              setLoggedInUser(userName);
+              reloadWithLoader(tokenData);
+            }}
+            applyAfterSignup={applyAfterSignup}
             onSignupSuccess={(data) => {
               setLoggedInUser(data.name);
               setSignupData(data);
-
-              // Delay turning off loader to prevent signup modal flicker during transition
-              setTimeout(() => {
-                setShowLoader(false);
-              }, 300);
+              setApplyAfterSignup(false);
+              navigate(routes.apply);
             }}
           />
         )}
@@ -112,10 +118,11 @@ export default function AppModals({ app }) {
       <AnimatePresence>
         {deferredView === "dashboard" && (
           <CandidateDashboard
-            onClose={(bypassApplyModal) => {
-              if (cameFromApply && !bypassApplyModal && selectedJob) {
-                navigate(routes.jobApply(selectedJob.id));
-                setCameFromApply(false);
+            onClose={(section) => {
+              if (cameFromApply) {
+                navigate(routes.jobApply(selectedJob?.id));
+              } else if (section) {
+                navigate(routes.dashboardTab(section));
               } else {
                 setCameFromApply(false);
                 setCameFromSection(undefined);
@@ -199,6 +206,6 @@ export default function AppModals({ app }) {
           />
         )}
       </AnimatePresence>
-    </>
+    </Suspense>
   );
 }

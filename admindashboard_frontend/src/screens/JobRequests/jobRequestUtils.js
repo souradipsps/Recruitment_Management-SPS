@@ -14,6 +14,7 @@ export const emptyForm = () => ({
   id: Date.now() + Math.random(),
   department: "",
   role: "",
+  existing_role: null,
   vacancies: "",
   exp: "",
   qual: [],

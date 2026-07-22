@@ -32,6 +32,7 @@ export function normalizeJob(raw) {
     // Identity ---------------------------------------------------------------
     id: raw.id,
     postingId: raw.posting_id ?? null,
+    existing_role: raw.existing_role || null,
 
     // Header -----------------------------------------------------------------
     title: raw.role ?? raw.title ?? "Untitled Position",

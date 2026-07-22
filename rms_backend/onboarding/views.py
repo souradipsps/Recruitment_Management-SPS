@@ -15,8 +15,8 @@ class OfferViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.role == "candidate":
-            return Offer.objects.filter(candidate=user).select_related("candidate", "onboarding")
-        return Offer.objects.all().select_related("candidate", "onboarding")
+            return Offer.objects.filter(candidate=user).select_related("candidate", "onboarding", "existing_role")
+        return Offer.objects.all().select_related("candidate", "onboarding", "existing_role")
 
     def get_permissions(self):
         if self.action in ["list", "retrieve", "accept", "decline"]:
@@ -57,6 +57,7 @@ class OfferViewSet(viewsets.ModelViewSet):
                 record_id=auto_id("ONB", OnboardingRecord),
                 employee_name=offer.candidate_name,
                 role=offer.role,
+                existing_role=offer.existing_role,
                 joining_date=offer.joining_date,
                 offer=offer,
                 candidate=offer.candidate,
@@ -101,9 +102,9 @@ class OnboardingViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         if self.request.user.role == "candidate":
-            qs = OnboardingRecord.objects.filter(candidate=self.request.user).select_related("offer", "candidate", "candidate__profile")
+            qs = OnboardingRecord.objects.filter(candidate=self.request.user).select_related("offer", "candidate", "candidate__profile", "existing_role")
         else:
-            qs = OnboardingRecord.objects.all().select_related("offer", "candidate", "candidate__profile")
+            qs = OnboardingRecord.objects.all().select_related("offer", "candidate", "candidate__profile", "existing_role")
 
         for record in qs:
             needs_save = False

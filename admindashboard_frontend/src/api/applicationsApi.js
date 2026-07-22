@@ -167,6 +167,7 @@ export const normalizeGeneralApplication = (r) => ({
   backendId: r.id,
   name: r.candidate_name || "",
   preferredRole: r.preferred_role || "",
+  existing_role: r.existing_role || null,
   location: r.location || "",
   status: r.status || "Applied",
   applied: r.applied_date || "",

@@ -60,6 +60,7 @@ export function normalizeInterview(raw) {
   return {
     id: raw.id,
     role: raw.role || "Interview",
+    existing_role: raw.existing_role || null,
     round: raw.round || null,
     date: formatDate(raw.date),
     time: formatTime(raw.time),

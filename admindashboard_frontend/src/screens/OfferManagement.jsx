@@ -23,12 +23,12 @@ const getRoundOrdinal = (round) => {
   return `${round}th Round`;
 };
 
-export default function OfferManagement({ offers, setOffers, jobPostings = [], interviews = [], panelists = [] }) {
+export default function OfferManagement({ offers, setOffers, jobPostings = [], interviews = [], panelists = [], existingRoles = [] }) {
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
   const [viewOffer, setViewOffer] = useState(null);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [genForm, setGenForm] = useState({ candidate: "", role: "", ctc: "", expiry: "", joining: "" });
+  const [genForm, setGenForm] = useState({ candidate: "", role: "", existing_role: null, candidateId: null, ctc: "", expiry: "", joining: "" });
   const [genOfferId, setGenOfferId] = useState(null);
   const [genRange, setGenRange] = useState(null);
   const [genSubmitting, setGenSubmitting] = useState(false);
@@ -147,7 +147,7 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [], i
   };
 
   const getRoleRange = (role) => {
-    const roleDef = EXISTING_ROLES.find((r) => r.role === role || (r.role && r.role.toLowerCase() === role.toLowerCase()));
+    const roleDef = (existingRoles || []).find((r) => r.role === role || (r.role && r.role.toLowerCase() === role.toLowerCase()));
     return roleDef?.salaryRange ? parseSalaryRange(roleDef.salaryRange) : null;
   };
 
@@ -402,7 +402,7 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [], i
                     </div>
                   </div>
                   <div style={{ padding: "12px 0 0", display: "flex", justifyContent: "flex-end", gap: 8 }} onClick={(e) => e.stopPropagation()}>
-                    <button onClick={() => { setGenForm({ candidate: o.candidate, role: o.role, ctc: "", expiry: "", joining: "" }); setGenOfferId(o.backendId ?? null); setGenRange(getRoleRange(o.role)); setShowGenerateModal(true); }} style={{ border: "none", background: "rgba(255,255,255,0.2)", color: "#fff", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>Generate Offer</button>
+                    <button onClick={() => { setGenForm({ candidate: o.candidate, role: o.role, existing_role: o.existing_role || null, candidateId: o.candidateId || null, ctc: "", expiry: "", joining: "" }); setGenOfferId(o.backendId ?? null); setGenRange(getRoleRange(o.role)); setShowGenerateModal(true); }} style={{ border: "none", background: "rgba(255,255,255,0.2)", color: "#fff", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>Generate Offer</button>
                     {o.ctc && o.issued && o.expiry ? (
                       <button onClick={() => setViewOffer(o)} style={{ border: "none", background: "#fff", color: T.primary, borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>View Letter</button>
                     ) : (
@@ -453,7 +453,7 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [], i
                 score,
                 <Badge label={o.status} variant={statusVariant(o.status)} />,
                 <div onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => { setGenForm({ candidate: o.candidate, role: o.role, ctc: "", expiry: "", joining: "" }); setGenOfferId(o.backendId ?? null); setGenRange(getRoleRange(o.role)); setShowGenerateModal(true); }} style={{ border: "none", background: T.blueLight, color: T.blue, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>Generate Offer</button>
+                  <button onClick={() => { setGenForm({ candidate: o.candidate, role: o.role, existing_role: o.existing_role || null, candidateId: o.candidateId || null, ctc: "", expiry: "", joining: "" }); setGenOfferId(o.backendId ?? null); setGenRange(getRoleRange(o.role)); setShowGenerateModal(true); }} style={{ border: "none", background: T.blueLight, color: T.blue, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>Generate Offer</button>
                 </div>,
                 <div onClick={(e) => e.stopPropagation()}>
                   {o.ctc && o.issued && o.expiry ? (
@@ -576,7 +576,7 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [], i
               {selectedOfferForModal.ctc && selectedOfferForModal.issued && selectedOfferForModal.expiry ? (
                 <Btn label="View Letter" variant="outline" onClick={(e) => { e.stopPropagation(); setViewOffer(selectedOfferForModal); setSelectedOfferForModal(null); }} style={{ flex: isMobile ? 1 : undefined }} />
               ) : (
-                <Btn label="Generate Offer" onClick={(e) => { e.stopPropagation(); setGenForm({ candidate: selectedOfferForModal.candidate, role: selectedOfferForModal.role, ctc: "", expiry: "", joining: "" }); setGenOfferId(selectedOfferForModal.backendId ?? null); setGenRange(getRoleRange(selectedOfferForModal.role)); setShowGenerateModal(true); setSelectedOfferForModal(null); }} style={{ flex: isMobile ? 1 : undefined }} />
+                <Btn label="Generate Offer" onClick={(e) => { e.stopPropagation(); setGenForm({ candidate: selectedOfferForModal.candidate, role: selectedOfferForModal.role, existing_role: selectedOfferForModal.existing_role || null, candidateId: selectedOfferForModal.candidateId || null, ctc: "", expiry: "", joining: "" }); setGenOfferId(selectedOfferForModal.backendId ?? null); setGenRange(getRoleRange(selectedOfferForModal.role)); setShowGenerateModal(true); setSelectedOfferForModal(null); }} style={{ flex: isMobile ? 1 : undefined }} />
               )}
             </div>
           </>
@@ -733,6 +733,8 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [], i
                 const payload = {
                   candidate: genForm.candidate,
                   role: genForm.role,
+                  existing_role: genForm.existing_role || null,
+                  candidateId: genForm.candidateId || null,
                   ctc: `₹${ctcNumber.toLocaleString()}/mo`,
                   issued: new Date().toISOString().split("T")[0],
                   expiry: genForm.expiry,
@@ -748,7 +750,7 @@ export default function OfferManagement({ offers, setOffers, jobPostings = [], i
                   return [...prev, saved];
                 });
                 setShowGenerateModal(false);
-                setGenForm({ candidate: "", role: "", ctc: "", expiry: "", joining: "" });
+                setGenForm({ candidate: "", role: "", existing_role: null, candidateId: null, ctc: "", expiry: "", joining: "" });
                 setGenOfferId(null);
                 setGenRange(null);
               } catch (err) {

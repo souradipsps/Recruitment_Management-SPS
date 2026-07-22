@@ -40,6 +40,7 @@ export default function InterviewPanel({
   onGiveOffer,
   offers = [],
   setOffers,
+  existingRoles = [],
 }) {
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
@@ -141,6 +142,14 @@ export default function InterviewPanel({
   // Track the current active round view override per candidate (key: name-role)
   const [activeRoundOverrides, setActiveRoundOverrides] = useState({});
   const [selectedCandidateKeys, setSelectedCandidateKeys] = useState([]);
+
+  const getExistingRoleId = (roleName) => {
+    if (!roleName) return null;
+    const matched = (existingRoles || []).find(
+      (r) => r.role.trim().toLowerCase() === roleName.trim().toLowerCase()
+    );
+    return matched ? matched.backendId : null;
+  };
 
   const candidateKey = (c) => `${c.name}-${c.role}`;
 
@@ -401,7 +410,7 @@ export default function InterviewPanel({
       if (findInterviewForRound(c.name, c.role, newRound)?.backendId != null) continue;
       try {
         const norm = await createInterview(
-          buildInterviewPayload({ candidate: c.name, role: c.role, round: newRound, status: "Pending" })
+          buildInterviewPayload({ candidate: c.name, role: c.role, existing_role: getExistingRoleId(c.role), round: newRound, status: "Pending" })
         );
         upsertInterview(norm);
       } catch (err) {
@@ -423,7 +432,7 @@ export default function InterviewPanel({
     if (findInterviewForRound(c.name, c.role, newRound)?.backendId != null) return;
     try {
       const norm = await createInterview(
-        buildInterviewPayload({ candidate: c.name, role: c.role, round: newRound, status: "Pending" })
+        buildInterviewPayload({ candidate: c.name, role: c.role, existing_role: getExistingRoleId(c.role), round: newRound, status: "Pending" })
       );
       upsertInterview(norm);
     } catch (err) {
@@ -558,6 +567,7 @@ export default function InterviewPanel({
       meetingLink: scheduleForm.mode === "Online" ? scheduleForm.meetingLink : "",
       round: schedulingCandidate.activeRound,
       status: "Scheduled",
+      existing_role: getExistingRoleId(schedulingCandidate.role),
       applicationId: existing?.applicationId || (schedulingCandidate.sourceType === "job" ? schedulingCandidate.backendId : null),
       // Only send the panel when creating a fresh row. On reschedule (updating an
       // existing row) we omit it so the backend leaves the assigned panelists
@@ -600,6 +610,7 @@ export default function InterviewPanel({
         : {
           candidate: assigningCandidate.name,
           role: assigningCandidate.role,
+          existing_role: getExistingRoleId(assigningCandidate.role),
           round: assigningCandidate.activeRound,
           status: "Pending",
           panelIds: resolvePanelIds(tempPanelists),
@@ -648,6 +659,7 @@ export default function InterviewPanel({
         : {
           candidate: interviewLike.candidate,
           role: interviewLike.role,
+          existing_role: getExistingRoleId(interviewLike.role),
           round: interviewLike.round,
           date: interviewLike.date || undefined,
           time: interviewLike.time || undefined,

@@ -122,7 +122,8 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
         return {
           ...f,
           exp: selectedExp,
-          salary: matching ? matching.salaryRange : ""
+          salary: matching ? matching.salaryRange : "",
+          existing_role: matching ? matching.backendId : null
         };
       })
     );
@@ -184,7 +185,8 @@ export function useJobRequests({ jobRequests, setJobRequests, setApprovalRequest
     setSelectedRequest({
       ...selectedRequest,
       exp: selectedExp,
-      salary: matching ? matching.salaryRange : ""
+      salary: matching ? matching.salaryRange : "",
+      existing_role: matching ? matching.backendId : null
     });
   };
 

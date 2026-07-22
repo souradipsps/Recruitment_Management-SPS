@@ -278,5 +278,30 @@ class GeneralApplicationSerializer(serializers.ModelSerializer):
             if not validated_data.get("preferred_role"):
                 validated_data["preferred_role"] = ", ".join(profile.roles_interested) if profile.roles_interested else ""
 
+        # Dynamically map preferred_role string or list onto existing_role relation
+        preferred_role_str = validated_data.get("preferred_role", "")
+        if preferred_role_str and not validated_data.get("existing_role"):
+            import json
+            from jobs.models import ExistingRole
+            roles_list = []
+            try:
+                parsed = json.loads(preferred_role_str)
+                if isinstance(parsed, list):
+                    roles_list = parsed
+                else:
+                    roles_list = [str(parsed)]
+            except Exception:
+                roles_list = [preferred_role_str]
+
+            matched = None
+            for rname in roles_list:
+                matched = ExistingRole.objects.filter(role__iexact=rname.strip()).first()
+                if matched:
+                    break
+            if matched:
+                validated_data["existing_role"] = matched
+            elif profile:
+                validated_data["existing_role"] = profile.interested_roles.first()
+
         return super().create(validated_data)
 

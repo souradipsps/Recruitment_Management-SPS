@@ -129,6 +129,7 @@ class MeView(APIView):
                         candidate=user,
                         app_id=auto_id("GAPP", GeneralApplication),
                         preferred_role=profile_role,
+                        existing_role=profile.interested_roles.first(),
                         experience=profile.years_of_experience or "",
                         qualification=qual,
                     )

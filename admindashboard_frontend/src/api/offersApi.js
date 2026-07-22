@@ -16,6 +16,7 @@ export const normalizeOffer = (o) => ({
   joining: o.joining_date || "",
   status: o.status || "Draft",
   candidateId: o.candidate ?? null,
+  existing_role: o.existing_role || null,
 });
 
 // GET /api/offers/ -> normalized array.
@@ -32,13 +33,14 @@ export async function fetchOffers() {
 }
 
 // POST /api/offers/ -> create (or effectively regenerate) an offer.
-export async function createOffer({ candidate, role, ctc, issued, expiry, joining, status, candidateId }) {
+export async function createOffer({ candidate, role, ctc, issued, expiry, joining, status, candidateId, existing_role }) {
   const res = await authFetch(API_URL, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify({
       candidate_name: candidate,
       role,
+      existing_role: existing_role || null,
       ...(ctc ? { ctc } : {}),
       ...(issued ? { issued_date: issued } : {}),
       ...(expiry ? { expiry_date: expiry } : {}),
@@ -75,6 +77,7 @@ export async function updateOffer(backendId, fields) {
   const body = {};
   if (fields.candidate !== undefined) body.candidate_name = fields.candidate;
   if (fields.role !== undefined) body.role = fields.role;
+  if (fields.existing_role !== undefined) body.existing_role = fields.existing_role;
   if (fields.ctc !== undefined) body.ctc = fields.ctc;
   if (fields.issued !== undefined) body.issued_date = fields.issued;
   if (fields.expiry !== undefined) body.expiry_date = fields.expiry;

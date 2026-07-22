@@ -16,6 +16,10 @@ class Offer(models.Model):
     )
     candidate_name = models.CharField(max_length=200)
     role           = models.CharField(max_length=200)
+    existing_role  = models.ForeignKey(
+        "jobs.ExistingRole", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="offers"
+    )
     ctc            = models.CharField(max_length=100, blank=True)
     issued_date    = models.DateField(null=True, blank=True)
     expiry_date    = models.DateField(null=True, blank=True)
@@ -43,6 +47,10 @@ class OnboardingRecord(models.Model):
     record_id     = models.CharField(max_length=30, unique=True)
     employee_name = models.CharField(max_length=200)
     role          = models.CharField(max_length=200)
+    existing_role  = models.ForeignKey(
+        "jobs.ExistingRole", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="onboarding_records"
+    )
     joining_date  = models.DateField(null=True, blank=True, db_index=True)
     employee_id   = models.CharField(max_length=50, blank=True)
     status        = models.CharField(

@@ -91,6 +91,10 @@ class RoleRequest(models.Model):
         "users.User", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="role_requests_created"
     )
+    existing_role = models.ForeignKey(
+        "ExistingRole", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="role_requests"
+    )
 
     class Meta:
         db_table = "role_requests"
@@ -148,6 +152,10 @@ class JobRequest(models.Model):
         "users.User", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="job_requests_created"
     )
+    existing_role = models.ForeignKey(
+        "ExistingRole", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="job_requests"
+    )
 
     class Meta:
         db_table = "job_requests"
@@ -155,6 +163,43 @@ class JobRequest(models.Model):
 
     def __str__(self):
         return f"{self.request_id} — {self.role} ({self.status})"
+
+    def save(self, *args, **kwargs):
+        is_new_approved = False
+        if self.pk:
+            try:
+                old_self = JobRequest.objects.get(pk=self.pk)
+                if old_self.status != "Approved" and self.status == "Approved":
+                    is_new_approved = True
+            except JobRequest.DoesNotExist:
+                pass
+        else:
+            if self.status == "Approved":
+                is_new_approved = True
+
+        super().save(*args, **kwargs)
+
+        if is_new_approved:
+            from jobs.models import JobPosting
+            from users.utils import auto_id
+            if not JobPosting.objects.filter(job_request=self).exists():
+                JobPosting.objects.create(
+                    posting_id=auto_id("JP", JobPosting),
+                    role=self.role,
+                    existing_role=self.existing_role,
+                    department=self.department,
+                    type=self.type or "Full-time",
+                    category=self.category,
+                    location=self.location or "Guwahati, Assam",
+                    description=self.description,
+                    experience=self.experience,
+                    salary_range=self.salary_range,
+                    educational_qualifications=self.educational_qualifications,
+                    skills_required=self.skills_required,
+                    channel="Career Page",
+                    status="Unpublished",
+                    job_request=self,
+                )
 
 
 class ApprovalRequest(models.Model):
@@ -224,6 +269,10 @@ class JobPosting(models.Model):
 
     posting_id     = models.CharField(max_length=30, unique=True)
     role           = models.CharField(max_length=200)
+    existing_role  = models.ForeignKey(
+        "ExistingRole", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="postings"
+    )
     department     = models.CharField(max_length=100, blank=True)
     type           = models.CharField(max_length=50, default="Full-time")
     category       = models.ForeignKey(

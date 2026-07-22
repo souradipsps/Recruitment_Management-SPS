@@ -29,6 +29,7 @@ const normalizeOnboardingRecord = (r) => ({
   backendId: r.id,
   name: r.employee_name || "",
   role: r.role || "",
+  existing_role: r.existing_role || null,
   joining: r.joining_date || "—",
   empId: r.employee_id || "—",
   status: r.status || "Documents Pending",

@@ -77,7 +77,7 @@ class ExistingRoleViewSet(viewsets.ModelViewSet):
 
 
 class RoleRequestViewSet(viewsets.ModelViewSet):
-    queryset           = RoleRequest.objects.select_related("created_by").prefetch_related("approvals", "approvals__history").all()
+    queryset           = RoleRequest.objects.select_related("created_by", "existing_role").prefetch_related("approvals", "approvals__history").all()
     serializer_class   = RoleRequestSerializer
     permission_classes = [IsHRAdmin]
     search_fields      = ["role", "department", "request_id"]
@@ -97,7 +97,7 @@ class RoleRequestViewSet(viewsets.ModelViewSet):
 
 
 class JobRequestViewSet(viewsets.ModelViewSet):
-    queryset           = JobRequest.objects.select_related("category", "created_by").prefetch_related("approvals", "approvals__history").all()
+    queryset           = JobRequest.objects.select_related("category", "created_by", "existing_role").prefetch_related("approvals", "approvals__history").all()
     serializer_class   = JobRequestSerializer
     permission_classes = [IsHRAdmin]
     search_fields      = ["role", "request_id"]
@@ -120,7 +120,8 @@ class JobRequestViewSet(viewsets.ModelViewSet):
 
 class ApprovalRequestViewSet(viewsets.ModelViewSet):
     queryset           = ApprovalRequest.objects.select_related(
-                             "job_request", "job_request__category", "role_request", "role_request__created_by"
+                             "job_request", "job_request__category", "job_request__existing_role",
+                             "role_request", "role_request__created_by", "role_request__existing_role"
                          ).prefetch_related("history").all()
     serializer_class   = ApprovalRequestSerializer
     permission_classes = [IsHRAdmin]
@@ -240,6 +241,7 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
                 JobPosting.objects.create(
                     posting_id=auto_id("JP", JobPosting),
                     role=job_req.role,
+                    existing_role=job_req.existing_role,
                     department=job_req.department,
                     type=job_req.type or "Full-time",
                     category=job_req.category,
@@ -280,7 +282,7 @@ class JobPostingViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = JobPosting.objects.select_related("category", "job_request")
+        queryset = JobPosting.objects.select_related("category", "job_request", "existing_role")
         if not user.is_authenticated or user.role == "candidate":
             return queryset.filter(status="Published").order_by("-created_at")
         return queryset.annotate(annotated_application_count=Count("job_applications")).order_by("-created_at")

@@ -97,6 +97,7 @@ export const normalizeInterview = (r) => ({
   applicationId: r.application ?? null,
   candidate: r.candidate_name || "",
   role: r.role || "",
+  existing_role: r.existing_role || null,
   date: r.date || "",
   time: toDisplayTime(r.time),
   panel: Array.isArray(r.panel_details) ? r.panel_details.map((p) => p.name) : [],
@@ -122,6 +123,7 @@ export const buildInterviewPayload = (fi) => {
   const p = {};
   if (fi.candidate !== undefined) p.candidate_name = fi.candidate;
   if (fi.role !== undefined) p.role = fi.role;
+  if (fi.existing_role !== undefined) p.existing_role = fi.existing_role;
   if (fi.date !== undefined) p.date = fi.date || null;
   if (fi.time !== undefined) p.time = fi.time ? toApiTime(fi.time) : null;
   if (fi.mode !== undefined) p.mode = toApiMode(fi.mode);

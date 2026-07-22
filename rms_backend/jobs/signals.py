@@ -114,18 +114,24 @@ def create_approval_for_role_request(sender, instance, created, **kwargs):
             })()]
 
         for var in variations:
-            existing = ExistingRole.objects.filter(
-                role__iexact=instance.role,
-                department__iexact=instance.department,
-                type=var.type,
-                experience=var.experience
-            ).first()
+            existing = None
+            if instance.existing_role:
+                existing = instance.existing_role
+            else:
+                existing = ExistingRole.objects.filter(
+                    role__iexact=instance.role,
+                    department__iexact=instance.department,
+                    type=var.type,
+                    experience=var.experience
+                ).first()
             
             if existing:
                 existing.headcount += 1
                 existing.save()
+                if not instance.existing_role:
+                    RoleRequest.objects.filter(pk=instance.pk).update(existing_role=existing)
             else:
-                ExistingRole.objects.create(
+                new_role = ExistingRole.objects.create(
                     role_id=auto_id("ROL", ExistingRole),
                     role=instance.role,
                     department=instance.department,
@@ -136,6 +142,8 @@ def create_approval_for_role_request(sender, instance, created, **kwargs):
                     filled=0,
                     status="Inactive"
                 )
+                if not instance.existing_role:
+                    RoleRequest.objects.filter(pk=instance.pk).update(existing_role=new_role)
 
 
 # ── Auto-create ApprovalRequest when a JobRequest is created or resubmitted ──────────────

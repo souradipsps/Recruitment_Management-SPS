@@ -19,6 +19,7 @@ export const normalizeJobRequest = (r) => ({
   id: r.request_id || String(r.id),      // human id shown in the table (e.g. "JR-2026-0006")
   backendId: r.id,                       // numeric pk, kept for future PATCH/DELETE
   role: r.role || "",
+  existing_role: r.existing_role || null,
   location: r.location || "",
   vacancies: r.vacancies ?? "",
   exp: r.experience || "",
@@ -54,6 +55,7 @@ export async function fetchJobRequests() {
 // Map frontend form data (using UI keys like qual, exp, etc.) to backend API payload keys.
 const buildJobRequestPayload = (formData) => ({
   role: formData.role,
+  existing_role: formData.existing_role || null,
   vacancies: parseInt(formData.vacancies) || 1,
   experience: formData.exp,
   salary_range: formData.salary,

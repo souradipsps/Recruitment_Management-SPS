@@ -16,6 +16,7 @@ export const normalizeRoleRequest = (r) => ({
   salaryRange: r.salary_range || "",
   just: r.justification || "",
   status: r.status || "Pending",
+  existing_role: r.existing_role || null,
   submittedBy: r.submitted_by || "",
   date: r.created_at ? new Date(r.created_at).toLocaleDateString() : "",
   history: Array.isArray(r.history) ? r.history : [],
@@ -78,6 +79,7 @@ export async function createRoleRequest(formData, submittedBy) {
     role: formData.role,
     justification: formData.just,
     submitted_by: submittedBy,
+    existing_role: formData.existing_role || null,
     variations: (formData.variations || []).map((v) => ({
       type: v.type,
       experience: v.experience,

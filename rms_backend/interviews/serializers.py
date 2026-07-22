@@ -77,7 +77,7 @@ class InterviewSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Interview
         fields = [
-            "id", "interview_id", "application", "candidate_name", "role", "date", "time",
+            "id", "interview_id", "application", "candidate_name", "role", "existing_role", "date", "time",
             "panel", "panel_details", "score", "recommendation", "feedback", "status",
             "mode", "meeting_link", "round", "reminder_sent_at", "created_at", "updated_at",
             "evaluations", "panelist_evaluation", "evaluation_summary", "candidate_present"
