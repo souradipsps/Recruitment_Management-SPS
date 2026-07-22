@@ -192,7 +192,7 @@ export default function useDashboardCharts({
         },
         {
           type: "bar",
-          label: "Hires Made (Bar Graph)",
+          label: "Hires Made",
           data: hiresData,
           backgroundColor: "rgba(0, 139, 139, 0.9)",
           borderColor: T.teal,
@@ -279,15 +279,27 @@ export default function useDashboardCharts({
 
   // ── 2. Candidate Funnel Doughnut Chart & Funnel Stages ────────────────────
 
-  const shortlistedCount = Math.min(18, Math.max(1, Math.round(totalAppsCount * 0.38)));
-  const selectedCount = Math.min(4, Math.max(1, Math.round(totalAppsCount * 0.15)));
-  const safeOffersCount = Math.min(offersCount, Math.max(1, Math.round(totalAppsCount * 0.10)));
+  const finalAppliedCount = (stats && stats.pipeline && stats.pipeline.applied > 0)
+    ? stats.pipeline.applied
+    : (totalAppsCount || 1);
+
+  const finalShortlistedCount = (stats && stats.pipeline && stats.pipeline.shortlisted != null)
+    ? stats.pipeline.shortlisted
+    : Math.min(18, Math.max(1, Math.round(finalAppliedCount * 0.38)));
+
+  const finalInterviewedCount = (stats && stats.pipeline && (stats.pipeline.interviewed != null || stats.pipeline.interviews != null))
+    ? (stats.pipeline.interviewed ?? stats.pipeline.interviews)
+    : Math.min(6, Math.max(1, (interviews || []).length || Math.round(finalAppliedCount * 0.25)));
+
+  const finalOfferedCount = (stats && stats.pipeline && stats.pipeline.offered != null)
+    ? stats.pipeline.offered
+    : (offersCount || Math.min(offersCount, Math.max(1, Math.round(finalAppliedCount * 0.10))));
 
   const funnelStages = [
-    { label: "Applied", count: stats ? stats.pipeline.applied : totalAppsCount, color: "#0284C7", bg: T.skyLight },
-    { label: "Shortlisted", count: stats ? stats.pipeline.shortlisted : shortlistedCount, color: "#7C3AED", bg: T.violetLight },
-    { label: "Selected", count: stats ? stats.pipeline.selected : selectedCount, color: "#0D9488", bg: T.tealLight },
-    { label: "Offered", count: stats ? stats.pipeline.offered : safeOffersCount, color: "#059669", bg: T.greenLight },
+    { label: "Applied", count: finalAppliedCount, color: "#0284C7", bg: T.skyLight },
+    { label: "Shortlisted", count: finalShortlistedCount, color: "#7C3AED", bg: T.violetLight },
+    { label: "Interviewed", count: finalInterviewedCount, color: "#0D9488", bg: T.tealLight },
+    { label: "Offered", count: finalOfferedCount, color: "#059669", bg: T.greenLight },
   ];
 
   const funnelDoughnutData = {
@@ -908,9 +920,9 @@ export default function useDashboardCharts({
     funnelDoughnutData,
     funnelDoughnutOptions,
     centerTextPlugin,
-    shortlistedCount,
-    selectedCount,
-    safeOffersCount,
+    shortlistedCount: finalShortlistedCount,
+    interviewedCount: finalInterviewedCount,
+    safeOffersCount: finalOfferedCount,
     deptChartData: getDeptChartData(),
     deptChartOptions: getDeptChartOptions(),
     roleBudgetData,

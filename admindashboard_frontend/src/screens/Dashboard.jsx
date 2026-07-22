@@ -1178,18 +1178,18 @@ export default function Dashboard({
               </div>
             </div>
 
-            <div style={{ overflowX: "auto" }}>
+            <div style={{ overflowX: "auto", borderRadius: radius.lg, border: `1px solid ${T.border}`, boxShadow: shadow.sm }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: font.xs + 1 }}>
                 <thead>
                   <tr style={{ background: T.canvas, borderBottom: `1px solid ${T.border}` }}>
-                    <th style={{ textAlign: "left", padding: "10px 12px", color: T.inkMid, fontWeight: font.bold, width: "24%" }}>Job Role Title</th>
-                    <th style={{ textAlign: "left", padding: "10px 8px", color: T.inkMid, fontWeight: font.bold, width: "11%" }}>Dept</th>
-                    <th style={{ textAlign: "left", padding: "10px 8px", color: T.inkMid, fontWeight: font.bold, width: "11%" }}>Type</th>
-                    <th style={{ textAlign: "center", padding: "10px 8px", color: T.inkMid, fontWeight: font.bold, width: "12%" }}>Required Exp</th>
-                    <th style={{ textAlign: "center", padding: "10px 8px", color: T.inkMid, fontWeight: font.bold, width: "10%" }}>Target Hires</th>
-                    <th style={{ textAlign: "right", padding: "10px 8px", color: T.inkMid, fontWeight: font.bold, width: "15%" }}>Allocated Budget</th>
-                    <th style={{ textAlign: "right", padding: "10px 8px", color: T.inkMid, fontWeight: font.bold, width: "12%" }}>Actual Spend</th>
-                    <th style={{ textAlign: "center", padding: "10px 8px 10px 54px", color: T.inkMid, fontWeight: font.bold, width: "16%" }}>Status</th>
+                    <th style={{ textAlign: "left", padding: "11px 14px", color: T.inkMid, fontWeight: font.bold, width: "24%", borderTopLeftRadius: radius.lg }}>Job Role Title</th>
+                    <th style={{ textAlign: "left", padding: "11px 8px", color: T.inkMid, fontWeight: font.bold, width: "11%" }}>Dept</th>
+                    <th style={{ textAlign: "left", padding: "11px 8px", color: T.inkMid, fontWeight: font.bold, width: "11%" }}>Type</th>
+                    <th style={{ textAlign: "center", padding: "11px 8px", color: T.inkMid, fontWeight: font.bold, width: "12%" }}>Required Exp</th>
+                    <th style={{ textAlign: "center", padding: "11px 8px", color: T.inkMid, fontWeight: font.bold, width: "10%" }}>Target Hires</th>
+                    <th style={{ textAlign: "right", padding: "11px 8px", color: T.inkMid, fontWeight: font.bold, width: "15%" }}>Allocated Budget</th>
+                    <th style={{ textAlign: "right", padding: "11px 8px", color: T.inkMid, fontWeight: font.bold, width: "12%" }}>Actual Spend</th>
+                    <th style={{ textAlign: "center", padding: "11px 8px 11px 40px", color: T.inkMid, fontWeight: font.bold, width: "16%", borderTopRightRadius: radius.lg }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1211,12 +1211,12 @@ export default function Dashboard({
                           cursor: "pointer",
                         }}
                       >
-                        <td style={{ padding: "10px 12px", fontWeight: font.bold, color: T.ink }}>
+                        <td style={{ padding: "10px 14px", fontWeight: font.bold, color: T.ink }}>
                           <div>{item.role}</div>
                           <div style={{ fontSize: font.xs - 1, color: T.inkFaint, fontWeight: font.medium, marginTop: 1 }}>{item.id} • {item.category}</div>
                         </td>
                         <td style={{ padding: "10px 8px", color: T.inkLight }}>
-                          <span style={{ background: T.canvas, padding: "2px 7px", borderRadius: radius.sm, fontSize: font.xs - 1, border: `1px solid ${T.border}`, fontWeight: font.bold }}>
+                          <span style={{ background: T.canvas, padding: "2px 8px", borderRadius: radius.md, fontSize: font.xs - 1, border: `1px solid ${T.border}`, fontWeight: font.bold }}>
                             {item.dept}
                           </span>
                         </td>
@@ -1224,8 +1224,8 @@ export default function Dashboard({
                           <span style={{
                             background: badgeBg,
                             color: badgeColor,
-                            padding: "2px 8px",
-                            borderRadius: radius.sm,
+                            padding: "2px 9px",
+                            borderRadius: radius.md,
                             fontSize: font.xs - 1,
                             fontWeight: font.bold,
                             whiteSpace: "nowrap",
@@ -1245,8 +1245,8 @@ export default function Dashboard({
                         <td style={{ textAlign: "right", padding: "10px 8px", fontWeight: font.extrabold, color: T.teal }}>
                           ₹{item.spent.toLocaleString("en-IN")}
                         </td>
-                        <td style={{ textAlign: "center", padding: "10px 8px 10px 54px" }}>
-                          <span style={{ fontSize: 10, fontWeight: font.bold, color: T.green, background: T.greenLight, padding: "1px 6px", borderRadius: radius.full, border: `1px solid ${T.green}30`, whiteSpace: "nowrap", display: "inline-block" }}>
+                        <td style={{ textAlign: "center", padding: "10px 8px 10px 40px" }}>
+                          <span style={{ fontSize: 10, fontWeight: font.bold, color: T.green, background: T.greenLight, padding: "2px 8px", borderRadius: radius.full, border: `1px solid ${T.green}30`, whiteSpace: "nowrap", display: "inline-block" }}>
                             Under Budget
                           </span>
                         </td>
@@ -1258,28 +1258,27 @@ export default function Dashboard({
                   <tr
                     style={{
                       background: T.canvas,
-                      borderTop: `2px solid ${T.primary}40`,
-                      borderBottom: `2px solid ${T.primary}40`,
+                      borderTop: `2px solid ${T.primary}30`,
                       fontSize: font.xs + 1,
                     }}
                   >
-                    <td style={{ padding: "12px", fontWeight: font.black, color: T.primary, fontFamily: font.heading }}>
+                    <td style={{ padding: "13px 14px", fontWeight: font.black, color: T.primary, fontFamily: font.heading, borderBottomLeftRadius: radius.lg }}>
                       Total ({filteredRoleBudgetData.length} Roles)
                     </td>
-                    <td style={{ padding: "12px 8px" }} />
-                    <td style={{ padding: "12px 8px" }} />
-                    <td style={{ padding: "12px 8px" }} />
-                    <td style={{ textAlign: "center", padding: "12px 8px", fontWeight: font.black, color: T.teal }}>
+                    <td style={{ padding: "13px 8px" }} />
+                    <td style={{ padding: "13px 8px" }} />
+                    <td style={{ padding: "13px 8px" }} />
+                    <td style={{ textAlign: "center", padding: "13px 8px", fontWeight: font.black, color: T.teal }}>
                       {totalFilledHires} / {totalTargetHires}
                     </td>
-                    <td style={{ textAlign: "right", padding: "12px 8px", fontWeight: font.black, color: T.primary, fontSize: font.base }}>
+                    <td style={{ textAlign: "right", padding: "13px 8px", fontWeight: font.black, color: T.primary, fontSize: font.base }}>
                       ₹{totalAllocatedBudget.toLocaleString("en-IN")}
                     </td>
-                    <td style={{ textAlign: "right", padding: "12px 8px", fontWeight: font.black, color: T.teal, fontSize: font.base }}>
+                    <td style={{ textAlign: "right", padding: "13px 8px", fontWeight: font.black, color: T.teal, fontSize: font.base }}>
                       ₹{totalActualSpend.toLocaleString("en-IN")}
                     </td>
-                    <td style={{ textAlign: "center", padding: "12px 8px 12px 54px" }}>
-                      <span style={{ fontSize: 9.5, fontWeight: font.bold, color: T.green, background: T.greenLight, padding: "1px 5px", borderRadius: radius.full, border: `1px solid ${T.green}40`, whiteSpace: "nowrap", display: "inline-block" }}>
+                    <td style={{ textAlign: "center", padding: "13px 8px 13px 40px", borderBottomRightRadius: radius.lg }}>
+                      <span style={{ fontSize: 10, fontWeight: font.bold, color: T.green, background: T.greenLight, padding: "3px 10px", borderRadius: radius.full, border: `1px solid ${T.green}40`, whiteSpace: "nowrap", display: "inline-block", boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
                         ₹{(totalAllocatedBudget - totalActualSpend).toLocaleString("en-IN")} Surplus
                       </span>
                     </td>
