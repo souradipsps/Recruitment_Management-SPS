@@ -73,7 +73,14 @@ export default function ScreenRouter({ active, s, navigate, onGiveOffer }) {
           />
         );
       case "existing-roles":
-        return <ExistingRoles roles={s.existingRoles} setRoles={s.setExistingRoles} />;
+        return (
+          <ExistingRoles
+            roles={s.existingRoles}
+            setRoles={s.setExistingRoles}
+            setRevisionRoleRequestData={s.setRevisionRoleRequestData}
+            navigate={navigate}
+          />
+        );
       case "role-requests":
         return (
           <RoleRequests
@@ -84,6 +91,8 @@ export default function ScreenRouter({ active, s, navigate, onGiveOffer }) {
             setExistingRoles={s.setExistingRoles}
             onNavigateToExistingRoles={() => navigate("existing-roles")}
             currentUser={s.currentUser}
+            revisionRoleRequestData={s.revisionRoleRequestData}
+            setRevisionRoleRequestData={s.setRevisionRoleRequestData}
           />
         );
       case "job-requests":

@@ -7,7 +7,7 @@ import RoleCardGrid from "./RoleCardGrid";
 import RolesTable from "./RolesTable";
 import DeleteConfirmModal from "./DeleteConfirmModal";
 
-export default function ExistingRoles({ roles, setRoles }) {
+export default function ExistingRoles({ roles, setRoles, setRevisionRoleRequestData, navigate }) {
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
 
@@ -17,6 +17,11 @@ export default function ExistingRoles({ roles, setRoles }) {
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [statusError, setStatusError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+
+  const handleRequestRevision = (roleData) => {
+    setRevisionRoleRequestData(roleData);
+    navigate("role-requests");
+  };
 
   useEffect(() => {
     setCurrentPage(1);
@@ -152,6 +157,7 @@ export default function ExistingRoles({ roles, setRoles }) {
           rows={displayFiltered}
           onStatusChange={handleStatusChange}
           onDelete={handleDeleteRole}
+          onRequestRevision={handleRequestRevision}
           bp={bp}
         />
 

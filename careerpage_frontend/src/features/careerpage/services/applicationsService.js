@@ -54,6 +54,7 @@ export async function updateUserProfile(profileFields, resumeFile = null) {
     salary_expectation: salary,
     linkedin_profile: linkedin,
     portfolio_link: portfolio,
+    profile_picture: profileFields.profilePicture ?? "",
   };
 
   let res;
@@ -146,6 +147,7 @@ export function mapUserResponseToSavedProfile(userData) {
     selectedSkills: profile.skills || [],
     linkedin: profile.linkedin_profile || "",
     portfolio: profile.portfolio_link || "",
+    profilePicture: profile.profile_picture || "",
     resumeFile: resumePath ? resumePath.split("/").pop() : "",
     resumeUrl,
   };

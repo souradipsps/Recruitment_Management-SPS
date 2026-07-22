@@ -16,6 +16,7 @@ export function buildMergedProfileData({ savedProfileData, applicationDraft, sig
     location: savedProfileData?.location || "Guwahati, Assam",
     resumeFile: savedProfileData?.resumeFile || "",
     resumeUrl: savedProfileData?.resumeUrl || "",
+    profilePicture: savedProfileData?.profilePicture || "",
     education: applicationDraft?.education ?? savedProfileData?.education ?? "",
     degreeName: applicationDraft?.degreeName ?? savedProfileData?.degreeName ?? "",
     professionalQualification: applicationDraft?.professionalQual ?? savedProfileData?.professionalQualification ?? "",

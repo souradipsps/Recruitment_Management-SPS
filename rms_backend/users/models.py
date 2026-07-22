@@ -107,6 +107,7 @@ class CandidateProfile(models.Model):
     salary_expectation  = models.CharField(max_length=100, blank=True)
     linkedin_profile    = models.URLField(blank=True)
     portfolio_link      = models.URLField(blank=True)
+    profile_picture     = models.TextField(blank=True)
     resume = models.FileField(
         upload_to="resumes/%Y/%m/",
         blank=True,

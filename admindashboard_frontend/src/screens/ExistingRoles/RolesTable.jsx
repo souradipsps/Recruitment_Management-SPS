@@ -9,6 +9,7 @@ export default function RolesTable({
   rows,
   onStatusChange,
   onDelete,
+  onRequestRevision,
   bp,
 }) {
   const [sel, setSel] = useState(null);
@@ -251,7 +252,7 @@ export default function RolesTable({
           </div>
         )}
 
-        <RoleDetailsModal sel={sel} setSel={setSel} onClose={close} onStatusChange={onStatusChange} onDelete={onDelete} bp={bp} roles={rows} />
+        <RoleDetailsModal sel={sel} setSel={setSel} onClose={close} onStatusChange={onStatusChange} onDelete={onDelete} onRequestRevision={onRequestRevision} bp={bp} roles={rows} />
       </>
     );
   }
@@ -263,7 +264,7 @@ export default function RolesTable({
         rows={renderRows()}
         onRowClick={(i) => open(rows[i])}
       />
-      <RoleDetailsModal sel={sel} setSel={setSel} onClose={close} onStatusChange={onStatusChange} onDelete={onDelete} bp={bp} roles={rows} />
+      <RoleDetailsModal sel={sel} setSel={setSel} onClose={close} onStatusChange={onStatusChange} onDelete={onDelete} onRequestRevision={onRequestRevision} bp={bp} roles={rows} />
     </>
   );
 }
