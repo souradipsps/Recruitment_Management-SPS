@@ -40,6 +40,7 @@ export function SignupForm({ onSignupSuccess, onClose, onSwitchTab, onFormSubmit
     if (!signup.name || !signup.email || !signup.phone || !signup.password || !signup.confirm) { setError("Please fill in all required fields."); return; }
     if (!/^[a-zA-Z\s]+$/.test(signup.name.trim())) { setError("First name must contain alphabets only."); return; }
     if (signup.lastName && !/^[a-zA-Z\s]*$/.test(signup.lastName.trim())) { setError("Last name must contain alphabets only."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signup.email.trim())) { setError("Please enter a valid email address."); return; }
     if (signup.phone.length !== 10) { setError("Phone number must be exactly 10 digits."); return; }
     if (signup.password.length < 8) { setError("Password must be at least 8 characters long."); return; }
     if (signup.password !== signup.confirm) { setError("Passwords do not match."); return; }

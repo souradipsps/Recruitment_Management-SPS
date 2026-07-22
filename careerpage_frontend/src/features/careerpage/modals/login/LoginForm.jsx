@@ -21,6 +21,9 @@ export function LoginForm({ onLoginSuccess, onClose, onSwitchTab, onForgotPasswo
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(login.identifier)) { setError("Please enter a valid email address."); return; }
     } else if (isNumeric) {
       if (!/^\d{10}$/.test(login.identifier)) { setError("Please enter a valid 10-digit phone number."); return; }
+    } else {
+      setError("Please enter a valid email address or 10-digit phone number.");
+      return;
     }
 
     setError("");
