@@ -1186,8 +1186,13 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
         <div
           onClick={() => { setShowViewModal(false); setSelectedRequest(null); setOriginalRequest(null); setModalError(""); }}
           style={{
-            position: "fixed", inset: 0, zIndex: 200,
-            background: "rgba(15,23,42,0.45)",
+            position: "fixed",
+            top: "60px",
+            left: (bp === "mobile" || bp === "tablet") ? "0px" : "240px",
+            right: "0px",
+            bottom: "0px",
+            zIndex: 200,
+            background: "rgba(0,0,0,0.5)",
             display: "flex", alignItems: "center", justifyContent: "center",
             padding: 16,
             backdropFilter: "blur(2px)",

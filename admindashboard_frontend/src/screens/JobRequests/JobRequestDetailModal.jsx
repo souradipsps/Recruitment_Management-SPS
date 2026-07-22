@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { T } from "../../theme";
 import { statusVariant } from "../../theme";
+import { useBreakpoint } from "../../hooks";
 import { Btn, Input, Select, Badge } from "../../components/ui";
 import { VACANCY_OPTIONS, QUAL_OPTIONS, TYPE_OPTIONS, CATEGORY_OPTIONS, ALL_SKILLS } from "../../data";
 import SkillsMultiSelect from "../../components/SkillsMultiSelect";
@@ -48,6 +49,8 @@ export default function JobRequestDetailModal({
   currentUser,
   existingRoles = [],
 }) {
+  const bp = useBreakpoint();
+  const isCompact = bp === "mobile" || bp === "tablet";
   const isEditable = selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back";
   const patch = (key, value) => setSelectedRequest({ ...selectedRequest, [key]: value });
 
@@ -74,8 +77,13 @@ export default function JobRequestDetailModal({
     <div
       onClick={onClose}
       style={{
-        position: "fixed", inset: 0, zIndex: 200,
-        background: "rgba(15,23,42,0.45)",
+        position: "fixed",
+        top: "60px",
+        left: isCompact ? "0px" : "240px",
+        right: "0px",
+        bottom: "0px",
+        zIndex: 200,
+        background: "rgba(0,0,0,0.5)",
         display: "flex", alignItems: "center", justifyContent: "center",
         padding: 16,
         backdropFilter: "blur(4px)", // Increased blur slightly for better premium effect

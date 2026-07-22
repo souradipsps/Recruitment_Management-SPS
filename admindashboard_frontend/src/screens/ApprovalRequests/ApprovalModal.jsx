@@ -6,6 +6,7 @@ import { QUAL_OPTIONS, TYPE_OPTIONS, VACANCY_OPTIONS, CATEGORY_OPTIONS, ALL_SKIL
 import SkillsMultiSelect from "../../components/SkillsMultiSelect";
 import { labelCss } from "./constants";
 import ActivityChatHistory from "../../components/ActivityChatHistory";
+import { useBreakpoint } from "../../hooks";
 
 // Only Active roles (Existing Roles screen) are eligible to be requested against.
 const isActiveRole = (r) => (r.currentStatus || r.status) === "Active";
@@ -60,12 +61,20 @@ export default function ApprovalModal({ sel, setSel, closeModal, isPending, comm
     });
   };
 
+  const bp = useBreakpoint();
+  const isCompact = bp === "mobile" || bp === "tablet";
+
   return createPortal(
     <div
       onClick={closeModal}
       style={{
-        position: "fixed", inset: 0, zIndex: 200,
-        background: "rgba(15,23,42,0.45)",
+        position: "fixed",
+        top: "60px",
+        left: isCompact ? "0px" : "240px",
+        right: "0px",
+        bottom: "0px",
+        zIndex: 200,
+        background: "rgba(0,0,0,0.5)",
         display: "flex", alignItems: "center", justifyContent: "center",
         padding: 16,
         backdropFilter: "blur(4px)",
