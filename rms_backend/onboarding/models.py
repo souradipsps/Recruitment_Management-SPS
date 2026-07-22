@@ -14,6 +14,14 @@ class Offer(models.Model):
         "users.User", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="offers"
     )
+    job_application = models.ForeignKey(
+        "applications.JobApplication", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="offers"
+    )
+    general_application = models.ForeignKey(
+        "applications.GeneralApplication", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="offers"
+    )
     candidate_name = models.CharField(max_length=200)
     role           = models.CharField(max_length=200)
     existing_role  = models.ForeignKey(
