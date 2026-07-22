@@ -13,6 +13,7 @@ const InterviewPanel = React.lazy(() => import("../screens/InterviewPanel"));
 const Panelist = React.lazy(() => import("../screens/Panelist"));
 const Onboarding = React.lazy(() => import("../screens/Onboarding"));
 const OfferManagement = React.lazy(() => import("../screens/OfferManagement"));
+const Feedback = React.lazy(() => import("../screens/Feedback"));
 
 // Maps the active nav id to its screen, wiring in shared state.
 // `s` is the app state bag from App; `navigate(id)` switches the active screen.
@@ -176,6 +177,8 @@ export default function ScreenRouter({ active, s, navigate, onGiveOffer }) {
             offers={s.offers}
           />
         );
+      case "feedback":
+        return <Feedback />;
       default:
         return (
           <Dashboard
