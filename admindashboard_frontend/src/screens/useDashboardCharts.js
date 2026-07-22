@@ -912,6 +912,7 @@ export default function useDashboardCharts({
       const mins = Math.floor(diffMs / 60000);
       const hrs = Math.floor(mins / 60);
       const days = Math.floor(hrs / 24);
+      const diffDays = days;
       let timeStr = "";
       if (item.isDateOnly) {
         if (diffDays === 0) timeStr = "Today";
