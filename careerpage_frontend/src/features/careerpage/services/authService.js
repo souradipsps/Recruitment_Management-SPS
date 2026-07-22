@@ -1,0 +1,245 @@
+// Central place for every authentication network call used by the login modal.
+//
+// The bodies below are currently client-side mocks so the UI works without a
+// backend. When the real API is ready, replace each body with an HTTP request
+// (fetch / axios). Keep the function names and the shape of the resolved value
+// the same and none of the form components will need to change.
+//
+// Each function throws an Error on failure — the forms catch it and show
+// `error.message` to the user.
+
+/* eslint-disable no-unused-vars -- some params are the API contract for
+   endpoints that are still mocked; the real HTTP calls will use every one. */
+
+// API base URL comes solely from the environment (.env → VITE_API_BASE_URL).
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+if (!BASE_URL) {
+  console.error("VITE_API_BASE_URL is not set. Create a .env file with VITE_API_BASE_URL=<your API base URL> and restart the dev server.");
+}
+
+// Turn a Django REST Framework error body into one readable sentence.
+// DRF returns either { field: ["msg", ...], ... } or { detail: "msg" }.
+export function parseApiError(body, fallback) {
+  if (!body || typeof body !== "object") return fallback;
+  if (typeof body.detail === "string") return body.detail;
+  const firstKey = Object.keys(body)[0];
+  if (!firstKey) return fallback;
+  const val = body[firstKey];
+  const msg = Array.isArray(val) ? val[0] : val;
+  return typeof msg === "string" ? msg : fallback;
+}
+
+// Persist the JWT pair so later authenticated requests can send the access
+// token (e.g. `Authorization: Bearer <access>`).
+function saveAuthTokens(tokens) {
+  if (!tokens) return;
+  if (tokens.access) localStorage.setItem("accessToken", tokens.access);
+  if (tokens.refresh) localStorage.setItem("refreshToken", tokens.refresh);
+}
+
+/**
+ * Authenticate an existing candidate.
+ * @param {{ identifier: string, password: string }} credentials
+ * @returns {Promise<{ name: string }>}
+ */
+export async function loginUser({ identifier, password }) {
+  const res = await fetch(`${BASE_URL}/auth/login/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: identifier, password }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseApiError(data, "Invalid credentials. Please try again."));
+  }
+
+  // Success body: { access, refresh } (SimpleJWT — no user object is returned,
+  // so the display name is derived from the email local part for now).
+  saveAuthTokens(data);
+
+  const name = identifier.includes("@") ? identifier.split("@")[0] : identifier;
+  return { name };
+}
+
+/**
+ * Register a new candidate account.
+ * POST /api/auth/register/  (Django REST Framework).
+ * @param {{ name: string, lastName: string, email: string, phone: string, password: string, confirmPassword: string }} data
+ * @returns {Promise<{ name: string, lastName: string, email: string, phone: string }>}
+ */
+export async function signupUser({ name, lastName, email, phone, password, confirmPassword }) {
+  const res = await fetch(`${BASE_URL}/auth/register/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      first_name: name,
+      last_name: lastName,
+      email,
+      phone,
+      password,
+      confirm_password: confirmPassword ?? password,
+    }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseApiError(data, "Could not create account. Please try again."));
+  }
+
+  // Success body: { message, user: {...}, tokens: { access, refresh } }
+  saveAuthTokens(data?.tokens);
+
+  return {
+    name: data?.user?.first_name ?? name,
+    lastName: data?.user?.last_name ?? lastName,
+    email: data?.user?.email ?? email,
+    phone: data?.user?.phone ?? phone,
+  };
+}
+
+/**
+ * Send a password-reset OTP to the given email.
+ * POST /api/auth/password-reset/send-otp/
+ * @param {{ email: string }} data
+ * @returns {Promise<{ success: true }>}
+ */
+export async function sendPasswordResetOtp({ email }) {
+  const res = await fetch(`${BASE_URL}/auth/password-reset/send-otp/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseApiError(data, "Could not send OTP. Please try again."));
+  }
+  return { success: true };
+}
+
+/**
+ * Verify the OTP the candidate received by email.
+ * POST /api/auth/password-reset/verify-otp/
+ * @param {{ email: string, otp: string }} data
+ * @returns {Promise<{ success: true }>}
+ */
+export async function verifyPasswordResetOtp({ email, otp }) {
+  const res = await fetch(`${BASE_URL}/auth/password-reset/verify-otp/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, otp }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseApiError(data, "Invalid OTP. Please try again."));
+  }
+  return { success: true };
+}
+
+/**
+ * Set a new password after OTP verification.
+ * POST /api/auth/password-reset/reset/
+ * @param {{ email: string, otp: string, newPassword: string, confirmPassword: string }} data
+ * @returns {Promise<{ success: true }>}
+ */
+export async function resetPassword({ email, otp, newPassword, confirmPassword }) {
+  const res = await fetch(`${BASE_URL}/auth/password-reset/reset/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email,
+      otp,
+      new_password: newPassword,
+      confirm_password: confirmPassword ?? newPassword,
+    }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseApiError(data, "Could not reset password. Please try again."));
+  }
+  return { success: true };
+}
+
+/**
+ * Send an OTP to verify the new email address.
+ * @param {{ email: string }} data
+ * @returns {Promise<{ message: string }>}
+ */
+export async function sendChangeEmailOtp({ email }) {
+  const token = localStorage.getItem("accessToken");
+  if (!token) throw new Error("You must be logged in to do this. Please log in and try again.");
+
+  const res = await fetch(`${BASE_URL}/auth/change-email/send-otp/`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseApiError(data, "Failed to send OTP. Please try again."));
+  }
+  return data;
+}
+
+/**
+ * Verify the OTP sent to the new email address.
+ * @param {{ email: string, otp: string }} data
+ * @returns {Promise<{ message: string }>}
+ */
+export async function verifyChangeEmailOtp({ email, otp }) {
+  const token = localStorage.getItem("accessToken");
+  if (!token) throw new Error("You must be logged in to do this. Please log in and try again.");
+
+  const res = await fetch(`${BASE_URL}/auth/change-email/verify-otp/`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, otp }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseApiError(data, "Invalid OTP or verification failed. Please try again."));
+  }
+  return data;
+}
+
+/**
+ * Change the password for the currently logged-in candidate.
+ * POST /api/auth/change-password/
+ * @param {{ oldPassword: string, newPassword: string }} data
+ * @returns {Promise<{ message: string }>}
+ */
+export async function changePassword({ oldPassword, newPassword }) {
+  const token = localStorage.getItem("accessToken");
+  if (!token) throw new Error("You must be logged in to change your password. Please log in and try again.");
+
+  const res = await fetch(`${BASE_URL}/auth/change-password/`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      old_password: oldPassword,
+      new_password: newPassword,
+    }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(parseApiError(data, "Could not change password. Please verify your current password."));
+  }
+  return data;
+}
+

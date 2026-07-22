@@ -1,0 +1,3205 @@
+import React, { useState, useRef, useEffect } from "react";
+import { T, font } from "../theme";
+import { statusVariant } from "../theme";
+import { useBreakpoint, useHorizontalScroll } from "../hooks";
+import { Card, SectionTitle, Badge, Btn, Modal, ModalHeader, FormField, Select, Input } from "../components/ui";
+import { createPanelist } from "../api/panelistsApi";
+import { createInterview, updateInterview, deleteInterview, buildInterviewPayload, triggerInterviewReminder } from "../api/interviewsApi";
+import { deleteOffer } from "../api/offersApi";
+
+const TIME_OPTIONS = [
+  { value: "9:00 AM", label: "9:00 AM" },
+  { value: "10:00 AM", label: "10:00 AM" },
+  { value: "11:00 AM", label: "11:00 AM" },
+  { value: "12:00 PM", label: "12:00 PM" },
+  { value: "2:00 PM", label: "2:00 PM" },
+  { value: "3:00 PM", label: "3:00 PM" },
+  { value: "4:00 PM", label: "4:00 PM" },
+];
+
+const MODE_OPTIONS = [
+  { value: "In-Person", label: "In-Person" },
+  { value: "Online", label: "Online" },
+];
+
+const getRoundOrdinal = (round) => {
+  if (round === 1) return "1st Round";
+  if (round === 2) return "2nd Round";
+  if (round === 3) return "3rd Round";
+  return `${round}th Round`;
+};
+
+export default function InterviewPanel({
+  jobApplications = [],
+  generalApplications = [],
+  jobPostings = [],
+  interviews = [],
+  setInterviews,
+  panelists = [],
+  setPanelists,
+  onGiveOffer,
+  offers = [],
+  setOffers,
+  existingRoles = [],
+}) {
+  const bp = useBreakpoint();
+  const isMobile = bp === "mobile";
+
+  const getExistingOffer = (candidateName, candidateRole) => {
+    return (offers || []).find((o) => {
+      const oCand = (o.candidate || "").trim().toLowerCase();
+      const cCand = (candidateName || "").trim().toLowerCase();
+      const oRole = (o.role || "").trim().toLowerCase();
+      const cRole = (candidateRole || "").trim().toLowerCase();
+      return oCand === cCand && oRole === cRole;
+    });
+  };
+
+  const [search, setSearch] = useState("");
+  const [selectedPostingId, setSelectedPostingId] = useState(null);
+  const [roundFilter, setRoundFilter] = useState(1);
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const scrollRef = useRef(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedPostingId, roundFilter]);
+  const [evalInterview, setEvalInterview] = useState(null);
+  const [inlineEvalKey, setInlineEvalKey] = useState(null);
+  const [scores, setScores] = useState({});
+  const [recommendation, setRecommendation] = useState("");
+  const [remarks, setRemarks] = useState("");
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [schedulingCandidate, setSchedulingCandidate] = useState(null);
+  const [assigningCandidate, setAssigningCandidate] = useState(null);
+  const [selectedAppDetail, setSelectedAppDetail] = useState(null);
+  const [openEvaluations, setOpenEvaluations] = useState({});
+  const [showAddPanelistModal, setShowAddPanelistModal] = useState(false);
+  const [reminderCandidate, setReminderCandidate] = useState(null);
+
+  const [tempPanelists, setTempPanelists] = useState([]);
+  const [isSavingPanelists, setIsSavingPanelists] = useState(false);
+
+  useEffect(() => {
+    if (assigningCandidate) {
+      setTempPanelists(assigningCandidate.interview?.panel || []);
+    } else {
+      setTempPanelists([]);
+    }
+  }, [assigningCandidate]);
+
+  // Form validations for Add Panelist
+  const [panelistErrors, setPanelistErrors] = useState({ name: "", email: "", phone: "" });
+  const [isSubmittingPanelist, setIsSubmittingPanelist] = useState(false);
+
+  const validateName = (name) => {
+    if (!name.trim()) return "Full Name is required.";
+    if (name.trim().length < 2) return "Full Name must be at least 2 characters.";
+    if (!/^[a-zA-Z\s.\-]+$/.test(name)) return "Full Name can only contain letters, spaces, dots, and hyphens.";
+    return "";
+  };
+
+  const validateEmail = (email) => {
+    if (!email.trim()) return "Email address is required.";
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email.trim())) return "Please enter a valid email address.";
+    return "";
+  };
+
+  const validatePhone = (phone) => {
+    if (!phone.trim()) return "Phone number is required.";
+    if (!/^\+?[0-9\s.\-()]+$/.test(phone)) return "Phone number contains invalid characters.";
+    const digits = phone.replace(/[^0-9]/g, "");
+    if (digits.length < 10) return "Phone number must have at least 10 digits.";
+    if (digits.length > 15) return "Phone number cannot exceed 15 digits.";
+    return "";
+  };
+
+  const handleNameChange = (val) => {
+    setNewPanelistName(val);
+    setPanelistErrors((prev) => ({ ...prev, name: validateName(val) }));
+  };
+
+  const handleEmailChange = (val) => {
+    setNewPanelistEmail(val);
+    setPanelistErrors((prev) => ({ ...prev, email: validateEmail(val) }));
+  };
+
+  const handlePhoneChange = (val) => {
+    setNewPanelistPhone(val);
+    setPanelistErrors((prev) => ({ ...prev, phone: validatePhone(val) }));
+  };
+
+  const closeAddPanelistModal = () => {
+    setShowAddPanelistModal(false);
+    setNewPanelistName("");
+    setNewPanelistEmail("");
+    setNewPanelistPhone("");
+    setPanelistErrors({ name: "", email: "", phone: "" });
+  };
+
+  // Track the current active round view override per candidate (key: name-role)
+  const [activeRoundOverrides, setActiveRoundOverrides] = useState({});
+  const [selectedCandidateKeys, setSelectedCandidateKeys] = useState([]);
+
+  const getExistingRoleId = (roleName) => {
+    if (!roleName) return null;
+    const matched = (existingRoles || []).find(
+      (r) => r.role.trim().toLowerCase() === roleName.trim().toLowerCase()
+    );
+    return matched ? matched.backendId : null;
+  };
+
+  const candidateKey = (c) => `${c.name}-${c.role}`;
+
+  // Form for Schedule Modal
+  const [scheduleForm, setScheduleForm] = useState({
+    date: "",
+    time: "",
+    mode: "In-Person",
+    meetingLink: "",
+  });
+
+  // Form for Add Panelist
+  const [newPanelistName, setNewPanelistName] = useState("");
+  const [newPanelistEmail, setNewPanelistEmail] = useState("");
+  const [newPanelistPhone, setNewPanelistPhone] = useState("");
+
+  const [filterActiveIndex, setFilterActiveIndex] = useState(0);
+  const hScroll = useHorizontalScroll();
+  const dateInputRef = useRef(null);
+  const criteria = ["Subject Knowledge", "Communication Skills", "Demo Class / Task", "Classroom Management"];
+
+  // Filter out candidates from Applications where status === "Shortlisted"
+  const shortlistedCandidates = [
+    ...jobApplications
+      .filter((a) => a.status === "Shortlisted")
+      .map((a) => ({
+        id: a.id,
+        backendId: a.backendId,
+        candidateId: a.candidateId ?? null,
+        name: a.name,
+        email: a.email,
+        phone: a.phone || "",
+        role: a.role,
+        jobPostingId: a.jobPostingId,
+        exp: a.exp,
+        qualification: a.qualification || "—",
+        applied: a.applied,
+        sourceType: "job",
+      })),
+    ...generalApplications
+      .filter((a) => a.status === "Shortlisted")
+      .map((a) => ({
+        id: a.id,
+        backendId: a.backendId,
+        candidateId: a.candidateId ?? null,
+        name: a.name,
+        email: a.email,
+        phone: a.phone || "",
+        role: a.preferredRole || "General",
+        jobPostingId: null,
+        referredBy: "None",
+        exp: a.exp,
+        qualification: a.qualification || "—",
+        applied: a.applied,
+        sourceType: "general",
+      })),
+  ];
+
+  // Get active round for candidate, defaulting to highest scheduled round or 1
+  const getCandidateActiveRound = (name, role) => {
+    const override = activeRoundOverrides[`${name}-${role}`];
+    if (override !== undefined) return override;
+
+    const candInts = interviews.filter((i) => i.candidate === name && i.role === role);
+    if (candInts.length > 0) {
+      return Math.max(...candInts.map((i) => i.round || 1));
+    }
+    return 1;
+  };
+
+  // Resolve interview details specifically for the candidate's active round
+  const candidatesWithInterviews = shortlistedCandidates.map((c) => {
+    const activeRound = getCandidateActiveRound(c.name, c.role);
+    const foundInt = interviews.find(
+      (i) => i.candidate === c.name && i.role === c.role && i.round === activeRound
+    );
+    
+    const interview = foundInt
+      ? {
+          ...foundInt,
+          applicationId: foundInt.applicationId || (c.sourceType === "job" ? c.backendId : null),
+        }
+      : {
+          id: `INT-${c.id}-${activeRound}`,
+          applicationId: c.sourceType === "job" ? c.backendId : null,
+          candidate: c.name,
+          role: c.role,
+          date: "",
+          time: "",
+          panel: [],
+          score: null,
+          rec: "—",
+          status: "Pending",
+          mode: "In-Person",
+          meetingLink: "",
+          round: activeRound,
+        };
+    return {
+      ...c,
+      activeRound,
+      interview,
+    };
+  });
+
+  // Enrich job postings with shortlisted candidate counts for the carousel
+  const enrichedPostings = jobPostings.map((p) => {
+    const count = shortlistedCandidates.filter((c) => c.jobPostingId === p.id || (p.backendId && String(c.jobPostingId) === String(p.backendId)) || c.role === p.role).length;
+    return {
+      ...p,
+      count,
+    };
+  });
+
+  const selectedRole = enrichedPostings.find((p) => p.id === selectedPostingId)?.role ?? null;
+
+  // Candidates after job filter (before round filter) — used to compute available rounds
+  const jobFilteredCandidates = candidatesWithInterviews.filter((c) => {
+    if (selectedPostingId) {
+      const posting = jobPostings.find((p) => p.id === selectedPostingId);
+      return c.jobPostingId === selectedPostingId || (posting && posting.backendId && String(c.jobPostingId) === String(posting.backendId)) || c.role === selectedRole;
+    }
+    return true;
+  });
+
+  // All rounds up to the max active round
+  const maxRound = jobFilteredCandidates.length > 0 ? Math.max(...jobFilteredCandidates.map((c) => c.activeRound)) : 0;
+  const availableRounds = Array.from({ length: maxRound }, (_, i) => i + 1);
+
+  const filteredCandidates = jobFilteredCandidates
+    .filter((c) => {
+      const matchesSearch =
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.role.toLowerCase().includes(search.toLowerCase()) ||
+        c.email.toLowerCase().includes(search.toLowerCase());
+
+      const matchesRound = roundFilter === null || c.activeRound >= roundFilter;
+
+      return matchesSearch && matchesRound;
+    })
+    .map((c) => {
+      if (roundFilter !== null && c.activeRound > roundFilter) {
+        const interview = interviews.find(
+          (i) => i.candidate === c.name && i.role === c.role && i.round === roundFilter
+        ) || {
+          id: `INT-${c.id}-${roundFilter}`,
+          candidate: c.name,
+          role: c.role,
+          date: "",
+          time: "",
+          panel: [],
+          score: null,
+          rec: "—",
+          status: "Pending",
+          mode: "In-Person",
+          meetingLink: "",
+          round: roundFilter,
+        };
+        return {
+          ...c,
+          displayRound: roundFilter,
+          interview,
+        };
+      }
+      return { ...c, displayRound: c.activeRound };
+    });
+
+  const ITEMS_PER_PAGE = 20;
+  const totalItems = filteredCandidates.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const activePage = Math.min(currentPage, Math.max(totalPages, 1));
+  const startIndex = (activePage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const displayCandidates = filteredCandidates.slice(startIndex, endIndex);
+
+  const selectableCandidates = filteredCandidates.filter((c) => {
+    const existingOffer = getExistingOffer(c.name, c.role);
+    return c.displayRound === c.activeRound && !existingOffer;
+  });
+
+  const isAllSelected =
+    selectableCandidates.length > 0 &&
+    selectableCandidates.every((c) => selectedCandidateKeys.includes(candidateKey(c)));
+
+  const toggleSelectCandidate = (c) => {
+    if (c.displayRound < c.activeRound) return; // ignore toggling for disabled/previous rounds
+    const existingOffer = getExistingOffer(c.name, c.role);
+    if (existingOffer) return; // ignore if they already have an offer
+    const key = candidateKey(c);
+    setSelectedCandidateKeys((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      const selectableKeys = selectableCandidates.map(candidateKey);
+      setSelectedCandidateKeys((prev) => prev.filter((k) => !selectableKeys.includes(k)));
+    } else {
+      const selectableKeys = selectableCandidates.map(candidateKey);
+      setSelectedCandidateKeys((prev) => {
+        const next = [...prev];
+        selectableKeys.forEach((k) => {
+          if (!next.includes(k)) next.push(k);
+        });
+        return next;
+      });
+    }
+  };
+
+  // Resolve panelist display names -> backend ids (interviews API stores panel as ids).
+  const resolvePanelIds = (names = []) =>
+    names
+      .map((n) => panelists.find((p) => p.name === n)?.backendId)
+      .filter((id) => id != null);
+
+  // Insert or replace a normalized interview record in the shared list. Matches on
+  // backend id first, then on candidate/role/round (to replace an unsaved placeholder).
+  const upsertInterview = (norm) => {
+    if (!setInterviews) return;
+    setInterviews((prev) => {
+      const idx = prev.findIndex(
+        (i) =>
+          (norm.backendId != null && i.backendId === norm.backendId) ||
+          (i.candidate === norm.candidate && i.role === norm.role && i.round === norm.round)
+      );
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = norm;
+        return next;
+      }
+      return [...prev, norm];
+    });
+  };
+
+  const findInterviewForRound = (name, role, round) =>
+    interviews.find((i) => i.candidate === name && i.role === role && i.round === round);
+
+  const handleAdvanceSelectedRounds = async () => {
+    if (selectedCandidateKeys.length === 0) {
+      alert("Select at least one candidate to advance their round.");
+      return;
+    }
+    const toAdvance = selectableCandidates.filter((c) => selectedCandidateKeys.includes(candidateKey(c)));
+    setActiveRoundOverrides((prev) => {
+      const next = { ...prev };
+      toAdvance.forEach((c) => {
+        next[candidateKey(c)] = Math.min(10, c.activeRound + 1);
+      });
+      return next;
+    });
+    setSelectedCandidateKeys([]);
+
+    // Create a fresh interview row in the DB for each advanced candidate's next
+    // round — only candidate/role/round are sent; schedule + panel come later.
+    for (const c of toAdvance) {
+      const newRound = Math.min(10, c.activeRound + 1);
+      if (newRound === c.activeRound) continue;
+      if (findInterviewForRound(c.name, c.role, newRound)?.backendId != null) continue;
+      try {
+        const norm = await createInterview(
+          buildInterviewPayload({ candidate: c.name, role: c.role, existing_role: getExistingRoleId(c.role), round: newRound, status: "Pending" })
+        );
+        upsertInterview(norm);
+      } catch (err) {
+        console.error("Failed to create next-round interview:", err);
+      }
+    }
+  };
+
+  const handleIncrementCandidateRound = async (c, currentRound) => {
+    const newRound = Math.min(10, currentRound + 1);
+    if (newRound === currentRound) return;
+    setActiveRoundOverrides((prev) => ({
+      ...prev,
+      [`${c.name}-${c.role}`]: newRound,
+    }));
+
+    // Re-shortlist the candidate into the next round: create a fresh interview row
+    // carrying only candidate + role + round (no schedule/panel copied over).
+    if (findInterviewForRound(c.name, c.role, newRound)?.backendId != null) return;
+    try {
+      const norm = await createInterview(
+        buildInterviewPayload({ candidate: c.name, role: c.role, existing_role: getExistingRoleId(c.role), round: newRound, status: "Pending" })
+      );
+      upsertInterview(norm);
+    } catch (err) {
+      console.error("Failed to create next-round interview:", err);
+      alert("Could not create the next round interview. Please try again.");
+    }
+  };
+
+  const handleDecrementCandidateRound = async (c, currentRound) => {
+    const newRound = Math.max(1, currentRound - 1);
+
+    // Delete the interview row for the round we're leaving so it can be redone
+    // (re-scheduled and re-paneled after advancing again).
+    const leaving = findInterviewForRound(c.name, c.role, currentRound);
+    if (leaving?.backendId != null) {
+      try {
+        await deleteInterview(leaving.backendId);
+      } catch (err) {
+        console.error("Failed to delete interview:", err);
+        alert("Could not delete the interview for this round. Please try again.");
+        return;
+      }
+    }
+    if (setInterviews) {
+      setInterviews((prev) =>
+        prev.filter((i) => !(i.candidate === c.name && i.role === c.role && i.round === currentRound))
+      );
+    }
+    setActiveRoundOverrides((prev) => ({
+      ...prev,
+      [`${c.name}-${c.role}`]: newRound,
+    }));
+  };
+
+  const handleAddPanelist = async (e) => {
+    e.preventDefault();
+    const nameErr = validateName(newPanelistName);
+    const emailErr = validateEmail(newPanelistEmail);
+    const phoneErr = validatePhone(newPanelistPhone);
+
+    if (nameErr || emailErr || phoneErr) {
+      setPanelistErrors({ name: nameErr, email: emailErr, phone: phoneErr });
+      return;
+    }
+
+    if (!setPanelists) return;
+
+    setIsSubmittingPanelist(true);
+    try {
+      // Register the panelist on the backend (POST /api/panelists/).
+      // Department is intentionally not sent per requirements.
+      const created = await createPanelist({
+        name: newPanelistName,
+        email: newPanelistEmail,
+        phone: newPanelistPhone,
+      });
+
+      setPanelists((prev) => [...prev, created]);
+      setNewPanelistName("");
+      setNewPanelistEmail("");
+      setNewPanelistPhone("");
+      setPanelistErrors({ name: "", email: "", phone: "" });
+      setShowAddPanelistModal(false);
+    } catch (err) {
+      console.error("Failed to register panelist:", err);
+      setPanelistErrors((prev) => ({
+        ...prev,
+        email: "Could not register panelist. Please try again.",
+      }));
+    } finally {
+      setIsSubmittingPanelist(false);
+    }
+  };
+
+  const handleGiveOffer = (c) => {
+    if (onGiveOffer) {
+      onGiveOffer(c);
+    }
+  };
+
+  const handleDeclineOfferInPanel = async (candidateName, candidateRole) => {
+    const existing = getExistingOffer(candidateName, candidateRole);
+    if (!existing) return;
+    try {
+      if (existing.backendId != null) {
+        await deleteOffer(existing.backendId);
+      }
+      if (setOffers) {
+        setOffers((prev) =>
+          prev.filter((o) => !(o.candidate === candidateName && o.role === candidateRole))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to decline offer:", err);
+      alert("Failed to decline offer. Please try again.");
+    }
+  };
+
+  const handleOpenSchedule = (candidate) => {
+    setSchedulingCandidate(candidate);
+    const inv = candidate.interview;
+    setScheduleForm({
+      date: inv.date || "",
+      time: inv.time || "",
+      mode: inv.mode || "In-Person",
+      meetingLink: inv.meetingLink || "",
+    });
+    setShowScheduleModal(true);
+  };
+
+  const [isSavingSchedule, setIsSavingSchedule] = useState(false);
+
+  const handleSaveSchedule = async () => {
+    if (!scheduleForm.date || !scheduleForm.time) {
+      alert("Please select date and time.");
+      return;
+    }
+    if (scheduleForm.mode === "Online" && !scheduleForm.meetingLink) {
+      alert("Please provide a meeting link for online interviews.");
+      return;
+    }
+    if (!setInterviews || !schedulingCandidate) return;
+
+    const existing = schedulingCandidate.interview;
+    const isExisting = existing?.backendId != null;
+    const payload = buildInterviewPayload({
+      candidate: schedulingCandidate.name,
+      role: schedulingCandidate.role,
+      date: scheduleForm.date,
+      time: scheduleForm.time,
+      mode: scheduleForm.mode,
+      meetingLink: scheduleForm.mode === "Online" ? scheduleForm.meetingLink : "",
+      round: schedulingCandidate.activeRound,
+      status: "Scheduled",
+      existing_role: getExistingRoleId(schedulingCandidate.role),
+      applicationId: existing?.applicationId || (schedulingCandidate.sourceType === "job" ? schedulingCandidate.backendId : null),
+      // Only send the panel when creating a fresh row. On reschedule (updating an
+      // existing row) we omit it so the backend leaves the assigned panelists
+      // untouched — re-sending name-resolved ids risks silently dropping any
+      // panelist whose name didn't resolve. See resolvePanelIds.
+      ...(isExisting ? {} : { panelIds: resolvePanelIds(existing?.panel || []) }),
+    });
+
+    setIsSavingSchedule(true);
+    try {
+      const norm = isExisting
+        ? await updateInterview(existing.backendId, payload)
+        : await createInterview(payload);
+      upsertInterview(norm);
+      setShowScheduleModal(false);
+      setSchedulingCandidate(null);
+    } catch (err) {
+      console.error("Failed to save interview schedule:", err);
+      alert("Could not save the interview schedule. Please try again.");
+    } finally {
+      setIsSavingSchedule(false);
+    }
+  };
+
+  const handleTogglePanelistTemp = (panelistName) => {
+    setTempPanelists((prev) =>
+      prev.includes(panelistName)
+        ? prev.filter((p) => p !== panelistName)
+        : [...prev, panelistName]
+    );
+  };
+
+  const handleSavePanelists = async () => {
+    if (!assigningCandidate || !setInterviews) return;
+
+    const backendId = assigningCandidate.interview?.backendId;
+    const payload = buildInterviewPayload(
+      backendId != null
+        ? { panelIds: resolvePanelIds(tempPanelists) }
+        : {
+          candidate: assigningCandidate.name,
+          role: assigningCandidate.role,
+          existing_role: getExistingRoleId(assigningCandidate.role),
+          round: assigningCandidate.activeRound,
+          status: "Pending",
+          panelIds: resolvePanelIds(tempPanelists),
+        }
+    );
+
+    setIsSavingPanelists(true);
+    try {
+      const norm = backendId != null
+        ? await updateInterview(backendId, payload)
+        : await createInterview(payload);
+      upsertInterview(norm);
+      setAssigningCandidate(null);
+    } catch (err) {
+      console.error("Failed to save interview panel:", err);
+      alert("Could not save the panel assignment. Please try again.");
+    } finally {
+      setIsSavingPanelists(false);
+    }
+  };
+
+  const handleCloseAssignModal = async () => {
+    if (!assigningCandidate) return;
+    const current = assigningCandidate.interview?.panel || [];
+    const sortedCurrent = [...current].sort();
+    const sortedTemp = [...tempPanelists].sort();
+    const hasChanged = JSON.stringify(sortedCurrent) !== JSON.stringify(sortedTemp);
+
+    if (hasChanged) {
+      const shouldSave = window.confirm("You have unsaved changes. Do you want to save them?");
+      if (shouldSave) {
+        await handleSavePanelists();
+        return;
+      }
+    }
+    setAssigningCandidate(null);
+  };
+
+  // Shared save path for both the evaluation modal and the inline mobile-card
+  // evaluation form. POSTs a fresh row if the round hasn't been persisted yet,
+  // otherwise PATCHes the existing one.
+  const saveEvaluation = async (interviewLike, { avgScore, recommendationValue, remarksValue }) => {
+    const payload = buildInterviewPayload(
+      interviewLike.backendId != null
+        ? { score: avgScore, rec: recommendationValue, remarks: remarksValue, status: "Completed" }
+        : {
+          candidate: interviewLike.candidate,
+          role: interviewLike.role,
+          existing_role: getExistingRoleId(interviewLike.role),
+          round: interviewLike.round,
+          date: interviewLike.date || undefined,
+          time: interviewLike.time || undefined,
+          mode: interviewLike.mode || "In-Person",
+          meetingLink: interviewLike.meetingLink || "",
+          panelIds: resolvePanelIds(interviewLike.panel || []),
+          score: avgScore,
+          rec: recommendationValue,
+          remarks: remarksValue,
+          status: "Completed",
+        }
+    );
+    const norm = interviewLike.backendId != null
+      ? await updateInterview(interviewLike.backendId, payload)
+      : await createInterview(payload);
+    upsertInterview(norm);
+    return norm;
+  };
+
+  const [isSubmittingEval, setIsSubmittingEval] = useState(false);
+
+  const submitEvaluation = async () => {
+    if (!recommendation) {
+      alert("Please select a recommendation.");
+      return;
+    }
+    if (!setInterviews || !evalInterview) return;
+
+    const scoreValues = Object.values(scores);
+    const avgScore = scoreValues.length > 0 ? Math.round((scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length) * 20) : null;
+
+    setIsSubmittingEval(true);
+    try {
+      await saveEvaluation(evalInterview, { avgScore, recommendationValue: recommendation, remarksValue: remarks });
+      setEvalInterview(null);
+      setScores({});
+      setRecommendation("");
+      setRemarks("");
+    } catch (err) {
+      console.error("Failed to submit interview evaluation:", err);
+      alert("Could not submit the evaluation. Please try again.");
+    } finally {
+      setIsSubmittingEval(false);
+    }
+  };
+
+  const scrollCarousel = (dir) => {
+    if (hScroll.ref.current) {
+      hScroll.ref.current.scrollBy({ left: dir === "left" ? -320 : 320, behavior: "smooth" });
+    }
+  };
+
+  const selectPosting = (id) => {
+    setSelectedPostingId(id);
+    setSearch("");
+    setRoundFilter(1); // reset round filter when job changes
+  };
+
+  const avatar = (name, size = 32, fontSize = 12) => (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        background: T.primaryLight,
+        color: T.primary,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize,
+        fontWeight: 700,
+        flexShrink: 0,
+      }}
+    >
+      {name.split(" ").map((n) => n[0]).join("")}
+    </div>
+  );
+
+  const actionBtnStyle = (variant, disabled = false) => ({
+    border: "none",
+    background: disabled
+      ? T.border
+      : variant === "primary"
+        ? T.primaryLight
+        : variant === "success"
+          ? T.greenLight
+          : variant === "amber"
+            ? T.accentLight
+            : variant === "reschedule"
+              ? "#FFF3E0"
+              : variant === "danger"
+                ? "rgba(239, 68, 68, 0.15)"
+                : T.skyLight,
+    color: disabled
+      ? T.inkFaint
+      : variant === "primary"
+        ? T.primary
+        : variant === "success"
+          ? T.green
+          : variant === "amber"
+            ? T.accentDark
+            : variant === "reschedule"
+              ? "#E65100"
+              : variant === "danger"
+                ? "#EF4444"
+                : T.sky,
+    borderRadius: 8,
+    padding: "5px 8px",
+    cursor: disabled ? "not-allowed" : "pointer",
+    fontWeight: 700,
+    fontSize: 10.5,
+    whiteSpace: "nowrap",
+    opacity: disabled ? 0.6 : 1,
+  });
+
+  const formatDateAndTime = (dateStr, timeStr) => {
+    if (!dateStr) return "—";
+    try {
+      const dateObj = new Date(dateStr);
+      let formattedDate = "";
+      let yearDigits = "";
+
+      if (isNaN(dateObj.getTime())) {
+        const parts = dateStr.split("-");
+        if (parts.length === 3) {
+          const year = parseInt(parts[0], 10);
+          const month = parseInt(parts[1], 10) - 1;
+          const day = parseInt(parts[2], 10);
+          const d = new Date(year, month, day);
+          if (!isNaN(d.getTime())) {
+            formattedDate = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+            yearDigits = String(year).slice(-2);
+          }
+        }
+      } else {
+        formattedDate = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        yearDigits = String(dateObj.getFullYear()).slice(-2);
+      }
+
+      if (!formattedDate) {
+        return `${dateStr}${timeStr ? ` · ${timeStr}` : ""}`;
+      }
+
+      const formattedTime = timeStr
+        ? timeStr.replace(/^0/, "").replace(/:00\s*/, " ").trim()
+        : "";
+
+      return `${formattedDate}, ’${yearDigits}${formattedTime ? ` · ${formattedTime}` : ""}`;
+    } catch (e) {
+      return `${dateStr}${timeStr ? ` · ${timeStr}` : ""}`;
+    }
+  };
+
+  const modeCell = (mode) => {
+    const isOnline = mode === "Online";
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 5,
+          fontSize: 11,
+          fontWeight: 700,
+          background: isOnline ? T.skyLight : T.primaryLight,
+          color: isOnline ? T.sky : T.primary,
+          borderRadius: 99,
+          padding: "3px 10px",
+          border: `1px solid ${isOnline ? "#BAE6FD" : "#E8D0D8"}`,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {isOnline ? "💻" : "🏢"} {mode}
+      </span>
+    );
+  };
+
+  return (
+    <div>
+      <style>{`
+        .btn-action-hover {
+          transition: all 0.2s ease-in-out !important;
+        }
+        .btn-action-hover:hover {
+          transform: translateY(-1.5px) scale(1.02);
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+          filter: brightness(0.95);
+        }
+      `}</style>
+      <SectionTitle
+        title="Interview Panel"
+        sub="Manage shortlisted candidates, schedule interviews, and assign panel members"
+        action={
+          <button
+            onClick={() => setShowAddPanelistModal(true)}
+            className="btn-action-hover"
+            style={{
+              background: T.primary,
+              color: "#fff",
+              border: "none",
+              borderRadius: 10,
+              padding: isMobile ? "8px 14px" : "9px 18px",
+              fontSize: isMobile ? 12 : 13,
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              boxShadow: `0 4px 12px ${T.primary}33`,
+              whiteSpace: "nowrap",
+            }}
+          >
+            <span style={{ fontSize: 15 }}>＋</span> Register Panelist
+          </button>
+        }
+      />
+
+      {/* Job filter carousel — sticky on mobile */}
+      {enrichedPostings.length > 0 && (
+        <div style={{
+          marginBottom: 20,
+          position: isMobile ? "sticky" : "relative",
+          top: isMobile ? -16 : undefined,
+          zIndex: isMobile ? 50 : undefined,
+          background: isMobile ? T.canvas : undefined,
+          paddingTop: isMobile ? 12 : undefined,
+          paddingBottom: isMobile ? 4 : undefined,
+          marginLeft: isMobile ? -12 : undefined,
+          marginRight: isMobile ? -12 : undefined,
+          paddingLeft: isMobile ? 12 : undefined,
+          paddingRight: isMobile ? 12 : undefined,
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: T.inkMid }}>
+              {selectedPostingId ? (
+                <span>
+                  Filtering by <span style={{ color: T.primary }}>{selectedRole}</span>
+                  <button
+                    onClick={() => {
+                      selectPosting(null);
+                      setFilterActiveIndex(0);
+                      if (hScroll.ref.current) {
+                        const cards = hScroll.ref.current.children;
+                        if (cards[0]) cards[0].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+                      }
+                    }}
+                    style={{ marginLeft: 8, fontSize: 11, color: T.inkFaint, background: "none", border: `1px solid ${T.border}`, borderRadius: 6, padding: "2px 8px", cursor: "pointer" }}
+                  >
+                    Clear ×
+                  </button>
+                </span>
+              ) : (
+                <span style={{ color: T.inkFaint }}>Select a job to filter shortlisted candidates</span>
+              )}
+            </div>
+            {!isMobile && (
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={() => scrollCarousel("left")} style={{ background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, color: T.inkMid, display: "flex", alignItems: "center", justifyContent: "center" }}>‹</button>
+                <button onClick={() => scrollCarousel("right")} style={{ background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, color: T.inkMid, display: "flex", alignItems: "center", justifyContent: "center" }}>›</button>
+              </div>
+            )}
+          </div>
+
+          {/* ── MOBILE: one-at-a-time full-width tile snap carousel ── */}
+          {isMobile ? (
+            <>
+              <div
+                ref={hScroll.ref}
+                onScroll={(e) => {
+                  const scrollLeft = e.currentTarget.scrollLeft;
+                  const cardWidth = e.currentTarget.clientWidth;
+                  if (cardWidth > 0) {
+                    const newIndex = Math.round(scrollLeft / cardWidth);
+                    setFilterActiveIndex(newIndex);
+                  }
+                }}
+                style={{
+                  display: "flex",
+                  overflowX: "auto",
+                  scrollSnapType: "x mandatory",
+                  WebkitOverflowScrolling: "touch",
+                  scrollbarWidth: "none",
+                  msOverflowStyle: "none",
+                  gap: 12,
+                  paddingBottom: 4,
+                }}
+              >
+                {/* All tile — full width */}
+                <div
+                  onClick={() => {
+                    selectPosting(null);
+                    setFilterActiveIndex(0);
+                    if (hScroll.ref.current) {
+                      const cards = hScroll.ref.current.children;
+                      if (cards[0]) cards[0].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+                    }
+                  }}
+                  style={{
+                    flexShrink: 0, width: "100%", scrollSnapAlign: "center",
+                    border: `2px solid ${!selectedPostingId ? T.primary : T.borderMid}`,
+                    borderRadius: 16, padding: "18px 20px", cursor: "pointer",
+                    background: !selectedPostingId ? T.primaryLight : T.surface,
+                    transition: "all 0.2s",
+                    boxShadow: !selectedPostingId ? `0 4px 20px ${T.primary}22` : "0 1px 4px rgba(0,0,0,0.05)",
+                    display: "flex", flexDirection: "column", justifyContent: "space-between",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{
+                      width: 52, height: 52, borderRadius: "50%", flexShrink: 0,
+                      background: !selectedPostingId ? T.primary : "#E2E8F0",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 20, color: !selectedPostingId ? "#fff" : T.inkMid,
+                      fontWeight: 800,
+                    }}>◈</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, lineHeight: 1.3 }}>All Shortlisted</div>
+                      <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 2 }}>Universal Filter</div>
+                    </div>
+                    {!selectedPostingId && (
+                      <div style={{ background: T.primary, color: "#fff", borderRadius: 99, padding: "4px 12px", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>Active</div>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, gap: 8 }}>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <span style={{
+                        fontSize: 11, borderRadius: 99, padding: "3px 10px", fontWeight: 700,
+                        background: !selectedPostingId ? "rgba(255,255,255,0.25)" : T.canvas,
+                        color: !selectedPostingId ? T.primary : T.inkLight,
+                        border: !selectedPostingId ? `1px solid rgba(255,255,255,0.3)` : `1px solid ${T.border}`,
+                      }}>All Jobs</span>
+                    </div>
+                    <div style={{ flexShrink: 0, textAlign: "right" }}>
+                      <span style={{ fontSize: 18, fontWeight: 800, color: !selectedPostingId ? T.primary : T.ink }}>{shortlistedCandidates.length}</span>
+                      <span style={{ fontSize: 10, color: T.inkFaint, display: "block", lineHeight: 1 }}>shortlisted</span>
+                    </div>
+                  </div>
+                </div>
+
+                {enrichedPostings.map((p, idx) => {
+                  const isSelected = selectedPostingId === p.id;
+                  const initials = p.role.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => {
+                        selectPosting(p.id);
+                        setFilterActiveIndex(idx + 1);
+                        if (hScroll.ref.current) {
+                          const cards = hScroll.ref.current.children;
+                          if (cards[idx + 1]) cards[idx + 1].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+                        }
+                      }}
+                      style={{
+                        flexShrink: 0, width: "100%", scrollSnapAlign: "center",
+                        border: `2px solid ${isSelected ? T.primary : T.borderMid}`,
+                        borderRadius: 16, padding: "18px 20px", cursor: "pointer",
+                        background: isSelected ? T.primaryLight : T.surface,
+                        transition: "all 0.2s",
+                        boxShadow: isSelected ? `0 4px 20px ${T.primary}22` : "0 1px 4px rgba(0,0,0,0.05)",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                        <div style={{
+                          width: 52, height: 52, borderRadius: "50%", flexShrink: 0,
+                          background: isSelected ? T.primary : "#E2E8F0",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 17, fontWeight: 800,
+                          color: isSelected ? "#fff" : T.inkMid,
+                        }}>{initials}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, lineHeight: 1.3, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{p.role}</div>
+                          <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 2 }}>{p.channel} Posting</div>
+                        </div>
+                        {isSelected && (
+                          <div style={{ background: T.primary, color: "#fff", borderRadius: 99, padding: "4px 12px", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>Active</div>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, gap: 8 }}>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <span style={{
+                            fontSize: 11, borderRadius: 99, padding: "3px 10px", fontWeight: 700,
+                            background: p.type === "Full-time" ? T.primaryLight : T.tealLight,
+                            color: p.type === "Full-time" ? T.primary : T.teal,
+                          }}>{p.type}</span>
+                        </div>
+                        <div style={{ flexShrink: 0, textAlign: "right" }}>
+                          <span style={{ fontSize: 18, fontWeight: 800, color: isSelected ? T.primary : T.ink }}>{p.count}</span>
+                          <span style={{ fontSize: 10, color: T.inkFaint, display: "block", lineHeight: 1 }}>shortlisted</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Dot indicators */}
+              <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10 }}>
+                {[null, ...enrichedPostings.map((p) => p.id)].map((id, i) => (
+                  <div
+                    key={i}
+                    onClick={() => {
+                      if (id === null) selectPosting(null);
+                      else selectPosting(id);
+                      setFilterActiveIndex(i);
+                      if (hScroll.ref.current) {
+                        const cards = hScroll.ref.current.children;
+                        if (cards[i]) cards[i].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+                      }
+                    }}
+                    style={{
+                      width: filterActiveIndex === i ? 20 : 6,
+                      height: 6, borderRadius: 99,
+                      background: filterActiveIndex === i ? T.primary : T.border,
+                      cursor: "pointer", transition: "all 0.2s",
+                    }}
+                  />
+                ))}
+              </div>
+            </>
+          ) : (
+            /* ── DESKTOP: premium inertia + drag carousel ── */
+            <div style={{ position: "relative" }}>
+              {/* Left fade */}
+              <div style={{
+                position: "absolute", left: 0, top: 0, bottom: 8, width: 40, zIndex: 2,
+                background: `linear-gradient(to right, ${T.canvas}, transparent)`,
+                pointerEvents: "none",
+              }} />
+              {/* Right fade */}
+              <div style={{
+                position: "absolute", right: 0, top: 0, bottom: 8, width: 40, zIndex: 2,
+                background: `linear-gradient(to left, ${T.canvas}, transparent)`,
+                pointerEvents: "none",
+              }} />
+              <div
+                ref={hScroll.ref}
+                className="carousel-scroll hscroll-track"
+                onWheel={hScroll.onWheel}
+                onMouseDown={hScroll.onMouseDown}
+                onMouseMove={hScroll.onMouseMove}
+                onMouseUp={hScroll.onMouseUp}
+                onMouseLeave={hScroll.onMouseLeave}
+                style={{ display: "flex", gap: 14, overflowX: "auto", padding: "12px 24px 16px 24px", WebkitOverflowScrolling: "touch", cursor: "grab", userSelect: "none" }}
+              >
+                <div
+                  onClick={() => selectPosting(null)}
+                  style={{
+                    flexShrink: 0, width: 200,
+                    border: `2px solid ${!selectedPostingId ? T.primary : T.borderMid}`,
+                    borderRadius: 14, padding: "16px 18px", cursor: "pointer",
+                    background: !selectedPostingId ? T.primaryLight : T.surface,
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                    gap: 8, transition: "all 0.15s", minHeight: 140,
+                  }}
+                >
+                  <div style={{ fontSize: 24, opacity: 0.5 }}>◈</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: !selectedPostingId ? T.primary : T.ink, textAlign: "center" }}>All Shortlisted</div>
+                  <div style={{ fontSize: 11, color: T.inkFaint, textAlign: "center" }}>{shortlistedCandidates.length} candidates</div>
+                </div>
+
+                {enrichedPostings.map((p) => {
+                  const isSelected = selectedPostingId === p.id;
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => selectPosting(p.id)}
+                      style={{
+                        flexShrink: 0, width: 280,
+                        border: `2px solid ${isSelected ? T.primary : T.borderMid}`,
+                        borderRadius: 14, padding: "14px 16px", cursor: "pointer",
+                        background: isSelected ? T.primaryLight : T.surface,
+                        transition: "all 0.18s",
+                        display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 140,
+                        boxShadow: isSelected ? `0 4px 20px ${T.primary}22` : "0 1px 4px rgba(0,0,0,0.05)",
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 4 }}>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, lineHeight: 1.3, flex: 1 }}>{p.role}</div>
+                          <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 99, padding: "2px 7px", background: p.type === "Full-time" ? T.primaryLight : T.tealLight, color: p.type === "Full-time" ? T.primary : T.teal }}>{p.type}</span>
+                        </div>
+                        <div style={{ fontSize: 11, color: T.inkLight }}>{p.channel} Posting</div>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+                        <span style={{ fontSize: 12, color: T.inkMid }}><strong>{p.count}</strong> shortlisted</span>
+                        {isSelected && <span style={{ fontSize: 10, fontWeight: 700, background: T.primary, color: "#fff", borderRadius: 99, padding: "2px 8px" }}>Selected</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Round Filter Pills — shown below carousel, depends on selected job */}
+      {availableRounds.length > 0 && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", marginRight: 2 }}>Round:</span>
+          {availableRounds.map((rnd) => {
+            const count = jobFilteredCandidates.filter((c) => c.activeRound >= rnd).length;
+            const isActive = roundFilter === rnd;
+            return (
+              <button
+                key={rnd}
+                onClick={() => setRoundFilter(rnd)}
+                style={{
+                  background: isActive ? T.primary : T.white,
+                  color: isActive ? "#fff" : T.ink,
+                  border: `1.5px solid ${isActive ? T.primary : T.border}`,
+                  borderRadius: 999,
+                  padding: "5px 14px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                }}
+              >
+                {getRoundOrdinal(rnd)}
+                <span
+                  style={{
+                    background: isActive ? "rgba(255,255,255,0.25)" : T.primaryLight,
+                    color: isActive ? "#fff" : T.primary,
+                    borderRadius: 99,
+                    padding: "1px 7px",
+                    fontSize: 10,
+                    fontWeight: 800,
+                  }}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Main candidate list board */}
+      {isMobile ? (
+        /* ── MOBILE: one candidate at a time snap carousel ── */
+        <div style={{ marginBottom: 4 }}>
+          {/* Selection actions */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginBottom: 12 }}>
+            <button
+              onClick={toggleSelectAll}
+              style={{
+                background: T.surface,
+                border: `1.5px solid ${T.border}`,
+                borderRadius: 10,
+                padding: "8px 14px",
+                fontSize: 12,
+                fontWeight: 700,
+                color: T.ink,
+                cursor: "pointer",
+              }}
+            >
+              {isAllSelected ? "Clear selection" : "Select all"}
+            </button>
+            <button
+              onClick={handleAdvanceSelectedRounds}
+              disabled={selectedCandidateKeys.length === 0}
+              style={{
+                background: selectedCandidateKeys.length === 0 ? T.border : T.primary,
+                color: selectedCandidateKeys.length === 0 ? T.inkFaint : "#fff",
+                border: "none",
+                borderRadius: 10,
+                padding: "8px 14px",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: selectedCandidateKeys.length === 0 ? "not-allowed" : "pointer",
+              }}
+            >
+              Advance Round
+            </button>
+            <span style={{ fontSize: 12, color: T.inkFaint, whiteSpace: "nowrap" }}>
+              {selectedCandidateKeys.length} selected
+            </span>
+          </div>
+          {/* Search bar */}
+          <div style={{ marginBottom: 12 }}>
+            <Input
+              placeholder="Search candidate name, role, email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          {filteredCandidates.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 20px", color: T.inkFaint, fontSize: 14 }}>
+              No candidates found
+            </div>
+          ) : (
+            <>
+              {/* Candidate count */}
+              <div style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, marginBottom: 8, textAlign: "center" }}>
+                Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, totalItems)} of {totalItems} candidates
+              </div>
+
+              {/* Snap scroll container */}
+              <div
+                ref={scrollRef}
+                onScroll={(e) => {
+                  const scrollLeft = e.currentTarget.scrollLeft;
+                  const cardWidth = e.currentTarget.clientWidth;
+                  const newIndex = Math.round(scrollLeft / cardWidth);
+                  setCurrentCardIndex(newIndex);
+                }}
+                style={{
+                  display: "flex",
+                  overflowX: "auto",
+                  scrollSnapType: "x mandatory",
+                  WebkitOverflowScrolling: "touch",
+                  scrollbarWidth: "none",
+                  msOverflowStyle: "none",
+                  gap: 16,
+                  padding: "0 16px 20px",
+                  margin: "0 -16px",
+                }}
+              >
+                {displayCandidates.map((c, idx) => {
+                  const i = c.interview;
+                  const rnd = c.displayRound;
+                  const isScheduled = !!i.date;
+                  const isPreviousRound = c.displayRound < c.activeRound;
+                  const existingOffer = getExistingOffer(c.name, c.role);
+                  const cardBackground = "linear-gradient(135deg, #72102a 0%, #3a0010 100%)";
+                  return (
+                    <div
+                      key={`${c.name}-${c.role}-${rnd}`}
+                      style={{
+                        flexShrink: 0,
+                        minWidth: "calc(100% - 32px)",
+                        scrollSnapAlign: "center",
+                        background: cardBackground,
+                        color: "#fff",
+                        borderRadius: 20,
+                        padding: 24,
+                        position: "relative",
+                        boxShadow: "0 14px 40px rgba(0,0,0,0.25)",
+                        minHeight: 460,
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      {/* Pagination counter */}
+                      <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", padding: "4px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.2)" }}>
+                        {startIndex + idx + 1} of {totalItems}
+                      </div>
+
+                      <div>
+                        {/* Card header — candidate info */}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 12,
+                            cursor: "pointer",
+                          }}
+                          onClick={() => setSelectedAppDetail(c)}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedCandidateKeys.includes(candidateKey(c))}
+                            disabled={isPreviousRound || !!existingOffer}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              toggleSelectCandidate(c);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              width: 18, height: 18,
+                              cursor: (isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
+                              flexShrink: 0,
+                            }}
+                          />
+                          {avatar(c.name, 48, 16)}
+                          <div style={{ flex: 1, minWidth: 0, paddingRight: 64 }}>
+                            <div style={{ fontSize: 16, fontWeight: 800, color: "#fff", lineHeight: 1.2 }}>{c.name}</div>
+                            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 3 }}>{c.role}</div>
+                            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 2 }}>{c.email}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Details (Glassmorphic) */}
+                      <div
+                        style={{
+                          background: "rgba(255,255,255,0.1)",
+                          backdropFilter: "blur(8px)",
+                          borderRadius: 12,
+                          padding: 18,
+                          border: "1px solid rgba(255,255,255,0.15)",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 12,
+                          marginTop: 16,
+                          flex: 1,
+                        }}
+                      >
+                        {/* Round stepper + status row */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid rgba(255,255,255,0.1)`, paddingBottom: 10 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Round</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDecrementCandidateRound(c, rnd); }}
+                                disabled={rnd <= 1 || isPreviousRound || !!existingOffer}
+                                style={{
+                                  width: 24, height: 24, borderRadius: 6, border: "none",
+                                  background: (rnd <= 1 || isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.05)" : "#fff",
+                                  color: (rnd <= 1 || isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.3)" : "#72102a",
+                                  cursor: (rnd <= 1 || isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
+                                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: "bold",
+                                }}
+                              >−</button>
+                              <span style={{
+                                fontSize: 13, fontWeight: 800, color: "#fff",
+                                background: "rgba(255,255,255,0.15)", borderRadius: 8, padding: "3px 10px",
+                                minWidth: 70, textAlign: "center",
+                              }}>
+                                {getRoundOrdinal(rnd)}
+                              </span>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleIncrementCandidateRound(c, rnd); }}
+                                disabled={rnd >= 10 || isPreviousRound || !!existingOffer}
+                                style={{
+                                  width: 24, height: 24, borderRadius: 6, border: "none",
+                                  background: (rnd >= 10 || isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.05)" : "#fff",
+                                  color: (rnd >= 10 || isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.3)" : "#72102a",
+                                  cursor: (rnd >= 10 || isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
+                                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: "bold",
+                                }}
+                              >+</button>
+                            </div>
+                          </div>
+
+                          <div style={{
+                            fontSize: 11, fontWeight: 700, borderRadius: 99, padding: "4px 10px",
+                            background: i.status === "Completed" ? "rgba(16, 185, 129, 0.2)" : isScheduled ? "rgba(245, 158, 11, 0.2)" : "rgba(255, 255, 255, 0.08)",
+                            color: i.status === "Completed" ? "#34D399" : isScheduled ? "#FBBF24" : "rgba(255,255,255,0.7)",
+                            border: `1px solid ${i.status === "Completed" ? "rgba(16, 185, 129, 0.3)" : isScheduled ? "rgba(245, 158, 11, 0.3)" : "rgba(255,255,255,0.15)"}`,
+                          }}>
+                            {i.status === "Completed" ? "✓ Done" : isScheduled ? "● Scheduled" : "○ Pending"}
+                          </div>
+                        </div>
+
+                        {/* Date & Time */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Date &amp; Time</span>
+                          {isScheduled ? (
+                            <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>
+                              {formatDateAndTime(i.date, i.time)}
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontStyle: "italic" }}>Not scheduled</span>
+                          )}
+                        </div>
+
+                        {/* Mode */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Mode</span>
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 5,
+                              fontSize: 11,
+                              fontWeight: 700,
+                              background: (i.mode || "In-Person") === "Online" ? "rgba(56, 189, 248, 0.2)" : "rgba(255, 255, 255, 0.08)",
+                              color: (i.mode || "In-Person") === "Online" ? "#38BDF8" : "#fff",
+                              borderRadius: 99,
+                              padding: "3px 10px",
+                              border: `1px solid ${(i.mode || "In-Person") === "Online" ? "rgba(56, 189, 248, 0.3)" : "rgba(255, 255, 255, 0.15)"}`,
+                            }}
+                          >
+                            {(i.mode || "In-Person") === "Online" ? "💻 Online" : "🏢 In-Person"}
+                          </span>
+                        </div>
+
+                        {/* Panelists */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Panelists</span>
+                          <span style={{ fontSize: 12, color: i.panel?.length > 0 ? "#fff" : "rgba(255,255,255,0.5)", fontStyle: i.panel?.length > 0 ? "normal" : "italic", textAlign: "right", maxWidth: "60%" }}>
+                            {i.panel?.length > 0 ? i.panel.join(", ") : "Not assigned"}
+                          </span>
+                        </div>
+
+                        {/* Score / Rec */}
+                        {i.score !== null && (
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Score / Rec</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div style={{
+                                width: 32, height: 32, borderRadius: "50%",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                fontSize: 12, fontWeight: 800,
+                                background: i.score >= 80 ? "rgba(16, 185, 129, 0.2)" : i.score >= 60 ? "rgba(245, 158, 11, 0.2)" : "rgba(239, 68, 68, 0.2)",
+                                color: i.score >= 80 ? "#34D399" : i.score >= 60 ? "#FBBF24" : "#FCA5A5",
+                                border: `1px solid ${i.score >= 80 ? "rgba(16, 185, 129, 0.3)" : i.score >= 60 ? "rgba(245, 158, 11, 0.3)" : "rgba(239, 68, 68, 0.3)"}`,
+                              }}>{i.score}</div>
+                              {i.rec && i.rec !== "—" && (
+                                <span style={{
+                                  fontSize: 11, fontWeight: 700, borderRadius: 99, padding: "3px 10px",
+                                  background: i.rec === "Selected" ? "rgba(16, 185, 129, 0.2)" : i.rec === "Rejected" ? "rgba(239, 68, 68, 0.2)" : "rgba(245, 158, 11, 0.2)",
+                                  color: i.rec === "Selected" ? "#34D399" : i.rec === "Rejected" ? "#FCA5A5" : "#FBBF24",
+                                  border: `1px solid ${i.rec === "Selected" ? "rgba(16, 185, 129, 0.3)" : i.rec === "Rejected" ? "rgba(239, 68, 68, 0.3)" : "rgba(245, 158, 11, 0.3)"}`,
+                                }}>{i.rec}</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action buttons */}
+                      <div style={{ padding: "14px 0 0", display: "flex", gap: 8, flexWrap: "wrap" }} onClick={(e) => e.stopPropagation()}>
+                        {!isScheduled ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleOpenSchedule(c); }}
+                            disabled={isPreviousRound || !!existingOffer}
+                            style={{
+                              flex: 1, padding: "10px 0", borderRadius: 10,
+                              background: (isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.15)",
+                              color: (isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.3)" : "#fff",
+                              border: (isPreviousRound || !!existingOffer) ? "none" : "1px solid rgba(255,255,255,0.25)",
+                              fontSize: 13, fontWeight: 700, cursor: (isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
+                              opacity: (isPreviousRound || !!existingOffer) ? 0.6 : 1,
+                            }}
+                          >📅 Schedule</button>
+                        ) : (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleOpenSchedule(c); }}
+                            disabled={isPreviousRound || !!existingOffer}
+                            style={{
+                              flex: 1, padding: "10px 0", borderRadius: 10,
+                              background: (isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.05)" : "rgba(245, 158, 11, 0.2)",
+                              color: (isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.3)" : "#FBBF24",
+                              border: (isPreviousRound || !!existingOffer) ? "none" : "1px solid rgba(245, 158, 11, 0.3)",
+                              fontSize: 13, fontWeight: 700, cursor: (isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
+                              opacity: (isPreviousRound || !!existingOffer) ? 0.6 : 1,
+                            }}
+                          >🔄 Reschedule</button>
+                        )}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setAssigningCandidate(c); }}
+                          disabled={isPreviousRound || !isScheduled || !!existingOffer}
+                          style={{
+                            flex: 1, padding: "10px 0", borderRadius: 10,
+                            background: (isPreviousRound || !isScheduled || !!existingOffer) ? "rgba(255,255,255,0.05)" : "rgba(255, 215, 0, 0.15)",
+                            color: (isPreviousRound || !isScheduled || !!existingOffer) ? "rgba(255,255,255,0.3)" : "#FBBF24",
+                            border: (isPreviousRound || !isScheduled || !!existingOffer) ? "none" : "1px solid rgba(255, 215, 0, 0.25)",
+                            fontSize: 13, fontWeight: 700, cursor: (isPreviousRound || !isScheduled || !!existingOffer) ? "not-allowed" : "pointer",
+                            opacity: (isPreviousRound || !isScheduled || !!existingOffer) ? 0.6 : 1,
+                          }}
+                        >{i.panel && i.panel.length > 0 ? "👥 Edit Panelist" : "👥 Panelist"}</button>
+                        {isScheduled && i.panel && i.panel.length > 0 && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setReminderCandidate(c); }}
+                            disabled={isPreviousRound || !!existingOffer}
+                            style={{
+                              flex: 1, padding: "10px 0", borderRadius: 10,
+                              background: (isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.05)" : "rgba(167, 139, 250, 0.2)",
+                              color: (isPreviousRound || !!existingOffer) ? "rgba(255,255,255,0.3)" : "#C084FC",
+                              border: (isPreviousRound || !!existingOffer) ? "none" : "1px solid rgba(167, 139, 250, 0.3)",
+                              fontSize: 13, fontWeight: 700, cursor: (isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
+                              opacity: (isPreviousRound || !!existingOffer) ? 0.6 : 1,
+                            }}
+                          >🔔 Reminder</button>
+                        )}
+                        {existingOffer ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (existingOffer.status === "Accepted") {
+                                alert("Offer already accepted");
+                              } else {
+                                handleDeclineOfferInPanel(c.name, c.role);
+                              }
+                            }}
+                            disabled={isPreviousRound}
+                            style={{
+                              width: "100%", padding: "10px 0", borderRadius: 10,
+                              background: (isPreviousRound || existingOffer.status === "Accepted") ? "rgba(255,255,255,0.05)" : "rgba(239, 68, 68, 0.2)",
+                              color: (isPreviousRound || existingOffer.status === "Accepted") ? "rgba(255,255,255,0.3)" : "#FCA5A5",
+                              border: (isPreviousRound || existingOffer.status === "Accepted") ? "none" : "1px solid rgba(239, 68, 68, 0.3)",
+                              fontSize: 13, fontWeight: 700,
+                              cursor: (isPreviousRound || existingOffer.status === "Accepted") ? "not-allowed" : "pointer",
+                              opacity: (isPreviousRound || existingOffer.status === "Accepted") ? 0.6 : 1,
+                            }}
+                          >Decline</button>
+                        ) : (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleGiveOffer(c); }}
+                            disabled={isPreviousRound}
+                            style={{
+                              width: "100%", padding: "10px 0", borderRadius: 10,
+                              background: isPreviousRound ? "rgba(255,255,255,0.05)" : "rgba(52, 211, 153, 0.2)",
+                              color: isPreviousRound ? "rgba(255,255,255,0.3)" : "#34D399",
+                              border: isPreviousRound ? "none" : "1px solid rgba(52, 211, 153, 0.3)",
+                              fontSize: 13, fontWeight: 700, cursor: isPreviousRound ? "not-allowed" : "pointer",
+                              opacity: isPreviousRound ? 0.6 : 1,
+                            }}
+                          >📜 Give Offer</button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Dot indicators */}
+              <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 12, paddingBottom: 8 }}>
+                {displayCandidates.map((_, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => scrollRef.current?.scrollTo({ left: (idx * scrollRef.current.clientWidth), behavior: "smooth" })}
+                    style={{
+                      width: 8, height: 8, borderRadius: "50%",
+                      background: currentCardIndex === idx ? T.primary : T.border,
+                      cursor: "pointer", transition: "all 0.3s",
+                    }}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        /* ── DESKTOP: table view ── */
+        <Card>
+          <div
+            style={{
+              padding: "12px 14px",
+              borderBottom: `1px solid ${T.border}`,
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+              <button
+                onClick={toggleSelectAll}
+                style={{
+                  background: T.surface,
+                  border: `1.5px solid ${T.border}`,
+                  borderRadius: 10,
+                  padding: "8px 14px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: T.ink,
+                  cursor: "pointer",
+                }}
+              >
+                {isAllSelected ? "Clear selection" : "Select all"}
+              </button>
+              <button
+                onClick={handleAdvanceSelectedRounds}
+                disabled={selectedCandidateKeys.length === 0}
+                style={{
+                  background: selectedCandidateKeys.length === 0 ? T.border : T.primary,
+                  color: selectedCandidateKeys.length === 0 ? T.inkFaint : "#fff",
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "8px 14px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: selectedCandidateKeys.length === 0 ? "not-allowed" : "pointer",
+                }}
+              >
+                Advance Round
+              </button>
+            </div>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+              <Input
+                placeholder="Search candidate name, role, email..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{ maxWidth: 360, flex: 1, minWidth: 0 }}
+              />
+              <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 600, whiteSpace: "nowrap" }}>
+                Showing {totalItems > 0 ? startIndex + 1 : 0} - {Math.min(endIndex, totalItems)} of {totalItems} shortlisted
+              </span>
+            </div>
+          </div>
+
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: font.base, fontFamily: font.body }}>
+              <thead>
+                <tr style={{ background: T.canvas, borderBottom: `2px solid ${T.border}` }}>
+                  <th style={{ width: 44, padding: "12px 8px", textAlign: "center", verticalAlign: "middle" }}>
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        onChange={toggleSelectAll}
+                        style={{ width: 16, height: 16, cursor: "pointer" }}
+                      />
+                    </div>
+                  </th>
+                  <th style={{ padding: "12px 10px", textAlign: "left", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle" }}>Candidate &amp; Role</th>
+                  <th style={{ padding: "12px 10px", textAlign: "center", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle", width: 100 }}>Score</th>
+                  <th style={{ padding: "12px 10px", textAlign: "center", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle", width: 120 }}>Round</th>
+                  <th style={{ padding: "12px 10px", textAlign: "left", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle" }}>Panelists</th>
+                  <th style={{ padding: "12px 10px", textAlign: "left", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle" }}>Schedule</th>
+                  <th style={{ padding: "12px 10px", textAlign: "left", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle", width: 100 }}>Mode</th>
+                  <th style={{ padding: "12px 10px", textAlign: "left", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle", width: 80 }}>Link</th>
+                  <th style={{ padding: "12px 10px", textAlign: "center", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle", width: 110 }}>Status</th>
+                  <th style={{ padding: "12px 10px", textAlign: "center", fontSize: font.xs, fontWeight: font.bold, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap", verticalAlign: "middle" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {displayCandidates.map((c) => {
+                  const i = c.interview;
+                  const rnd = c.displayRound;
+                  const isPreviousRound = c.displayRound < c.activeRound;
+                  const isChecked = selectedCandidateKeys.includes(candidateKey(c));
+                  const existingOffer = getExistingOffer(c.name, c.role);
+
+                  return (
+                    <React.Fragment key={candidateKey(c)}>
+                      <tr
+                        onClick={() => setSelectedAppDetail(c)}
+                        style={{
+                          borderBottom: `1px solid ${T.border}`,
+                          cursor: "pointer",
+                          background: isChecked ? `${T.primary}05` : "transparent",
+                          transition: "background-color 0.15s ease",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = isChecked ? `${T.primary}09` : `${T.canvas}`;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = isChecked ? `${T.primary}05` : "transparent";
+                        }}
+                      >
+                        {/* Checkbox */}
+                        <td style={{ padding: "12px 8px", textAlign: "center", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
+                          <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              disabled={isPreviousRound || !!existingOffer}
+                              onChange={() => {
+                                toggleSelectCandidate(c);
+                              }}
+                              style={{ width: 16, height: 16, cursor: (isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer" }}
+                            />
+                          </div>
+                        </td>
+
+                        {/* Candidate & Role */}
+                        <td style={{ padding: "12px 10px", verticalAlign: "middle" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            {avatar(c.name, 36, 12)}
+                            <div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                <span style={{ fontWeight: 700, color: T.ink, fontSize: 13 }}>{c.name}</span>
+                              </div>
+                              <div style={{ fontSize: 11, color: T.inkMid, marginTop: 1 }}>{c.role}</div>
+                              <div style={{ fontSize: 10, color: T.inkFaint }}>{c.email}</div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Score */}
+                        <td style={{ padding: "12px 10px", textAlign: "center", verticalAlign: "middle" }}>
+                          {(() => {
+                            const evals = i.evaluations || [];
+                            const summary = i.evaluationSummary;
+                            const avgScore = summary?.average_score ?? (evals.length > 0 ? Math.round(evals.reduce((sum, e) => sum + (e.overallScore || 0), 0) / evals.length) : null);
+                            if (avgScore !== null) {
+                              return (
+                                <span style={{
+                                  fontSize: 11, fontWeight: 800,
+                                  background: avgScore >= 80 ? T.greenLight : avgScore >= 60 ? T.amberLight : T.redLight,
+                                  color: avgScore >= 80 ? T.green : avgScore >= 60 ? T.amber : T.red,
+                                  border: `1px solid ${avgScore >= 80 ? "#A7F3D0" : avgScore >= 60 ? "#FDE68A" : "#FCA5A5"}`,
+                                  padding: "3px 8px", borderRadius: 6,
+                                  display: "inline-flex", alignItems: "center", gap: 3
+                                }}>
+                                  ★ {avgScore}
+                                </span>
+                              );
+                            }
+                            return <span style={{ fontSize: 11, color: T.inkFaint, fontStyle: "italic" }}>—</span>;
+                          })()}
+                        </td>
+
+                        {/* Round */}
+                        <td style={{ padding: "12px 10px", textAlign: "center", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 4, background: T.canvas, border: `1px solid ${T.border}`, borderRadius: 8, padding: "2px 4px" }}>
+                            <button
+                              onClick={() => handleDecrementCandidateRound(c, rnd)}
+                              disabled={rnd <= 1 || isPreviousRound || !!existingOffer}
+                              style={{
+                                width: 20, height: 20, borderRadius: 5, border: "none",
+                                background: (rnd <= 1 || isPreviousRound || !!existingOffer) ? "transparent" : T.primaryLight,
+                                color: (rnd <= 1 || isPreviousRound || !!existingOffer) ? T.inkFaint : T.primary,
+                                fontWeight: "bold",
+                                cursor: (rnd <= 1 || isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
+                                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11,
+                                transition: "all 0.15s"
+                              }}
+                            >
+                              -
+                            </button>
+                            <span style={{ fontSize: 11.5, fontWeight: 700, minWidth: 55, textAlign: "center", color: T.ink }}>
+                              {getRoundOrdinal(rnd)}
+                            </span>
+                            <button
+                              onClick={() => handleIncrementCandidateRound(c, rnd)}
+                              disabled={rnd >= 10 || isPreviousRound || !!existingOffer}
+                              style={{
+                                width: 20, height: 20, borderRadius: 5, border: "none",
+                                background: (rnd >= 10 || isPreviousRound || !!existingOffer) ? "transparent" : T.primaryLight,
+                                color: (rnd >= 10 || isPreviousRound || !!existingOffer) ? T.inkFaint : T.primary,
+                                fontWeight: "bold",
+                                cursor: (rnd >= 10 || isPreviousRound || !!existingOffer) ? "not-allowed" : "pointer",
+                                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11,
+                                transition: "all 0.15s"
+                              }}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* Panelists */}
+                        <td style={{ padding: "12px 10px", verticalAlign: "middle" }}>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                            {i.panel && i.panel.length > 0 ? (
+                              i.panel.map((pName) => (
+                                <span key={pName} style={{
+                                  fontSize: 10, fontWeight: 700, color: T.inkMid,
+                                  background: T.canvas, border: `1px solid ${T.border}`,
+                                  borderRadius: 4, padding: "2px 6px", whiteSpace: "nowrap"
+                                }} title={pName}>
+                                  {pName.split(" ").map((n) => n[0]).join("")}
+                                </span>
+                              ))
+                            ) : (
+                              <span style={{ fontSize: 11, color: T.inkFaint, fontStyle: "italic" }}>—</span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Schedule */}
+                        <td style={{ padding: "12px 10px", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
+                          {i.date ? (
+                            <div
+                              onClick={(e) => { if (!isPreviousRound) { e.stopPropagation(); handleOpenSchedule(c); } }}
+                              style={{
+                                cursor: isPreviousRound ? "default" : "pointer",
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: T.ink,
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              <span>{formatDateAndTime(i.date, i.time)}</span>
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: 11, color: T.inkFaint }}>—</span>
+                          )}
+                        </td>
+
+                        {/* Mode */}
+                        <td style={{ padding: "12px 10px", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
+                          {modeCell(i.mode || "In-Person")}
+                        </td>
+
+                        {/* Link */}
+                        <td style={{ padding: "12px 10px", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
+                          {i.mode === "Online" && i.meetingLink ? (
+                            <a
+                              href={i.meetingLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                fontSize: 12, color: T.primary, textDecoration: "none",
+                                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                width: 24, height: 24, borderRadius: 6, background: T.primaryLight,
+                                border: `1px solid ${T.primary}44`,
+                                transition: "all 0.2s"
+                              }}
+                              className="btn-action-hover"
+                              title="Join Meeting"
+                            >
+                              🔗
+                            </a>
+                          ) : (
+                            <span style={{ fontSize: 11, color: T.inkFaint }}>—</span>
+                          )}
+                        </td>
+
+                        {/* Status */}
+                        <td style={{ padding: "12px 10px", textAlign: "center", verticalAlign: "middle" }}>
+                          <Badge label={i.status || "Pending"} variant={statusVariant(i.status || "Pending")} />
+                        </td>
+
+                        {/* Actions */}
+                        <td style={{ padding: "12px 10px", textAlign: "center", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
+                          <div style={{ display: "grid", gridTemplateColumns: "105px 85px 90px 65px", gap: 6, justifyContent: "center", alignItems: "center" }}>
+                            {!i.date ? (
+                              <button
+                                onClick={() => handleOpenSchedule(c)}
+                                disabled={isPreviousRound || !!existingOffer}
+                                style={{ ...actionBtnStyle("primary", isPreviousRound || !!existingOffer), width: "100%", textAlign: "center" }}
+                                className={isPreviousRound || !!existingOffer ? "" : "btn-action-hover"}
+                              >
+                                📅 Schedule
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleOpenSchedule(c)}
+                                disabled={isPreviousRound || !!existingOffer}
+                                style={{ ...actionBtnStyle("reschedule", isPreviousRound || !!existingOffer), width: "100%", textAlign: "center" }}
+                                className={isPreviousRound || !!existingOffer ? "" : "btn-action-hover"}
+                                title={`Currently: ${formatDateAndTime(i.date, i.time)}`}
+                              >
+                                🔄 Reschedule
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setAssigningCandidate(c)}
+                              disabled={isPreviousRound || !i.date || !!existingOffer}
+                              style={{ ...actionBtnStyle("amber", isPreviousRound || !i.date || !!existingOffer), width: "100%", textAlign: "center" }}
+                              className={isPreviousRound || !i.date || !!existingOffer ? "" : "btn-action-hover"}
+                            >
+                              {i.panel && i.panel.length > 0 ? "Edit Panelist" : "Panelist"}
+                            </button>
+                            {i.date && i.panel && i.panel.length > 0 ? (
+                              <button
+                                onClick={() => setReminderCandidate(c)}
+                                disabled={isPreviousRound || !!existingOffer}
+                                style={{ ...actionBtnStyle("secondary", isPreviousRound || !!existingOffer), width: "100%", textAlign: "center" }}
+                                className={isPreviousRound || !!existingOffer ? "" : "btn-action-hover"}
+                              >
+                                🔔 Reminder
+                              </button>
+                            ) : (
+                              <div style={{ width: 90 }} />
+                            )}
+                            {existingOffer ? (
+                              <button
+                                onClick={() => {
+                                  if (existingOffer.status === "Accepted") {
+                                    alert("Offer already accepted");
+                                  } else {
+                                    handleDeclineOfferInPanel(c.name, c.role);
+                                  }
+                                }}
+                                disabled={isPreviousRound}
+                                style={{
+                                  ...actionBtnStyle("danger", isPreviousRound || existingOffer.status === "Accepted"),
+                                  width: "100%",
+                                  textAlign: "center",
+                                  cursor: (isPreviousRound || existingOffer.status === "Accepted") ? "not-allowed" : "pointer"
+                                }}
+                                className={(isPreviousRound || existingOffer.status === "Accepted") ? "" : "btn-action-hover"}
+                              >
+                                Decline
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleGiveOffer(c)}
+                                disabled={isPreviousRound}
+                                style={{ ...actionBtnStyle("success", isPreviousRound), width: "100%", textAlign: "center" }}
+                                className={isPreviousRound ? "" : "btn-action-hover"}
+                              >
+                                📜 Offer
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Inline Evaluation Form Row */}
+                      {inlineEvalKey === candidateKey(c) && (
+                        <tr>
+                          <td colSpan={9} style={{ padding: 0, background: T.canvas, borderBottom: `2px solid ${T.primary}22` }}>
+                            <div
+                              style={{
+                                padding: "20px 24px",
+                                background: `linear-gradient(135deg, ${T.primaryLight} 0%, ${T.canvas} 100%)`,
+                                borderTop: `2px solid ${T.primary}33`,
+                              }}
+                            >
+                              {/* Header */}
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                  <span style={{ fontSize: 16, fontWeight: 800, color: T.primary }}>📝 Evaluate — {c.name}</span>
+                                  <span style={{ fontSize: 12, color: T.inkMid, fontWeight: 600 }}>
+                                    {c.role} · {getRoundOrdinal(rnd)}
+                                    {i.date ? ` · ${formatDateAndTime(i.date, i.time)}` : ""}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    setInlineEvalKey(null);
+                                    setScores({});
+                                    setRecommendation("");
+                                    setRemarks("");
+                                  }}
+                                  style={{
+                                    background: "none", border: `1.5px solid ${T.border}`, borderRadius: 8,
+                                    padding: "4px 12px", fontSize: 12, fontWeight: 700, color: T.inkMid,
+                                    cursor: "pointer",
+                                  }}
+                                  className="btn-action-hover"
+                                >
+                                  ✕ Close
+                                </button>
+                              </div>
+
+                              {/* Scoring Grid */}
+                              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                                {criteria.map((cr) => (
+                                  <div key={cr} style={{ background: T.white, borderRadius: 10, padding: "12px 14px", border: `1px solid ${T.border}` }}>
+                                    <div style={{ fontSize: 12, fontWeight: 700, color: T.inkMid, marginBottom: 10 }}>{cr}</div>
+                                    <div style={{ display: "flex", gap: 6, justifyContent: "space-between" }}>
+                                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                                        <div
+                                          key={n}
+                                          onClick={() => setScores((prev) => ({ ...prev, [cr]: n }))}
+                                          style={{
+                                            width: 32, height: 32, borderRadius: 8,
+                                            display: "flex", alignItems: "center", justifyContent: "center",
+                                            fontSize: 12, fontWeight: 700, cursor: "pointer",
+                                            background: scores[cr] >= n ? T.primary : T.primaryLight,
+                                            color: scores[cr] >= n ? "#fff" : T.primary,
+                                            border: `1.5px solid ${scores[cr] >= n ? T.primary : T.border}`,
+                                            transition: "all 0.1s",
+                                          }}
+                                        >
+                                          {n}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Recommendation + Remarks row */}
+                              <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start", marginBottom: 16 }}>
+                                <div style={{ flex: "0 0 auto" }}>
+                                  <div style={{ fontSize: 12, fontWeight: 700, color: T.inkMid, marginBottom: 6 }}>Overall Recommendation</div>
+                                  <div style={{ display: "flex", gap: 8 }}>
+                                    {["Selected", "Hold", "Rejected"].map((r) => (
+                                      <button
+                                        key={r}
+                                        onClick={() => setRecommendation(r)}
+                                        style={{
+                                          border: `1.5px solid ${recommendation === r ? T.primary : T.border}`,
+                                          borderRadius: 8, padding: "8px 18px", fontSize: 13, fontWeight: 700,
+                                          background: recommendation === r ? T.primaryLight : T.white,
+                                          color: recommendation === r ? T.primary : T.inkMid,
+                                          cursor: "pointer",
+                                        }}
+                                        className="btn-action-hover"
+                                      >
+                                        {r}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div style={{ flex: 1, minWidth: 200 }}>
+                                  <div style={{ fontSize: 12, fontWeight: 700, color: T.inkMid, marginBottom: 6 }}>Remarks</div>
+                                  <textarea
+                                    placeholder="Any additional remarks…"
+                                    value={remarks}
+                                    onChange={(e) => setRemarks(e.target.value)}
+                                    style={{
+                                      border: `1.5px solid ${T.border}`, borderRadius: 8, padding: 10,
+                                      fontSize: 13, width: "100%", minHeight: 48, resize: "vertical",
+                                      boxSizing: "border-box", outline: "none", color: T.ink,
+                                      background: T.white,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Submit actions */}
+                              <div style={{ display: "flex", gap: 10 }}>
+                                <button
+                                  disabled={isSubmittingEval}
+                                  onClick={async () => {
+                                    if (!recommendation) {
+                                      alert("Please select a recommendation.");
+                                      return;
+                                    }
+                                    if (!setInterviews) return;
+                                    const scoreValues = Object.values(scores);
+                                    const avgScore = scoreValues.length > 0 ? Math.round((scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length) * 20) : null;
+                                    setIsSubmittingEval(true);
+                                    try {
+                                      await saveEvaluation(
+                                        { ...i, candidate: c.name, role: c.role, round: rnd },
+                                        { avgScore, recommendationValue: recommendation, remarksValue: remarks }
+                                      );
+                                      setInlineEvalKey(null);
+                                      setScores({});
+                                      setRecommendation("");
+                                      setRemarks("");
+                                    } catch (err) {
+                                      console.error("Failed to submit interview evaluation:", err);
+                                      alert("Could not submit the evaluation. Please try again.");
+                                    } finally {
+                                      setIsSubmittingEval(false);
+                                    }
+                                  }}
+                                  style={{
+                                    background: T.primary, color: "#fff", border: "none", borderRadius: 10,
+                                    padding: "9px 22px", fontSize: 13, fontWeight: 700,
+                                    cursor: isSubmittingEval ? "not-allowed" : "pointer",
+                                    opacity: isSubmittingEval ? 0.7 : 1,
+                                    boxShadow: `0 4px 12px ${T.primary}33`,
+                                  }}
+                                  className="btn-action-hover"
+                                >
+                                  {isSubmittingEval ? "Submitting…" : "✓ Submit Evaluation"}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setInlineEvalKey(null);
+                                    setScores({});
+                                    setRecommendation("");
+                                    setRemarks("");
+                                  }}
+                                  style={{
+                                    background: "none", border: `1.5px solid ${T.border}`, borderRadius: 10,
+                                    padding: "9px 22px", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                                    color: T.inkMid,
+                                  }}
+                                  className="btn-action-hover"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+
+                {totalItems === 0 && (
+                  <tr>
+                    <td colSpan={8} style={{ padding: "40px 24px", textAlign: "center", color: T.inkFaint, fontSize: 14 }}>
+                      No candidates found matching the filters.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Desktop/Mobile Pagination Control */}
+          {totalPages > 1 && (
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              padding: "16px 20px",
+              borderTop: `1px solid ${T.border}`,
+            }}>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={activePage === 1}
+                style={{
+                  background: T.white,
+                  color: activePage === 1 ? T.inkFaint : T.primary,
+                  border: `1.5px solid ${activePage === 1 ? T.border : T.primary}`,
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: activePage === 1 ? "not-allowed" : "pointer",
+                  opacity: activePage === 1 ? 0.5 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                &larr; Previous 20
+              </button>
+
+              <span style={{ fontSize: 13, color: T.inkMid, fontWeight: 600 }}>
+                Page {activePage} of {totalPages}
+              </span>
+
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={activePage === totalPages}
+                style={{
+                  background: activePage === totalPages ? T.white : T.primary,
+                  color: activePage === totalPages ? T.inkFaint : T.white,
+                  border: `1.5px solid ${activePage === totalPages ? T.border : T.primary}`,
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: activePage === totalPages ? "not-allowed" : "pointer",
+                  opacity: activePage === totalPages ? 0.5 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                Next 20 &rarr;
+              </button>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Schedule / Reschedule Interview Modal */}
+      <Modal open={showScheduleModal} onClose={() => { setShowScheduleModal(false); setSchedulingCandidate(null); }} maxWidth={480}>
+        <ModalHeader
+          title={schedulingCandidate?.interview?.date ? "🔄 Reschedule Interview" : "📅 Schedule Interview"}
+          onClose={() => { setShowScheduleModal(false); setSchedulingCandidate(null); }}
+        />
+        {schedulingCandidate && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {/* Candidate info card */}
+            <div style={{ background: T.canvas, borderRadius: 10, padding: 12, border: `1px solid ${T.border}` }}>
+              <strong>{schedulingCandidate.name}</strong>
+              <div style={{ fontSize: 12, color: T.inkLight, marginTop: 2 }}>
+                {schedulingCandidate.role} · {getRoundOrdinal(schedulingCandidate.activeRound)}
+              </div>
+            </div>
+
+            {/* Reschedule notice — shown only when already scheduled */}
+            {schedulingCandidate?.interview?.date && (
+              <div style={{
+                background: "#FFF3E0",
+                border: "1.5px solid #FFB74D",
+                borderRadius: 10,
+                padding: "10px 14px",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 10,
+              }}>
+                <span style={{ fontSize: 18, flexShrink: 0 }}>⚠️</span>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#E65100", marginBottom: 2 }}>Currently Scheduled</div>
+                  <div style={{ fontSize: 12, color: "#BF360C" }}>
+                    {formatDateAndTime(schedulingCandidate.interview.date, schedulingCandidate.interview.time)}
+                    {schedulingCandidate.interview.mode ? ` · ${schedulingCandidate.interview.mode}` : ""}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#E65100", marginTop: 3, opacity: 0.8 }}>
+                    Setting a new date &amp; time will replace the current schedule.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <FormField label="Interview Date" required>
+              <div
+                onClick={() => dateInputRef.current?.showPicker?.()}
+                style={{ cursor: "pointer" }}
+              >
+                <input
+                  ref={dateInputRef}
+                  type="date"
+                  value={scheduleForm.date}
+                  onChange={(e) => setScheduleForm((p) => ({ ...p, date: e.target.value }))}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.target.showPicker?.();
+                  }}
+                  style={{
+                    border: `1.5px solid ${T.border}`,
+                    borderRadius: 8,
+                    padding: "8px 12px",
+                    fontSize: 13,
+                    color: T.ink,
+                    background: "#fff",
+                    outline: "none",
+                    width: "100%",
+                    boxSizing: "border-box",
+                    cursor: "pointer",
+                  }}
+                />
+              </div>
+            </FormField>
+
+            <FormField label="Time Slot" required>
+              <Select
+                value={scheduleForm.time}
+                onChange={(e) => setScheduleForm((p) => ({ ...p, time: e.target.value }))}
+                options={TIME_OPTIONS}
+                placeholder="Select time…"
+              />
+            </FormField>
+
+            <FormField label="Interview Mode" required>
+              <Select
+                value={scheduleForm.mode}
+                onChange={(e) => setScheduleForm((p) => ({ ...p, mode: e.target.value, meetingLink: e.target.value === "In-Person" ? "" : p.meetingLink }))}
+                options={MODE_OPTIONS}
+              />
+            </FormField>
+
+            {scheduleForm.mode === "Online" && (
+              <FormField label="Meeting Link" required>
+                <Input
+                  placeholder="https://meet.google.com/xxx-xxx-xxx"
+                  value={scheduleForm.meetingLink}
+                  onChange={(e) => setScheduleForm((p) => ({ ...p, meetingLink: e.target.value }))}
+                />
+              </FormField>
+            )}
+
+            <div style={{ display: "flex", gap: 10, marginTop: 12, justifyContent: "flex-end" }}>
+              <Btn label="Cancel" variant="ghost" disabled={isSavingSchedule} onClick={() => { setShowScheduleModal(false); setSchedulingCandidate(null); }} />
+              <Btn label={isSavingSchedule ? "Saving…" : "Save Schedule"} disabled={isSavingSchedule} onClick={handleSaveSchedule} />
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Assign Panelist Modal */}
+      <Modal open={!!assigningCandidate} onClose={handleCloseAssignModal} maxWidth={440}>
+        <ModalHeader title="Assign Panelists" onClose={handleCloseAssignModal} />
+        {assigningCandidate && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ background: T.canvas, borderRadius: 10, padding: 12, border: `1px solid ${T.border}`, marginBottom: 4 }}>
+              <strong>{assigningCandidate.name}</strong>
+              <div style={{ fontSize: 12, color: T.inkLight, marginTop: 2 }}>
+                {assigningCandidate.role} · {getRoundOrdinal(assigningCandidate.activeRound)}
+              </div>
+            </div>
+
+            <FormField label="Available Panel Members">
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 240, overflowY: "auto", paddingRight: 4 }}>
+                {panelists.map((p) => {
+                  const isAssigned = tempPanelists.includes(p.name);
+                  return (
+                    <div
+                      key={p.name}
+                      onClick={() => handleTogglePanelistTemp(p.name)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "10px 12px",
+                        border: `1.5px solid ${isAssigned ? T.primary : T.border}`,
+                        borderRadius: 8,
+                        background: isAssigned ? T.primaryLight : T.white,
+                        cursor: "pointer",
+                        transition: "all 0.1s",
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: isAssigned ? T.primary : T.ink }}>{p.name}</div>
+                        <div style={{ fontSize: 11, color: T.inkFaint }}>{p.email} · {p.phone}</div>
+                      </div>
+                      <div
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: 4,
+                          border: `2px solid ${isAssigned ? T.primary : T.borderMid}`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          background: isAssigned ? T.primary : T.white,
+                          color: "#fff",
+                          fontSize: 12,
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {isAssigned ? "✓" : ""}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </FormField>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
+              <Btn label="Cancel" variant="ghost" disabled={isSavingPanelists} onClick={handleCloseAssignModal} />
+              <Btn label={isSavingPanelists ? "Saving..." : "Save"} disabled={isSavingPanelists} onClick={handleSavePanelists} />
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Candidate Details Modal */}
+      <Modal open={!!selectedAppDetail} onClose={() => setSelectedAppDetail(null)} maxWidth={640}>
+        {selectedAppDetail && (
+          <>
+            <ModalHeader title="Shortlisted Candidate Details" onClose={() => setSelectedAppDetail(null)} />
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 16,
+                marginBottom: 20,
+                padding: 16,
+                background: T.primaryLight,
+                borderRadius: 12,
+              }}
+            >
+              {avatar(selectedAppDetail.name, 56, 18)}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: T.ink }}>{selectedAppDetail.name}</div>
+                <div style={{ color: T.inkLight, fontSize: 13, marginTop: 2 }}>{selectedAppDetail.role}</div>
+                <div style={{ marginTop: 6 }}>
+                  <Badge label="Shortlisted" variant="primary" />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 20 }}>
+              {[
+                ["Application ID", selectedAppDetail.id],
+                ["Experience", selectedAppDetail.exp],
+                ["Qualification", selectedAppDetail.qualification],
+                ["Referred By", selectedAppDetail.referredBy],
+                ["Applied Date", selectedAppDetail.applied],
+                ["Email", selectedAppDetail.email],
+                ["Phone", selectedAppDetail.phone || "—"],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 3 }}>
+                    {label}
+                  </div>
+                  <div style={{ fontSize: 14, color: T.ink }}>{value}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Rounds History Log */}
+            <div style={{ marginTop: 24, borderTop: `1.5px solid ${T.border}`, paddingTop: 20 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 800, color: T.ink, marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Interview Rounds History
+              </h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                {(() => {
+                  const activeRnd = selectedAppDetail.activeRound || 1;
+                  const roundsToRender = Array.from({ length: activeRnd }, (_, i) => i + 1).filter((r) => {
+                    const hasInv = interviews.some(
+                      (i) => i.candidate === selectedAppDetail.name && i.role === selectedAppDetail.role && i.round === r
+                    );
+                    return r === activeRnd || hasInv;
+                  });
+
+                  return roundsToRender.map((r, idx, arr) => {
+                    const roundInv = interviews.find(
+                      (i) => i.candidate === selectedAppDetail.name && i.role === selectedAppDetail.role && i.round === r
+                    );
+
+                  const isCompleted = roundInv?.status === "Completed";
+                  const isScheduled = roundInv?.status === "Scheduled";
+                  const hasInv = !!roundInv;
+
+                  let nodeBg = "#E2E8F0";
+                  let nodeBorder = "#CBD5E1";
+                  if (hasInv) {
+                    if (isCompleted) {
+                      nodeBg = T.green;
+                      nodeBorder = T.greenLight;
+                    } else if (isScheduled) {
+                      nodeBg = T.primary;
+                      nodeBorder = T.primaryLight;
+                    } else {
+                      nodeBg = T.amber;
+                      nodeBorder = T.amberLight;
+                    }
+                  }
+
+                  return (
+                    <div key={r} style={{ display: "flex", gap: 16 }}>
+                      {/* Timeline Indicator Column */}
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 20, flexShrink: 0 }}>
+                        {/* Top line segment */}
+                        <div style={{ width: 2, flex: idx === 0 ? "0 0 12px" : 1, background: idx === 0 ? "transparent" : T.border }} />
+                        {/* Node */}
+                        <div style={{
+                          width: 12,
+                          height: 12,
+                          borderRadius: "50%",
+                          background: nodeBg,
+                          border: `3px solid ${nodeBorder}`,
+                          boxShadow: hasInv && !isCompleted ? `0 0 0 3px ${nodeBg}22` : "none",
+                          flexShrink: 0,
+                          zIndex: 2,
+                          transition: "all 0.2s"
+                        }} />
+                        {/* Bottom line segment */}
+                        <div style={{ width: 2, flex: idx === arr.length - 1 ? "0 0 12px" : 1, background: idx === arr.length - 1 ? "transparent" : T.border }} />
+                      </div>
+
+                      {/* Right Column: Card Content */}
+                      <div style={{ flex: 1, paddingBottom: idx < arr.length - 1 ? 20 : 0 }}>
+                        {!roundInv ? (
+                          <div style={{
+                            padding: "12px 16px",
+                            background: "#F8FAFC",
+                            borderRadius: 12,
+                            border: `1.5px dashed ${T.border}`,
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center"
+                          }}>
+                            <div>
+                              <span style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{getRoundOrdinal(r)}</span>
+                              <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 2 }}>Round has not been scheduled yet</div>
+                            </div>
+                            <span style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              color: T.amber,
+                              background: T.amberLight,
+                              border: `1px solid ${T.amber}33`,
+                              padding: "3px 10px",
+                              borderRadius: 99
+                            }}>
+                              Pending Schedule
+                            </span>
+                          </div>
+                        ) : (
+                          <div style={{
+                            padding: "16px 20px",
+                            background: isCompleted ? "#F0FDF4" : isScheduled ? "#F0F9FF" : "#FFFBEB",
+                            borderRadius: 14,
+                            border: `1.5px solid ${isCompleted ? "#DCFCE7" : isScheduled ? "#E0F2FE" : "#FEF3C7"}`,
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.01)"
+                          }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                              <span style={{ fontSize: 13.5, fontWeight: 850, color: isCompleted ? "#166534" : isScheduled ? "#075985" : "#92400E" }}>
+                                {getRoundOrdinal(r)}
+                              </span>
+                              <Badge label={roundInv.status} variant={statusVariant(roundInv.status)} />
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "10px 16px", fontSize: 11.5, color: T.inkMid }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 14 }}>📅</span>
+                                <div>
+                                  <div style={{ fontSize: 9.5, color: T.inkFaint, textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>Date &amp; Time</div>
+                                  <div style={{ fontWeight: 600, color: T.ink }}>{roundInv.date ? formatDateAndTime(roundInv.date, roundInv.time) : "Not Scheduled"}</div>
+                                </div>
+                              </div>
+
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 14 }}>🏢</span>
+                                <div>
+                                  <div style={{ fontSize: 9.5, color: T.inkFaint, textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>Mode</div>
+                                  <div style={{ fontWeight: 600, color: T.ink }}>{roundInv.mode || "In-Person"}</div>
+                                </div>
+                              </div>
+
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 14 }}>👥</span>
+                                <div>
+                                  <div style={{ fontSize: 9.5, color: T.inkFaint, textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>Panelists</div>
+                                  <div style={{ fontWeight: 600, color: T.ink }}>{roundInv.panel?.join(", ") || "None"}</div>
+                                </div>
+                              </div>
+
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 14 }}>📊</span>
+                                <div>
+                                  <div style={{ fontSize: 9.5, color: T.inkFaint, textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>Evaluation Status</div>
+                                  <div style={{ fontWeight: 600, color: T.ink }}>
+                                    {(() => {
+                                      const evals = roundInv.evaluations || [];
+                                      const summary = roundInv.evaluationSummary;
+                                      if (evals.length > 0) {
+                                        const avgScore = summary?.average_score ?? Math.round(evals.reduce((sum, e) => sum + (e.overallScore || 0), 0) / evals.length);
+                                        return (
+                                          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                            <strong style={{ color: avgScore >= 80 ? T.green : avgScore >= 60 ? T.accentDark : T.red }}>{avgScore}/100</strong>
+                                            <span style={{ fontSize: 10, background: "rgba(0,0,0,0.06)", padding: "1px 6px", borderRadius: 4, fontWeight: 700 }}>
+                                              {summary?.submitted_count ?? evals.length}/{summary?.assigned_count ?? (roundInv.panel?.length || "?")} evaluated
+                                            </span>
+                                          </span>
+                                        );
+                                      }
+                                      return <span style={{ color: T.inkFaint, fontStyle: "italic" }}>Not Evaluated</span>;
+                                    })()}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Per-Panelist Evaluation Scorecards */}
+                            {r === (selectedAppDetail.displayRound || selectedAppDetail.activeRound) && (roundInv.evaluations || []).length > 0 && (() => {
+                              const evalKey = `${selectedAppDetail.backendId || selectedAppDetail.name}_round_${r}`;
+                              const isExpanded = openEvaluations[evalKey] ?? false;
+
+                              return (
+                                <div style={{ marginTop: 20, borderTop: "1.5px solid rgba(0,0,0,0.06)", paddingTop: 18 }}>
+                                  <button 
+                                    type="button"
+                                    onClick={() => setOpenEvaluations((prev) => ({ ...prev, [evalKey]: !isExpanded }))}
+                                    style={{ 
+                                      width: "100%", 
+                                      background: "none", 
+                                      border: "none", 
+                                      padding: 0,
+                                      marginBottom: isExpanded ? 14 : 0, 
+                                      display: "flex", 
+                                      justifyContent: "space-between", 
+                                      alignItems: "center", 
+                                      cursor: "pointer", 
+                                      textAlign: "left",
+                                      outline: "none"
+                                    }}
+                                  >
+                                    <div style={{ 
+                                      fontSize: 10, 
+                                      fontWeight: 800, 
+                                      color: T.inkLight, 
+                                      textTransform: "uppercase", 
+                                      letterSpacing: "0.08em", 
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 6
+                                    }}>
+                                      <span>📋</span> Panelist Evaluations ({roundInv.evaluations.length})
+                                    </div>
+                                    <span style={{ 
+                                      fontSize: 14, 
+                                      color: T.inkLight, 
+                                      transition: "transform 0.2s ease", 
+                                      transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                                      display: "inline-block"
+                                    }}>
+                                      ▾
+                                    </span>
+                                  </button>
+
+                                  {isExpanded && (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                                      {roundInv.evaluations.map((ev, evIdx) => {
+                                        const pName = ev.panelistId != null
+                                          ? (panelists.find((p) => p.backendId === ev.panelistId)?.name || `Panelist #${ev.panelistId}`)
+                                          : `Panelist ${evIdx + 1}`;
+                                        const criteriaEntries = Object.entries(ev.criteria || {});
+                                        const evScore = ev.overallScore ?? (criteriaEntries.length > 0 ? Math.round((criteriaEntries.reduce((s, [, v]) => s + v, 0) / criteriaEntries.length) * 20) : null);
+
+                                        const REC_COLORS = {
+                                          "Strong Hire": { bg: "#ECFDF5", color: "#059669" },
+                                          "Hire": { bg: "#F0FDF4", color: "#16A34A" },
+                                          "Hold": { bg: "#FFFBEB", color: "#D97706" },
+                                          "Reject": { bg: "#FEF2F2", color: "#DC2626" },
+                                          "Selected": { bg: "#ECFDF5", color: "#059669" },
+                                          "Rejected": { bg: "#FEF2F2", color: "#DC2626" },
+                                          "On Hold": { bg: "#FFFBEB", color: "#D97706" },
+                                          "Next Round": { bg: "#F0F9FF", color: "#0284C7" },
+                                        };
+                                        const recStyle = REC_COLORS[ev.rec] || { bg: "#F8FAFC", color: T.inkLight };
+
+                                        return (
+                                          <div 
+                                            key={evIdx} 
+                                            style={{ 
+                                              background: "#ffffff", 
+                                              borderRadius: 16, 
+                                              border: "1px solid #ECE7E1", 
+                                              borderLeft: `5px solid ${recStyle.color}`,
+                                              boxShadow: "0 4px 20px rgba(0, 0, 0, 0.02)",
+                                              overflow: "hidden",
+                                              padding: "16px 20px"
+                                            }}
+                                          >
+                                            {/* Panelist Header */}
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+                                              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                                <div style={{ 
+                                                  width: 36, 
+                                                  height: 36, 
+                                                  borderRadius: "50%", 
+                                                  background: `linear-gradient(135deg, ${T.primary} 0%, ${T.primaryDark} 100%)`, 
+                                                  color: "#ffffff", 
+                                                  display: "flex", 
+                                                  alignItems: "center", 
+                                                  justifyContent: "center", 
+                                                  fontWeight: 800, 
+                                                  fontSize: 12, 
+                                                  flexShrink: 0,
+                                                  boxShadow: "0 3px 8px rgba(114, 16, 42, 0.15)"
+                                                }}>
+                                                  {pName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                  <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink, letterSpacing: "-0.01em" }}>{pName}</div>
+                                                  {ev.submittedAt && (
+                                                    <div style={{ fontSize: 10, color: T.inkFaint, marginTop: 1, display: "flex", alignItems: "center", gap: 4 }}>
+                                                      <span>📅</span>
+                                                      {new Date(ev.submittedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              </div>
+                                              
+                                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                {ev.rec && ev.rec !== "—" && (
+                                                  <span style={{ 
+                                                    fontSize: 10.5, 
+                                                    fontWeight: 700, 
+                                                    borderRadius: 100, 
+                                                    padding: "4px 12px", 
+                                                    background: recStyle.bg, 
+                                                    color: recStyle.color, 
+                                                    border: `1px solid ${recStyle.color}1A`,
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: 5
+                                                  }}>
+                                                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: recStyle.color }} />
+                                                    {ev.rec}
+                                                  </span>
+                                                )}
+                                                {evScore !== null && (
+                                                  <div style={{ 
+                                                    background: "linear-gradient(135deg, #1A1A1A 0%, #4A4A4A 100%)", 
+                                                    color: "#ffffff", 
+                                                    borderRadius: 100, 
+                                                    padding: "4px 12px", 
+                                                    display: "inline-flex", 
+                                                    alignItems: "center", 
+                                                    gap: 5,
+                                                    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.08)"
+                                                  }}>
+                                                    <span style={{ fontSize: 9.5, color: "rgba(255, 255, 255, 0.7)", fontWeight: 700, letterSpacing: "0.03em" }}>SCORE</span>
+                                                    <span style={{ 
+                                                      fontSize: 12, 
+                                                      fontWeight: 900, 
+                                                      color: evScore >= 80 ? "#4ADE80" : evScore >= 60 ? "#FBBF24" : "#F87171" 
+                                                    }}>{evScore}</span>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+
+                                            {/* Criteria Grid */}
+                                            {criteriaEntries.length > 0 && (
+                                              <div>
+                                                <div style={{ 
+                                                  display: "grid", 
+                                                  gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", 
+                                                  gap: "8px 24px",
+                                                  background: "#FAF9F6",
+                                                  borderRadius: 12,
+                                                  border: "1px solid #E8E2D9",
+                                                  padding: "12px 16px"
+                                                }}>
+                                                  {criteriaEntries.map(([field, val]) => (
+                                                    <div key={field} style={{ 
+                                                      display: "flex", 
+                                                      justifyContent: "space-between", 
+                                                      alignItems: "center", 
+                                                      gap: 8, 
+                                                      padding: "6px 0", 
+                                                      borderBottom: "1px dashed rgba(232, 226, 217, 0.6)" 
+                                                    }}>
+                                                      <span style={{ fontSize: 11.5, color: T.inkMid, fontWeight: 600 }}>{field}</span>
+                                                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                                        <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+                                                          {Array.from({ length: 5 }).map((_, di) => (
+                                                            <div 
+                                                              key={di} 
+                                                              style={{ 
+                                                                width: 14, 
+                                                                height: 5, 
+                                                                borderRadius: 2.5, 
+                                                                background: di < val ? recStyle.color : "#E2E8F0", 
+                                                                transition: "background 0.2s" 
+                                                              }} 
+                                                            />
+                                                          ))}
+                                                        </div>
+                                                        <span style={{ fontSize: 10.5, fontWeight: 800, color: T.ink, minWidth: 20, textAlign: "right" }}>{val}/5</span>
+                                                      </div>
+                                                    </div>
+                                                  ))}
+                                                </div>
+
+                                                {/* Feedback Notes */}
+                                                {ev.notes && (
+                                                  <div style={{ 
+                                                    marginTop: 12, 
+                                                    padding: "12px 16px", 
+                                                    background: "#ffffff", 
+                                                    borderRadius: 12, 
+                                                    border: "1px solid #E8E2D9",
+                                                    borderLeft: `4px solid ${recStyle.color}`,
+                                                    position: "relative",
+                                                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.01)"
+                                                  }}>
+                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                                                      <span style={{ fontSize: 9.5, fontWeight: 800, color: T.inkLight, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                                                        Feedback Remarks
+                                                      </span>
+                                                      <span style={{ fontSize: 18, fontWeight: 900, color: `${recStyle.color}2A`, fontFamily: "Georgia, serif", lineHeight: 1 }}>“</span>
+                                                    </div>
+                                                    <span style={{ fontStyle: "italic", fontSize: 12, color: T.inkMid, lineHeight: 1.6, display: "block" }}>
+                                                      "{ev.notes}"
+                                                    </span>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
+
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+            </div>
+          </>
+        )}
+      </Modal>
+
+      {/* Evaluation Modal */}
+      <Modal open={!!evalInterview} onClose={() => setEvalInterview(null)} maxWidth={600}>
+        {evalInterview && (
+          <>
+            <ModalHeader title={`Evaluate — ${evalInterview.candidate}`} onClose={() => setEvalInterview(null)} />
+            <div style={{ background: T.canvas, borderRadius: 10, padding: "12px 14px", marginBottom: 16, border: `1px solid ${T.border}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
+                <div>
+                  <div style={{ fontSize: 13, color: T.inkMid }}>
+                    <strong>{evalInterview.role}</strong> · {getRoundOrdinal(evalInterview.round)} · {formatDateAndTime(evalInterview.date, evalInterview.time)}
+                  </div>
+                  <div style={{ fontSize: 12, color: T.inkFaint, marginTop: 2 }}>Panel: {evalInterview.panel?.join(", ") || "None"}</div>
+                </div>
+                {modeCell(evalInterview.mode || "In-Person")}
+              </div>
+              {evalInterview.mode === "Online" && evalInterview.meetingLink && (
+                <div style={{ marginTop: 10 }}>
+                  <a
+                    href={evalInterview.meetingLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: 12, color: T.primary, fontWeight: 600, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}
+                  >
+                    🔗 Join Meeting
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 16 }}>
+              {criteria.map((c) => (
+                <div key={c} style={{ background: T.canvas, borderRadius: 10, padding: "12px 14px", border: `1px solid ${T.border}` }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: T.inkMid, marginBottom: 10 }}>{c}</div>
+                  <div style={{ display: "flex", gap: isMobile ? 4 : 6, justifyContent: "space-between" }}>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                      <div
+                        key={n}
+                        onClick={() => setScores((prev) => ({ ...prev, [c]: n }))}
+                        style={{
+                          width: isMobile ? 26 : 36,
+                          height: isMobile ? 26 : 36,
+                          borderRadius: isMobile ? 6 : 8,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: isMobile ? 11 : 13,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          background: scores[c] >= n ? T.primary : T.primaryLight,
+                          color: scores[c] >= n ? "#fff" : T.primary,
+                          border: `1.5px solid ${scores[c] >= n ? T.primary : T.border}`,
+                          transition: "all 0.1s",
+                        }}
+                      >
+                        {n}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <FormField label="Overall Recommendation">
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4, marginBottom: 12 }}>
+                {["Selected", "Hold", "Rejected"].map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setRecommendation(r)}
+                    style={{
+                      border: `1.5px solid ${recommendation === r ? T.primary : T.border}`,
+                      borderRadius: 8, padding: "8px 18px", fontSize: 13, fontWeight: 700,
+                      background: recommendation === r ? T.primaryLight : T.canvas,
+                      color: recommendation === r ? T.primary : T.inkMid,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </FormField>
+
+            <FormField label="Remarks">
+              <textarea
+                placeholder="Any additional remarks…"
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                style={{ border: `1.5px solid ${T.border}`, borderRadius: 8, padding: 10, fontSize: 13, width: "100%", minHeight: 64, resize: "vertical", boxSizing: "border-box", outline: "none", color: T.ink }}
+              />
+            </FormField>
+
+            <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+              <Btn label={isSubmittingEval ? "Submitting…" : "Submit Evaluation"} disabled={isSubmittingEval} onClick={submitEvaluation} />
+              <Btn label="Cancel" variant="ghost" disabled={isSubmittingEval} onClick={() => setEvalInterview(null)} />
+            </div>
+          </>
+        )}
+      </Modal>
+
+      {/* ── Add Panelist Modal ── */}
+      {showAddPanelistModal && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            background: "rgba(0,0,0,0.45)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={closeAddPanelistModal}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#fff",
+              borderRadius: 20,
+              width: "100%",
+              maxWidth: 460,
+              boxShadow: "0 24px 60px rgba(0,0,0,0.18)",
+              overflow: "hidden",
+              animation: "slideUp 0.22s ease",
+            }}
+          >
+            {/* Modal header */}
+            <div style={{
+              background: `linear-gradient(135deg, ${T.primary} 0%, ${T.primaryDark || T.primary} 100%)`,
+              padding: "24px 24px 20px",
+              position: "relative",
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
+                Interview Panel
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>Add New Panelist</div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", marginTop: 4 }}>
+                Register a panel member who can evaluate candidates
+              </div>
+              <button
+                onClick={closeAddPanelistModal}
+                style={{
+                  position: "absolute", top: 16, right: 16,
+                  background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%",
+                  width: 32, height: 32, cursor: "pointer", color: "#fff", fontSize: 18,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Form body */}
+            <form onSubmit={handleAddPanelist} style={{ padding: 24 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+                {/* Name field */}
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: T.inkMid, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    Full Name <span style={{ color: T.red }}>*</span>
+                  </label>
+                  <div style={{ position: "relative" }}>
+                    <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16, pointerEvents: "none" }}>👤</span>
+                    <input
+                      placeholder="e.g. Dr. Anitha Krishnan"
+                      value={newPanelistName}
+                      onChange={(e) => handleNameChange(e.target.value)}
+                      required
+                      style={{
+                        width: "100%", boxSizing: "border-box",
+                        border: `1.5px solid ${panelistErrors.name ? T.red : T.border}`, borderRadius: 10,
+                        padding: "11px 12px 11px 38px",
+                        fontSize: 14, outline: "none", color: T.ink,
+                        background: T.canvas,
+                        transition: "border-color 0.15s",
+                      }}
+                    />
+                  </div>
+                  {panelistErrors.name && (
+                    <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>{panelistErrors.name}</div>
+                  )}
+                </div>
+
+                {/* Email field */}
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: T.inkMid, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    Email Address <span style={{ color: T.red }}>*</span>
+                  </label>
+                  <div style={{ position: "relative" }}>
+                    <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16, pointerEvents: "none" }}>✉️</span>
+                    <input
+                      type="email"
+                      placeholder="e.g. anitha@school.edu"
+                      value={newPanelistEmail}
+                      onChange={(e) => handleEmailChange(e.target.value)}
+                      required
+                      style={{
+                        width: "100%", boxSizing: "border-box",
+                        border: `1.5px solid ${panelistErrors.email ? T.red : T.border}`, borderRadius: 10,
+                        padding: "11px 12px 11px 38px",
+                        fontSize: 14, outline: "none", color: T.ink,
+                        background: T.canvas,
+                      }}
+                    />
+                  </div>
+                  {panelistErrors.email && (
+                    <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>{panelistErrors.email}</div>
+                  )}
+                </div>
+
+                {/* Phone field */}
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: T.inkMid, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    Phone Number <span style={{ color: T.red }}>*</span>
+                  </label>
+                  <div style={{ position: "relative" }}>
+                    <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16, pointerEvents: "none" }}>📱</span>
+                    <input
+                      placeholder="e.g. +91 98765 43210"
+                      value={newPanelistPhone}
+                      onChange={(e) => handlePhoneChange(e.target.value)}
+                      required
+                      style={{
+                        width: "100%", boxSizing: "border-box",
+                        border: `1.5px solid ${panelistErrors.phone ? T.red : T.border}`, borderRadius: 10,
+                        padding: "11px 12px 11px 38px",
+                        fontSize: 14, outline: "none", color: T.ink,
+                        background: T.canvas,
+                      }}
+                    />
+                  </div>
+                  {panelistErrors.phone && (
+                    <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>{panelistErrors.phone}</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+                <button
+                  type="button"
+                  onClick={closeAddPanelistModal}
+                  disabled={isSubmittingPanelist}
+                  style={{
+                    flex: 1, padding: "12px", borderRadius: 10, border: `1.5px solid ${T.border}`,
+                    background: T.canvas, color: T.inkMid, fontSize: 14, fontWeight: 700,
+                    cursor: isSubmittingPanelist ? "not-allowed" : "pointer",
+                    opacity: isSubmittingPanelist ? 0.6 : 1,
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingPanelist}
+                  style={{
+                    flex: 2, padding: "12px", borderRadius: 10, border: "none",
+                    background: T.primary, color: "#fff", fontSize: 14, fontWeight: 700,
+                    cursor: isSubmittingPanelist ? "not-allowed" : "pointer",
+                    opacity: isSubmittingPanelist ? 0.7 : 1,
+                    boxShadow: `0 4px 14px ${T.primary}44`,
+                  }}
+                >
+                  {isSubmittingPanelist ? "Registering…" : "＋ Add Panelist"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Send Reminder Modal */}
+      <Modal open={!!reminderCandidate} onClose={() => setReminderCandidate(null)} maxWidth={440}>
+        <div style={{ padding: "8px 4px" }}>
+          {/* Header */}
+          <div style={{ textAlign: "center", marginBottom: 20 }}>
+            <div style={{
+              width: 60, height: 60, borderRadius: "50%", margin: "0 auto 12px",
+              background: "linear-gradient(135deg, #7B1FA2, #9C27B0)",
+              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26,
+            }}>🔔</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: T.ink }}>Reminder Sent!</div>
+            <div style={{ fontSize: 13, color: T.inkMid, marginTop: 4 }}>
+              Interview reminder dispatched for{" "}
+              <strong style={{ color: T.primary }}>{reminderCandidate?.role}</strong>
+            </div>
+          </div>
+
+          {/* Recipients section */}
+          <div style={{
+            background: T.canvas, borderRadius: 12, border: `1px solid ${T.border}`,
+            overflow: "hidden", marginBottom: 16,
+          }}>
+            <div style={{
+              fontSize: 10, fontWeight: 800, color: T.inkFaint, textTransform: "uppercase",
+              letterSpacing: "0.1em", padding: "8px 14px", borderBottom: `1px solid ${T.border}`,
+              background: T.surface,
+            }}>
+              📬 Recipients
+            </div>
+
+            {/* Candidate row */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "12px 14px", borderBottom: `1px solid ${T.border}`,
+            }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
+                background: `linear-gradient(135deg, ${T.primary}, ${T.accent})`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 14, fontWeight: 800, color: "#fff",
+              }}>
+                {reminderCandidate?.name?.charAt(0) || "C"}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{reminderCandidate?.name}</div>
+                <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 1 }}>{reminderCandidate?.email || "Candidate"}</div>
+              </div>
+              <div style={{
+                fontSize: 10, fontWeight: 700, borderRadius: 99, padding: "3px 9px",
+                background: T.primaryLight, color: T.primary,
+              }}>Candidate</div>
+            </div>
+
+            {/* Panelists rows */}
+            {(reminderCandidate?.interview?.panel?.length > 0
+              ? reminderCandidate.interview.panel
+              : ["No panelist assigned"]
+            ).map((p, idx) => (
+              <div key={idx} style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "12px 14px",
+                borderBottom: idx < (reminderCandidate?.interview?.panel?.length || 1) - 1
+                  ? `1px solid ${T.border}` : "none",
+              }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
+                  background: p === "No panelist assigned" ? T.border : "#EDE7F6",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 14, fontWeight: 800,
+                  color: p === "No panelist assigned" ? T.inkFaint : "#6A1B9A",
+                }}>
+                  {p === "No panelist assigned" ? "?" : p.charAt(0)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: p === "No panelist assigned" ? T.inkFaint : T.ink, fontStyle: p === "No panelist assigned" ? "italic" : "normal" }}>{p}</div>
+                  <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 1 }}>
+                    {p === "No panelist assigned" ? "Assign a panelist first" : "Interview Panelist"}
+                  </div>
+                </div>
+                {p !== "No panelist assigned" && (
+                  <div style={{
+                    fontSize: 10, fontWeight: 700, borderRadius: 99, padding: "3px 9px",
+                    background: "#EDE7F6", color: "#6A1B9A",
+                  }}>Panelist</div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Interview details */}
+          {reminderCandidate?.interview?.date && (
+            <div style={{
+              background: T.primaryLight, borderRadius: 10, padding: "10px 14px",
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              marginBottom: 16, fontSize: 12, color: T.primary, fontWeight: 600,
+            }}>
+              <span>📅 {reminderCandidate.interview.date} · {reminderCandidate.interview.time}</span>
+              <span style={{
+                background: T.primary, color: "#fff", borderRadius: 6,
+                padding: "2px 8px", fontSize: 10, fontWeight: 700,
+              }}>{reminderCandidate.interview.mode || "In-Person"}</span>
+            </div>
+          )}
+
+          <button
+            onClick={async () => {
+              // Persist reminder_sent_at on the interview record (API + local state).
+              const inv = reminderCandidate?.interview;
+              const sentAt = new Date().toISOString();
+              if (inv?.backendId != null) {
+                try {
+                  const norm = await triggerInterviewReminder(inv.backendId);
+                  upsertInterview(norm);
+                } catch (err) {
+                  console.error("Failed to record reminder:", err);
+                }
+              } else if (setInterviews && reminderCandidate) {
+                setInterviews((prev) =>
+                  prev.map((i) =>
+                    i.candidate === reminderCandidate.name && i.role === reminderCandidate.role
+                      ? { ...i, reminderSentAt: sentAt }
+                      : i
+                  )
+                );
+              }
+              setReminderCandidate(null);
+            }}
+            style={{
+              width: "100%", padding: "13px", borderRadius: 12, border: "none",
+              background: "linear-gradient(135deg, #7B1FA2, #9C27B0)",
+              color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer",
+              boxShadow: "0 4px 16px rgba(123,31,162,0.35)",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            }}
+          >
+            🔔 Send Reminder
+          </button>
+        </div>
+      </Modal>
+    </div>
+  );
+}

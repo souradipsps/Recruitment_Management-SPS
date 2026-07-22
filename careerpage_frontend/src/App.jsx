@@ -1,18 +1,112 @@
-import { useState, useMemo, useEffect } from "react";
-import { Toaster } from "sonner";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useNavigate, useLocation, useMatch } from "react-router-dom";
+import { Toaster, toast } from "sonner";
+import { AnimatePresence } from "motion/react";
 import { useKeepAwake } from "./lib/keepAwake";
-import { jobs } from "./data/jobs";
+import { useViewTransition } from "./lib/useViewTransition";
+import { buildMergedProfileData } from "./lib/profileData";
+import { Loader } from "./components/common/Loader";
+import { LottieLoader } from "./components/common/LottieLoader";
 import { CareerPage } from "./features/careerpage/CareerPage";
-import { LoginModal } from "./features/careerpage/modals/LoginModal";
-import { ApplyModal } from "./features/careerpage/modals/ApplyModal";
-import JobApplicationModal from "./features/careerpage/modals/JobApplicationModal";
-import { CandidateDashboard } from "./features/dashboard/CandidateDashboard";
+import AppModals from "./features/careerpage/AppModals";
+import { fetchUserProfile, mapUserResponseToSavedProfile, fetchMyJobApplications } from "./features/careerpage/services/applicationsService";
+import { fetchPublicJobs, fetchExistingRoles } from "./features/careerpage/services/jobsService";
+import { routes } from "./routes";
 
 // App shell: owns the cross-cutting auth / apply / dashboard state and wires
 // the public CareerPage together with the modals and candidate dashboard.
-// these are the changes git commit
+// Which overlay is showing is driven by the URL (/login, /signup, /apply,
+// /jobs/:jobId/apply, /dashboard) so it's deep-linkable, refresh-safe and
+// works with the browser back/forward buttons.
 export default function App() {
   useKeepAwake();
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const jobApplyMatch = useMatch(routes.jobApplyPattern);
+  const dashboardMatch = useMatch(routes.dashboardTabPattern);
+
+  const showLogin = location.pathname === routes.login;
+  const showSignup = location.pathname === routes.signup;
+  const showApply = location.pathname === routes.apply;
+  const showJobApplicationModal = !!jobApplyMatch;
+  const showDashboard = !!dashboardMatch;
+  const loginTab = showSignup ? "signup" : "login";
+
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [logoutLoading, setLogoutLoading] = useState(false);
+  const [showLoader, setShowLoader] = useState(false);
+  const [applyAfterSignup, setApplyAfterSignup] = useState(false);
+  const [loggedInUser, setLoggedInUser] = useState("");
+  const [appliedJobIds, setAppliedJobIds] = useState([]);
+  const [signupData, setSignupData] = useState(null);
+  const [savedProfileData, setSavedProfileData] = useState(null);
+  const [cameFromApply, setCameFromApply] = useState(false);
+  const [cameFromSection, setCameFromSection] = useState(undefined);
+  const [applicationDraft, setApplicationDraft] = useState(null);
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [existingRolesList, setExistingRolesList] = useState([]);
+
+  const loaderTimerRef = useRef(null);
+  const dashboardLoadedOnceRef = useRef(false);
+  const [dashboardCloseCount, setDashboardCloseCount] = useState(0);
+  const prevShowDashboardRef = useRef(false);
+
+  useEffect(() => {
+    let t1, t2, t3;
+    if (prevShowDashboardRef.current && !showDashboard) {
+      setDashboardCloseCount((prev) => prev + 1);
+      window.scrollTo({ top: 0, behavior: "instant" });
+      t1 = setTimeout(() => window.scrollTo({ top: 0, behavior: "instant" }), 0);
+      t2 = setTimeout(() => window.scrollTo({ top: 0, behavior: "instant" }), 50);
+      t3 = setTimeout(() => window.scrollTo({ top: 0, behavior: "instant" }), 150);
+    }
+    prevShowDashboardRef.current = showDashboard;
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [showDashboard]);
+
+  // ── Lottie loader: shown on every page refresh for 1.5 s ────────────────
+  useEffect(() => {
+    const t = setTimeout(() => setInitialLoading(false), 1500);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Prevent scrollbar visibility and scrolling when loaders are active
+  useEffect(() => {
+    if (initialLoading || showLoader) {
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+    } else {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    };
+  }, [initialLoading, showLoader]);
+
+  const openWithLoader = useCallback((then, ms = 600) => {
+    if (loaderTimerRef.current) clearTimeout(loaderTimerRef.current);
+    setShowLoader(true);
+    loaderTimerRef.current = setTimeout(() => {
+      setShowLoader(false);
+      then?.();
+    }, ms);
+  }, []);
+
+  const reloadWithLoader = useCallback(() => {
+    if (loaderTimerRef.current) clearTimeout(loaderTimerRef.current);
+    setShowLoader(true);
+    loaderTimerRef.current = setTimeout(() => setShowLoader(false), 1500);
+  }, []);
+
+  // Cleanup timer on unmount
+  useEffect(() => () => { if (loaderTimerRef.current) clearTimeout(loaderTimerRef.current); }, []);
 
   useEffect(() => {
     if ("scrollRestoration" in window.history) {
@@ -20,241 +114,216 @@ export default function App() {
     }
   }, []);
 
-  const [showLogin, setShowLogin] = useState(false);
-  const [showApply, setShowApply] = useState(false);
-  const [applyAfterSignup, setApplyAfterSignup] = useState(false);
-  const [showDashboard, setShowDashboard] = useState(false);
-  const [dashboardInitialTab, setDashboardInitialTab] = useState("dashboard");
-  const [loggedInUser, setLoggedInUser] = useState("");
-  const [appliedJobIds, setAppliedJobIds] = useState([]);
-  const [signupData, setSignupData] = useState(null);
-  const [showJobApplicationModal, setShowJobApplicationModal] = useState(false);
-  const [savedProfileData, setSavedProfileData] = useState(null);
-  const [cameFromApply, setCameFromApply] = useState(false);
-  const [cameFromSection, setCameFromSection] = useState(undefined);
-  const [applicationDraft, setApplicationDraft] = useState(null);
-  const [applicationsData, setApplicationsData] = useState({});
-  const [selectedJob, setSelectedJob] = useState(null);
-  const [loginTab, setLoginTab] = useState("login");
+  // Restore the session from the stored JWT on page load/refresh — without
+  // this, `loggedInUser` always starts blank and the user appears logged out.
+  useEffect(() => {
+    if (!localStorage.getItem("accessToken")) return;
+    fetchUserProfile()
+      .then((fetchedData) => {
+        if (!fetchedData) return;
+        setLoggedInUser(fetchedData.first_name || fetchedData.full_name || fetchedData.email);
+        setSignupData({
+          name: fetchedData.first_name,
+          lastName: fetchedData.last_name,
+          email: fetchedData.email,
+          phone: fetchedData.phone,
+        });
+        const saved = mapUserResponseToSavedProfile(fetchedData);
+        if (saved) setSavedProfileData(saved);
+      })
+      .catch(() => {
+        // Token invalid/expired — clear it so the UI doesn't keep retrying.
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+      });
 
+    // appliedJobIds only lived in memory, so a refresh forgot every job the
+    // candidate had already applied to and the button reverted to "Apply" —
+    // even though the application was correctly recorded on the backend (and
+    // showed up fine in the admin Applications screen). Rehydrate it here.
+    fetchMyJobApplications()
+      .then((apps) => {
+        setAppliedJobIds(apps.map((a) => a.posting).filter((id) => id != null));
+      })
+      .catch(() => {});
+  }, []);
+
+  // Fetch existing roles list from backend registry on mount
+  useEffect(() => {
+    fetchExistingRoles()
+      .then((roles) => {
+        const names = roles.map(r => r.role).filter(Boolean);
+        const uniqueNames = Array.from(new Set(names)).sort();
+        setExistingRolesList(uniqueNames);
+      })
+      .catch((err) => {
+        console.error("Failed to load existing roles registry dynamically:", err);
+      });
+  }, []);
+
+  // Guard the login-gated routes: a direct/bookmarked/stale link to any of
+  // these without a stored token bounces back to the login modal instead of
+  // rendering a broken overlay.
+  useEffect(() => {
+    const needsAuth = showApply || showJobApplicationModal || showDashboard;
+    if (needsAuth && !localStorage.getItem("accessToken")) {
+      toast.error("Please log in to continue.");
+      navigate(routes.login, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  // Resolve the job for /jobs/:jobId/apply when it wasn't handed to us via
+  // handleApplyJob (direct link, or a hard refresh while the modal was open).
+  useEffect(() => {
+    if (!jobApplyMatch) return;
+    const jobId = jobApplyMatch.params.jobId;
+    if (selectedJob && String(selectedJob.id) === String(jobId)) return;
+
+    let cancelled = false;
+    fetchPublicJobs()
+      .then((jobs) => {
+        if (cancelled) return;
+        const found = jobs.find((j) => String(j.id) === String(jobId));
+        if (found) {
+          setSelectedJob(found);
+        } else {
+          toast.error("That job posting is no longer available.");
+          navigate(routes.home, { replace: true });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) navigate(routes.home, { replace: true });
+      });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobApplyMatch?.params.jobId]);
+
+  const view = showDashboard
+    ? "dashboard"
+    : showJobApplicationModal
+      ? "jobApplication"
+      : showApply
+        ? "apply"
+        : showLogin || showSignup
+          ? "login"
+          : "career";
+
+  const { deferredView } = useViewTransition(view);
+
+  // Opens login/signup modal directly — no loader on navbar button click.
   const openModal = (tab) => {
-    setLoginTab(tab);
-    setShowLogin(true);
+    navigate(tab === "signup" ? routes.signup : routes.login);
   };
 
+  // Job apply: if not logged in show login modal directly.
   const handleApplyJob = (job) => {
     if (!loggedInUser) {
       openModal("login");
       return;
     }
     setSelectedJob(job);
-    setShowJobApplicationModal(true);
+    navigate(routes.jobApply(job.id));
   };
 
+  // General application / Submit Profile — open signup modal directly.
   const handleSignup = () => {
     setApplyAfterSignup(true);
     openModal("signup");
   };
 
   const handleOpenDashboard = () => {
-    setDashboardInitialTab("dashboard");
-    setShowDashboard(true);
+    setCameFromApply(false);
+    navigate(routes.dashboard);
   };
 
-  const mergedProfileData = useMemo(() => {
-    if (!savedProfileData && !applicationDraft) return null;
-    return {
-      fullName: savedProfileData?.fullName || (signupData ? `${signupData.name} ${signupData.lastName || ""}`.trim() : loggedInUser),
-      email: savedProfileData?.email || signupData?.email || "",
-      phone: savedProfileData?.phone || signupData?.phone || "",
-      location: savedProfileData?.location || "Guwahati, Assam",
-      resumeFile: savedProfileData?.resumeFile || "",
-      resumeUrl: savedProfileData?.resumeUrl || "",
-      education: applicationDraft?.education ?? savedProfileData?.education ?? "",
-      degreeName: applicationDraft?.degreeName ?? savedProfileData?.degreeName ?? "",
-      professionalQualification: applicationDraft?.professionalQual ?? savedProfileData?.professionalQualification ?? "",
-      professionalQualificationOther: applicationDraft?.professionalQualOther ?? savedProfileData?.professionalQualificationOther ?? "",
-      experience: applicationDraft?.experience ?? savedProfileData?.experience ?? "",
-      salary: applicationDraft?.salary ?? savedProfileData?.salary ?? "",
-      extracurricular: applicationDraft?.extracurricular ?? savedProfileData?.extracurricular ?? "",
-      extracurricularOther: applicationDraft?.extracurricularOther ?? savedProfileData?.extracurricularOther ?? "",
-      selectedRoles: applicationDraft?.selectedRoles ?? savedProfileData?.selectedRoles ?? [],
-      selectedSkills: applicationDraft?.selectedSkills ?? savedProfileData?.selectedSkills ?? [],
-      linkedin: applicationDraft?.linkedin ?? savedProfileData?.linkedin ?? "",
-      portfolio: applicationDraft?.portfolio ?? savedProfileData?.portfolio ?? "",
-    };
-  }, [savedProfileData, applicationDraft, signupData, loggedInUser]);
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
 
-  useEffect(() => {
-    if (!showDashboard && !showLogin && !showApply && !showJobApplicationModal) {
-      window.scrollTo({ top: 0, behavior: "instant" });
-      const t1 = setTimeout(() => window.scrollTo({ top: 0, behavior: "instant" }), 0);
-      const t2 = setTimeout(() => window.scrollTo({ top: 0, behavior: "instant" }), 50);
-      const t3 = setTimeout(() => window.scrollTo({ top: 0, behavior: "instant" }), 150);
-      return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
-        clearTimeout(t3);
-      };
-    }
-  }, [showDashboard, showLogin, showApply, showJobApplicationModal]);
+    setLogoutLoading(true);
+    setShowLoader(true);
+
+    setLoggedInUser("");
+    // Without this, logging in as a different account in the same browser
+    // session kept the previous account's applied jobs around, so job cards
+    // wrongly showed "Applied" for an account that never applied.
+    setAppliedJobIds([]);
+    navigate(routes.home);
+    setCameFromApply(false);
+    setCameFromSection(undefined);
+    dashboardLoadedOnceRef.current = false;
+
+    if (loaderTimerRef.current) clearTimeout(loaderTimerRef.current);
+    loaderTimerRef.current = setTimeout(() => {
+      setShowLoader(false);
+      setLogoutLoading(false);
+    }, 1500);
+  };
+
+  const mergedProfileData = useMemo(
+    () => buildMergedProfileData({ savedProfileData, applicationDraft, signupData, loggedInUser }),
+    [savedProfileData, applicationDraft, signupData, loggedInUser],
+  );
+
+
+  // Everything the overlay modals need to read and mutate.
+  const modalApp = {
+    deferredView,
+    loginTab,
+    applyAfterSignup,
+    cameFromApply,
+    cameFromSection,
+    loggedInUser,
+    signupData,
+    appliedJobIds,
+    selectedJob,
+    savedProfileData,
+    applicationDraft,
+    mergedProfileData,
+    existingRolesList,
+    reloadWithLoader,
+    handleLogout,
+    setApplyAfterSignup,
+    setLoggedInUser,
+    setSignupData,
+    setCameFromApply,
+    setCameFromSection,
+    setAppliedJobIds,
+    setApplicationDraft,
+    setSavedProfileData,
+    // Allows form submit handlers inside modals to trigger the branded loader
+    setShowLoader,
+    initialLoading,
+    dashboardLoadedOnce: dashboardLoadedOnceRef.current,
+    setDashboardLoadedOnce: (val) => { dashboardLoadedOnceRef.current = val; },
+  };
 
   return (
     <>
-      <CareerPage
-        loggedInUser={loggedInUser}
-        onLogin={() => openModal("login")}
-        onSignup={handleSignup}
-        onOpenDashboard={handleOpenDashboard}
-        onLogout={() => setLoggedInUser("")}
-        onApplyJob={handleApplyJob}
-        appliedJobIds={appliedJobIds}
-      />
-
-      {showLogin && (
-        <LoginModal
-          onClose={() => {
-            setShowLogin(false);
-            setApplyAfterSignup(false);
-          }}
-          initialTab={loginTab}
-          onLoginSuccess={(name) => {
-            setLoggedInUser(name);
-            setShowLogin(false);
-            setShowDashboard(false);
-          }}
-          onSignupSuccess={(data) => {
-            setLoggedInUser(data.name);
-            setSignupData(data);
-            setApplyAfterSignup(false);
-            if (applyAfterSignup) setShowApply(true);
-          }}
-        />
-      )}
-
-      {showDashboard && (
-        <CandidateDashboard
-          onClose={(bypassApplyModal) => {
-            setShowDashboard(false);
-            if (cameFromApply && !bypassApplyModal) {
-              setShowJobApplicationModal(true);
-              setCameFromApply(false);
-            } else {
-              setShowJobApplicationModal(false);
-              setCameFromApply(false);
-              setCameFromSection(undefined);
-            }
-          }}
-          onLogout={() => {
-            setLoggedInUser("");
-            setShowDashboard(false);
-            setCameFromApply(false);
-            setCameFromSection(undefined);
-          }}
-          userName={loggedInUser}
-          signupData={signupData}
+      {/* Career page renders immediately if dashboard is active, or waits for Lottie loader / logout loader to finish so its entry animations trigger visible to the user */}
+      {((!initialLoading && !logoutLoading) || showDashboard) && (
+        <CareerPage
+          key={`${loggedInUser ? "logged-in" : "guest"}-${dashboardCloseCount}`}
+          loggedInUser={loggedInUser}
+          onLogin={() => openModal("login")}
+          onSignup={handleSignup}
+          onOpenDashboard={handleOpenDashboard}
+          onLogout={handleLogout}
+          onApplyJob={handleApplyJob}
           appliedJobIds={appliedJobIds}
-          allJobs={jobs}
-          initialProfileData={mergedProfileData}
-          initialTab={dashboardInitialTab}
-          initialSection={cameFromSection}
-          onProfileUpdate={(updatedData) => {
-            setSavedProfileData(updatedData);
-            setApplicationDraft(null);
-          }}
-          applicationsData={applicationsData}
         />
       )}
 
-      {showJobApplicationModal && (
-        <JobApplicationModal
-          job={
-            selectedJob
-              ? {
-                id: selectedJob.id,
-                title: selectedJob.title,
-                department: selectedJob.department,
-                location: selectedJob.location,
-                type: selectedJob.type,
-              }
-              : null
-          }
-          onClose={() => {
-            setShowJobApplicationModal(false);
-            setApplicationDraft(null);
-            setCameFromSection(undefined);
-          }}
-          onSubmit={(jobId, formData, professionalData) => {
-            setAppliedJobIds((prev) => [...prev, jobId]);
-            setApplicationsData((prev) => ({ ...prev, [jobId]: formData }));
-            setApplicationDraft(null);
-            setCameFromSection(undefined);
-            if (professionalData) {
-              setSavedProfileData((prev) => ({
-                ...(prev || {
-                  fullName: signupData
-                    ? `${signupData.name} ${signupData.lastName || ""}`.trim()
-                    : loggedInUser,
-                  email: signupData?.email || "",
-                  phone: signupData?.phone || "",
-                  location: "Guwahati, Assam",
-                  resumeFile: "",
-                  resumeUrl: "",
-                }),
-                education: professionalData.education,
-                degreeName: professionalData.degreeName,
-                professionalQualification: professionalData.professionalQualification,
-                professionalQualificationOther: professionalData.professionalQualificationOther,
-                experience: professionalData.experience,
-                salary: professionalData.salary,
-                extracurricular: professionalData.extracurricular,
-                extracurricularOther: professionalData.extracurricularOther,
-                selectedRoles: professionalData.selectedRoles,
-                selectedSkills: professionalData.selectedSkills,
-                linkedin: professionalData.linkedin,
-                portfolio: professionalData.portfolio,
-              }));
-            }
-          }}
-          onEditProfile={(draftData, section) => {
-            setApplicationDraft(draftData);
-            setCameFromApply(true);
-            setCameFromSection(section);
-            setShowJobApplicationModal(false);
-            setDashboardInitialTab("resume");
-            setShowDashboard(true);
-          }}
-          profileData={{
-            firstName:
-              savedProfileData?.fullName?.split(" ")[0] ||
-              signupData?.name ||
-              loggedInUser,
-            lastName:
-              savedProfileData?.fullName?.split(" ").slice(1).join(" ") ||
-              signupData?.lastName ||
-              "",
-            email: savedProfileData?.email || "",
-            phone: savedProfileData?.phone || "",
-            location: savedProfileData?.location || "Guwahati, Assam",
-          }}
-          resumeFile={savedProfileData?.resumeFile || null}
-          resumeUrl={savedProfileData?.resumeUrl || null}
-          draftData={applicationDraft}
-          savedProfileData={savedProfileData}
-          scrollToSection={cameFromSection}
-        />
-      )}
+      <AppModals app={modalApp} />
 
-      {showApply && (
-        <ApplyModal
-          onClose={() => setShowApply(false)}
-          signupData={signupData}
-          onSubmitData={(data) => {
-            setSavedProfileData(data);
-            setShowApply(false);
-          }}
-        />
-      )}
+      {/* Lottie loader — overlays on page refresh only */}
+      {initialLoading && <LottieLoader />}
+
+      {/* Branded maroon Loader — overlays on button click / logout */}
+      <AnimatePresence>
+        {showLoader && <Loader key="btn-loader" />}
+      </AnimatePresence>
 
       <Toaster richColors position="top-right" />
     </>

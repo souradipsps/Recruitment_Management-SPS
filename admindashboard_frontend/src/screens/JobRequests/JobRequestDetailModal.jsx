@@ -1,0 +1,313 @@
+import { useEffect } from "react";
+import { createPortal } from "react-dom";
+import { T } from "../../theme";
+import { statusVariant } from "../../theme";
+import { useBreakpoint } from "../../hooks";
+import { Btn, Input, Select, Badge } from "../../components/ui";
+import { VACANCY_OPTIONS, QUAL_OPTIONS, TYPE_OPTIONS, CATEGORY_OPTIONS, ALL_SKILLS } from "../../data";
+import SkillsMultiSelect from "../../components/SkillsMultiSelect";
+import JobRequestActivityTimeline from "./JobRequestActivityTimeline";
+
+const labelStyle = { fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 };
+const Label = ({ children }) => <div style={labelStyle}>{children}</div>;
+
+const textareaStyle = { width: "100%", minHeight: 80, padding: 10, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, outline: "none", resize: "vertical", boxSizing: "border-box", background: T.surface, color: T.ink };
+
+// weight = font-weight used when the value is shown read-only
+const FIELDS = [
+  { key: "department", label: "Department", type: "select", placeholder: "Select department…", weight: 600 },
+  { key: "role", label: "Role", type: "select", placeholder: "Select role…", weight: 700 },
+  { key: "type", label: "Employment Type", type: "select", placeholder: "Select type…", weight: 400 },
+  { key: "exp", label: "Experience", type: "select", placeholder: "Select experience…", weight: 600 },
+  { key: "salary", label: "Salary Range", type: "input", placeholder: "Salary range", weight: 700 },
+  { key: "vacancies", label: "Vacancies", type: "select", options: VACANCY_OPTIONS, placeholder: "Select count…", weight: 400 },
+  { key: "location", label: "Location", type: "input", placeholder: "Enter job location", weight: 400 },
+  { key: "category", label: "Category", type: "select", options: CATEGORY_OPTIONS, placeholder: "Select category…", weight: 600, span2: true },
+];
+
+const TEXT_FIELDS = [
+  { key: "description", label: "Job Description", placeholder: "Enter job description" },
+  { key: "justification", label: "Justification", placeholder: "Why is this job needed?" },
+];
+
+export default function JobRequestDetailModal({
+  selectedRequest,
+  setSelectedRequest,
+  isMobile,
+  deptOptions,
+  getRoleOptionsForDept,
+  getTypeOptionsForRole,
+  getExperienceOptionsForType,
+  handleDepartmentChangeInModal,
+  handleRoleChangeInModal,
+  handleTypeChangeInModal,
+  handleExperienceChangeInModal,
+  hasChanges,
+  handleAccept,
+  cancelJobRequest,
+  onClose,
+  currentUser,
+  existingRoles = [],
+}) {
+  const bp = useBreakpoint();
+  const isCompact = bp === "mobile" || bp === "tablet";
+  const isEditable = selectedRequest.status === "Pending" || selectedRequest.status === "Sent Back";
+  const patch = (key, value) => setSelectedRequest({ ...selectedRequest, [key]: value });
+
+  const isExistingRole = (existingRoles || []).some(
+    (r) => r.role === selectedRequest.role && r.dept === selectedRequest.department && (r.currentStatus || r.status) === "Active"
+  );
+
+  // Lock body scroll and page content scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    const scrollContainer = document.querySelector(".animate-fade-in-up");
+    if (scrollContainer) {
+      scrollContainer.style.overflowY = "hidden";
+    }
+    return () => {
+      document.body.style.overflow = "";
+      if (scrollContainer) {
+        scrollContainer.style.overflowY = "auto";
+      }
+    };
+  }, []);
+
+  return createPortal(
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        top: "60px",
+        left: isCompact ? "0px" : "240px",
+        right: "0px",
+        bottom: "0px",
+        zIndex: 200,
+        background: "rgba(0,0,0,0.5)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 16,
+        backdropFilter: "blur(4px)", // Increased blur slightly for better premium effect
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: T.surface, borderRadius: 16, width: "100%", maxWidth: 580,
+          maxHeight: "90vh", overflowY: "auto",
+          boxShadow: "0 24px 64px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.10)",
+          display: "flex", flexDirection: "column",
+        }}
+      >
+        <div style={{
+          padding: "20px 24px 16px",
+          borderBottom: `1px solid ${T.border}`,
+          display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+          position: "sticky", top: 0, background: T.surface, zIndex: 1,
+          borderRadius: "16px 16px 0 0",
+        }}>
+          <div>
+            <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
+              <Badge label="Job Request" variant="blue" />
+              <Badge label={selectedRequest.status} variant={statusVariant(selectedRequest.status)} />
+              {isEditable && isExistingRole && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedRequest({
+                      ...selectedRequest,
+                      role: "",
+                      exp: "",
+                      salary: "",
+                      type: "",
+                    });
+                  }}
+                  style={{
+                    border: "none",
+                    background: "#F3F4F6",
+                    color: "#4B5563",
+                    padding: "3px 8px",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    fontWeight: 700,
+                    fontSize: 11,
+                    transition: "background 0.2s",
+                  }}
+                  onMouseOver={(e) => e.target.style.background = "#E5E7EB"}
+                  onMouseOut={(e) => e.target.style.background = "#F3F4F6"}
+                >
+                  Clear Role
+                </button>
+              )}
+            </div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: T.ink }}>
+              {selectedRequest.role || "Job Request Details"}
+            </div>
+            <div style={{ fontSize: 12, color: T.inkLight, marginTop: 3 }}>
+              {selectedRequest.department ? `${selectedRequest.department} · ` : ""}
+              {selectedRequest.location ? `${selectedRequest.location}` : ""}
+              {selectedRequest.date ? ` · ${selectedRequest.date}` : ""}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: T.canvas, border: `1px solid ${T.border}`, borderRadius: 8,
+              width: 32, height: 32, fontSize: 18, color: T.inkMid, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0, lineHeight: 1,
+            }}
+          >×</button>
+        </div>
+
+        <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ background: T.canvas, borderRadius: 10, padding: 16, border: `1px solid ${T.border}`, display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
+              {FIELDS.map((f) => {
+                const value = selectedRequest[f.key] || "";
+                const onChange = f.key === "department"
+                  ? (e) => handleDepartmentChangeInModal(e.target.value)
+                  : f.key === "role"
+                  ? (e) => handleRoleChangeInModal(e.target.value)
+                  : f.key === "type"
+                  ? (e) => handleTypeChangeInModal(e.target.value)
+                  : f.key === "exp"
+                  ? (e) => handleExperienceChangeInModal(e.target.value)
+                  : (e) => patch(f.key, e.target.value);
+                const options = f.key === "department"
+                  ? deptOptions
+                  : f.key === "role"
+                  ? getRoleOptionsForDept(selectedRequest.department)
+                  : f.key === "type"
+                  ? getTypeOptionsForRole(selectedRequest.department, selectedRequest.role)
+                  : f.key === "exp"
+                  ? getExperienceOptionsForType(selectedRequest.department, selectedRequest.role, selectedRequest.type)
+                  : f.options;
+                const placeholder = f.placeholder;
+
+                const isDisabledForCascading =
+                  (f.key === "role" && !selectedRequest.department) ||
+                  (f.key === "type" && !selectedRequest.role) ||
+                  (f.key === "exp" && !selectedRequest.type);
+
+                const isFieldDisabled = f.key === "salary" || isDisabledForCascading || (isExistingRole && ["department", "role"].includes(f.key));
+
+                const isSelectType = f.type === "select" || ["department", "role", "type", "exp"].includes(f.key);
+
+                return (
+                  <div key={f.key} style={{ gridColumn: f.span2 && !isMobile ? "span 2" : "auto" }}>
+                    <Label>{f.label}</Label>
+                    {isEditable ? (
+                      isSelectType ? (
+                        <Select
+                          value={value}
+                          onChange={onChange}
+                          options={options}
+                          placeholder={placeholder}
+                          disabled={isFieldDisabled}
+                        />
+                      ) : (
+                        <Input
+                          value={value}
+                          onChange={onChange}
+                          placeholder={f.placeholder}
+                          disabled={isFieldDisabled}
+                        />
+                      )
+                    ) : (
+                      <div style={{ fontSize: 13, fontWeight: f.weight, color: T.ink }}>{value || "—"}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Educational Qualification */}
+            <div>
+              <Label>Educational Qualification</Label>
+              {isEditable ? (
+                <SkillsMultiSelect
+                  options={QUAL_OPTIONS.map((o) => o.value)}
+                  selected={selectedRequest.qual || []}
+                  onChange={(v) => patch("qual", v)}
+                  placeholder="Select qualification(s)…"
+                />
+              ) : (
+                <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{(selectedRequest.qual || []).join(", ") || "—"}</div>
+              )}
+            </div>
+
+            {/* Required Skills */}
+            <div>
+              <Label>Required Skills</Label>
+              {isEditable ? (
+                <SkillsMultiSelect
+                  options={ALL_SKILLS}
+                  selected={selectedRequest.skills || []}
+                  onChange={(v) => patch("skills", v)}
+                  placeholder="Select required skills…"
+                />
+              ) : (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                  {(selectedRequest.skills || []).length > 0
+                    ? (selectedRequest.skills || []).map((s) => (
+                        <span key={s} style={{
+                          background: T.primaryLight || "#EDE9FE",
+                          color: T.primary,
+                          padding: "3px 8px",
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                        }}>{s}</span>
+                      ))
+                    : <span style={{ fontSize: 13, color: T.inkFaint }}>—</span>
+                  }
+                </div>
+              )}
+            </div>
+
+            {TEXT_FIELDS.map((f) => (
+              <div key={f.key}>
+                <Label>{f.label}</Label>
+                {isEditable ? (
+                  <textarea
+                    value={selectedRequest[f.key] || ""}
+                    onChange={(e) => patch(f.key, e.target.value)}
+                    placeholder={f.placeholder}
+                    style={textareaStyle}
+                  />
+                ) : (
+                  <div style={{ fontSize: 13, color: T.ink, lineHeight: 1.6 }}>{selectedRequest[f.key] || "—"}</div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <JobRequestActivityTimeline
+            history={selectedRequest.history}
+            currentUser={currentUser}
+            justification={selectedRequest.justification}
+            requestedBy={selectedRequest.submittedBy}
+          />
+        </div>
+
+        {isEditable && (
+          <div style={{
+            padding: "16px 24px",
+            borderTop: `1px solid ${T.border}`,
+            display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap",
+            background: T.canvas, borderRadius: "0 0 16px 16px",
+          }}>
+            <Btn label="Cancel Request" variant="danger" small onClick={() => cancelJobRequest(selectedRequest.id)} />
+            <Btn
+              label={hasChanges() ? "Resubmit as New Request" : "Accept"}
+              variant="success"
+              small
+              onClick={handleAccept}
+            />
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body
+  );
+}

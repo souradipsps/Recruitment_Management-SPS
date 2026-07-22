@@ -1,14 +1,17 @@
 import { motion, AnimatePresence } from "motion/react";
 import { Search } from "lucide-react";
-import { MAROON, GOLD } from "../../../lib/constants";
-import { CATEGORIES } from "../../../data/jobs";
+import { CATEGORIES } from "../../../mockData/jobs";
 import { useJobFilters } from "../hooks/useJobFilters";
 import { JobCard } from "./JobCard";
+import "./css/OpportunitiesSection.css";
 
 // "Current Opportunities" — search box, category filters and the job grid
 // with progressive "See More" paging.
-export function OpportunitiesSection({ onApplyJob, appliedJobIds }) {
+export function OpportunitiesSection({ onApplyJob, appliedJobIds, scrollDirection }) {
+  const isDown = scrollDirection === "down";
   const {
+    loading,
+    error,
     search,
     activeCategory,
     showAll,
@@ -23,72 +26,91 @@ export function OpportunitiesSection({ onApplyJob, appliedJobIds }) {
   return (
     <section id="opportunities" className="py-24 px-6">
       <div className="max-w-7xl mx-auto">
+
+        {/* ── Section header ─────────────────────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          viewport={{ once: false, amount: 0.2 }}
+          transition={isDown ? { duration: 0.6 } : { duration: 0 }}
         >
-          <div style={{ color: GOLD, fontSize: "0.7rem", letterSpacing: "0.25em", fontWeight: 700 }} className="uppercase mb-3">
-            Open Positions
-          </div>
+          <p className="os-eyebrow">Open Positions</p>
+
           <div className="flex flex-wrap items-end justify-between gap-4 mb-4">
-            <h2 style={{ fontFamily: "'Playfair Display', serif", color: MAROON, fontSize: "clamp(1.8rem, 4vw, 2.75rem)", fontWeight: 700 }}>
-              Current Opportunities
-            </h2>
-            <div style={{ background: `rgba(107,26,26,0.07)`, border: `1.5px solid rgba(107,26,26,0.15)`, borderRadius: "999px", padding: "6px 18px", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ color: MAROON, fontSize: "1.3rem", fontWeight: 700, lineHeight: 1 }}>{filteredJobs.length}</span>
-              <span style={{ color: "#6b5c5c", fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.08em" }} className="uppercase">
+            <h2 className="os-heading">Current Opportunities</h2>
+
+            <div className="os-count-pill">
+              <span className="os-count-number">{filteredJobs.length}</span>
+              <span className="os-count-label">
                 Position{filteredJobs.length !== 1 ? "s" : ""} Available
               </span>
             </div>
           </div>
-          <div style={{ width: "60px", height: "3px", background: GOLD }} className="mt-2 mb-8" />
+
+          <div className="os-divider" />
         </motion.div>
 
-        {/* Search & Filters */}
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false, amount: 0.15 }}
+          transition={isDown ? { type: "spring", stiffness: 70, damping: 15, delay: 0.1 } : { duration: 0 }}
+          className="flex flex-col md:flex-row gap-4 mb-8"
+        >
           <div className="relative flex-1">
-            <Search size={16} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#6b5c5c", pointerEvents: "none" }} />
+            <Search size={16} className="os-search-icon" />
             <input
               type="text"
               placeholder="Search by title or department…"
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              style={{ border: `1.5px solid rgba(107,26,26,0.2)`, background: "#fff", color: "#1a0a0a", fontSize: "0.875rem", width: "100%", paddingLeft: "42px" }}
-              className="py-3 pr-4 rounded-sm outline-none"
+              className="os-search-input py-3"
             />
           </div>
+
           <div className="flex flex-wrap gap-2">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat}
                 onClick={() => onCategoryChange(cat)}
-                style={{
-                  border: `1.5px solid ${activeCategory === cat ? MAROON : "rgba(107,26,26,0.18)"}`,
-                  background: activeCategory === cat ? MAROON : "#fff",
-                  color: activeCategory === cat ? "#faf8f5" : "#4a3a3a",
-                  fontSize: "0.78rem", fontWeight: 600, letterSpacing: "0.04em", transition: "all 0.2s", whiteSpace: "nowrap",
-                }}
-                className="px-4 py-2.5 rounded-sm"
+                className={`os-filter-btn px-4 py-2.5 ${
+                  activeCategory === cat ? "os-filter-btn--active" : "os-filter-btn--inactive"
+                }`}
               >
                 {cat}
               </button>
             ))}
           </div>
-        </div>
+        </motion.div>
 
-        {/* Job listings */}
+        {/* ── Loading / error states ──────────────────────────────────────── */}
+        {loading && (
+          <div className="py-16 text-center">
+            <p className="os-empty-msg">Loading opportunities…</p>
+          </div>
+        )}
+
+        {!loading && error && (
+          <div className="py-16 text-center">
+            <p className="os-empty-msg">
+              {error} Please refresh the page or try again later.
+            </p>
+          </div>
+        )}
+
+        {/* ── Job listings ────────────────────────────────────────────────── */}
+        {!loading && !error && (
         <div className="grid sm:grid-cols-2 gap-4">
           <AnimatePresence mode="popLayout">
             {visibleJobs.length > 0 ? (
               visibleJobs.map((job, i) => (
                 <motion.div
                   key={job.id}
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.3, delay: i * 0.05 }}
+                  initial={{ opacity: 0, y: 40, scale: 0.96 }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  viewport={{ once: false, amount: 0.05 }}
+                  exit={{ opacity: 0, y: -20, scale: 0.96 }}
+                  transition={isDown ? { type: "spring", stiffness: 80, damping: 15, delay: (i % 2) * 0.06 } : { duration: 0 }}
                 >
                   <JobCard
                     job={job}
@@ -101,28 +123,30 @@ export function OpportunitiesSection({ onApplyJob, appliedJobIds }) {
               ))
             ) : (
               <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-16 text-center">
-                <div style={{ color: "#6b5c5c", fontSize: "0.95rem" }}>
+                <p className="os-empty-msg">
                   No positions found matching your search. Try a different keyword or category.
-                </div>
+                </p>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
+        )}
 
-        {filteredJobs.length > JOBS_VISIBLE && showAll && (
+        {/* ── Show Less ───────────────────────────────────────────────────── */}
+        {!loading && !error && filteredJobs.length > JOBS_VISIBLE && showAll && (
           <div className="mt-8 text-center">
             <button
               onClick={() => {
                 setShowAll(false);
                 setTimeout(() => document.getElementById("opportunities")?.scrollIntoView({ behavior: "smooth" }), 10);
               }}
-              style={{ border: `1.5px solid ${MAROON}`, color: MAROON, fontWeight: 600, fontSize: "0.875rem", letterSpacing: "0.08em", background: "transparent", transition: "all 0.2s" }}
-              className="px-10 py-3 rounded-sm uppercase tracking-wider"
+              className="os-show-less-btn px-10 py-3"
             >
               Show Less
             </button>
           </div>
         )}
+
       </div>
     </section>
   );

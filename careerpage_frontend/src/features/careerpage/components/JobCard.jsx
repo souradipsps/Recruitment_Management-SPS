@@ -1,101 +1,213 @@
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { MapPin, Clock, Briefcase } from "lucide-react";
-import { MAROON } from "../../../lib/constants";
-import { experienceById } from "../../../data/jobs";
+import { MapPin, IndianRupee, Briefcase, Share2, Check, ArrowRight } from "lucide-react";
+import { routes } from "../../../routes";
+import "./css/JobCard.css";
 
 // A single opportunity card. `showOverlay` renders the blurred "See More"
 // gate on the last visible card when more results are hidden.
 export function JobCard({ job, applied, onApply, showOverlay, onSeeMore }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+  const [heights, setHeights] = useState({ collapsedHeight: "2.75rem", expandedHeight: "auto" });
+  const descRef = useRef(null);
+
+  useEffect(() => {
+    const element = descRef.current;
+    if (!element) return;
+
+    const checkOverflowAndHeights = () => {
+      const computedStyle = window.getComputedStyle(element);
+      const lineHeightVal = parseFloat(computedStyle.lineHeight);
+      const fontSizeVal = parseFloat(computedStyle.fontSize);
+      const lineHeight = isNaN(lineHeightVal) ? fontSizeVal * 1.65 : lineHeightVal;
+      const isOver = element.scrollHeight > lineHeight * 2.2;
+
+      setIsOverflowing(isOver);
+      if (isOver) {
+        setHeights({
+          collapsedHeight: `${lineHeight * 2}px`,
+          expandedHeight: `${element.scrollHeight}px`
+        });
+      }
+    };
+
+    checkOverflowAndHeights();
+
+    const resizeObserver = new ResizeObserver(() => {
+      checkOverflowAndHeights();
+    });
+    resizeObserver.observe(element);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [job.description]);
+
   const handleShare = () => {
     const text = `${job.title} at South Point School, Guwahati — ${job.type} | ${job.department}`;
+    const url = `${window.location.origin}${routes.jobApply(job.id)}`;
     if (navigator.share) {
-      navigator.share({ title: job.title, text, url: window.location.href });
+      navigator.share({ title: job.title, text, url });
     } else {
-      navigator.clipboard.writeText(`${text}\n${window.location.href}`);
+      navigator.clipboard.writeText(`${text}\n${url}`);
       toast.success("Job details copied to clipboard!");
     }
   };
 
+  const parseList = (arr) => {
+    if (!arr) return [];
+    return arr.flatMap((item) =>
+      typeof item === "string"
+        ? item.split(",").map((s) => s.trim()).filter(Boolean)
+        : item
+    );
+  };
+
+  const formatSalary = (salary) => {
+    if (!salary) return "30k\u201150k";
+    return salary
+      .toString()
+      .replace(/(\d+)000/g, "$1k")
+      .replace(/(\d+),000/g, "$1k")
+      .replace(/\s*-\s*/g, "\u2011")
+      .replace(/\s*–\s*/g, "\u2011")
+      .replace(/\s*—\s*/g, "\u2011")
+      .replace(/\s*to\s*/gi, "\u2011");
+  };
+
   return (
-    <div
-      id={`job-card-${job.id}`}
-      style={{ border: `1.5px solid rgba(0,0,0,0.1)`, background: "#fff", transition: "all 0.25s", position: "relative", overflow: "hidden", borderRadius: "10px" }}
-      className="flex flex-col h-full hover:shadow-lg"
-    >
-      <div className="p-5 pb-3">
-        <div className="flex items-start justify-between gap-3 mb-1">
-          <h3 style={{ fontFamily: "'Playfair Display', serif", color: "#1a0a0a", fontSize: "1.05rem", fontWeight: 700, lineHeight: 1.3 }}>
-            {job.title}
-          </h3>
-          <span style={{ background: `rgba(114,16,42,0.1)`, color: MAROON, fontSize: "0.7rem", fontWeight: 600, whiteSpace: "nowrap", borderRadius: "999px", padding: "3px 10px", flexShrink: 0 }}>
+    <div id={`job-card-${job.id}`} className="job-card flex flex-col h-full">
+
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <div className="jc-header-container">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="jc-title">{job.title}</h3>
+            <div className="jc-department-label">{job.department}</div>
+          </div>
+          <span className={`jc-type-badge ${job.type.toLowerCase().includes("full") ? "full-time" : "part-time"}`}>
             {job.type}
           </span>
         </div>
-        <div style={{ color: "#6b5c5c", fontSize: "0.8rem" }}>{job.department}</div>
       </div>
-      <div style={{ borderTop: "1px solid rgba(0,0,0,0.08)", margin: "0 20px" }} />
-      <div className="px-5 pt-3 pb-3 flex flex-wrap gap-4">
-        <span style={{ color: MAROON, fontSize: "0.78rem" }} className="flex items-center gap-1">
-          <MapPin size={12} />{job.location}
-        </span>
-        <span style={{ color: MAROON, fontSize: "0.78rem" }} className="flex items-center gap-1">
-          <Briefcase size={12} />
-          {experienceById[job.id] ?? "2–5 yrs"}
-        </span>
-        <span style={{ color: MAROON, fontSize: "0.78rem" }} className="flex items-center gap-1">
-          <Clock size={12} />{job.type}
-        </span>
+
+      {/* ── Meta Grid ───────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-2 px-6 pb-3">
+        <div className="jc-meta-card">
+          <span className="jc-meta-label">Location</span>
+          <span className="jc-meta-val">
+            <MapPin size={12} className="jc-meta-icon-mini" />
+            <span>{job.location}</span>
+          </span>
+        </div>
+        <div className="jc-meta-card">
+          <span className="jc-meta-label">Experience</span>
+          <span className="jc-meta-val">
+            <Briefcase size={12} className="jc-meta-icon-mini" />
+            <span>{job.experience ?? "2–5 yrs"}</span>
+          </span>
+        </div>
+        <div className="jc-meta-card">
+          <span className="jc-meta-label">Salary</span>
+          <span className="jc-meta-val">
+            <IndianRupee size={12} className="jc-meta-icon-mini" />
+            <span className="jc-salary-full">{job.salaryRange ?? "30k – 50k"}</span>
+            <span className="jc-salary-short">{formatSalary(job.salaryRange)}</span>
+          </span>
+        </div>
       </div>
-      <div className="px-5 pb-3">
-        <p style={{ color: "#4a4a4a", fontSize: "0.82rem", lineHeight: 1.65 }}>{job.description}</p>
+
+      <div className="jc-divider" />
+
+      {/* ── Description ─────────────────────────────────────────────────── */}
+      <div className="px-6 py-4">
+        <div
+          className={`jc-description-container ${isOverflowing ? "interactive" : ""} ${isExpanded ? "expanded" : "collapsed"}`}
+          onClick={() => isOverflowing && setIsExpanded(!isExpanded)}
+          style={{
+            height: isOverflowing
+              ? (isExpanded ? heights.expandedHeight : heights.collapsedHeight)
+              : "auto"
+          }}
+          title={isOverflowing ? (isExpanded ? "Click to collapse" : "Click to view full description") : undefined}
+        >
+          <p ref={descRef} className="jc-description">
+            {job.description}
+          </p>
+          {isOverflowing && (
+            <div className="jc-description-fade">
+              <span className="jc-ellipsis">&nbsp;...</span>
+              <span className="jc-read-more-badge">Read more</span>
+            </div>
+          )}
+        </div>
       </div>
-      <div className="px-5 pb-4">
-        <div style={{ color: "#1a0a0a", fontSize: "0.82rem", fontWeight: 700 }} className="mb-2">Key Qualifications:</div>
-        <ul className="flex flex-col gap-1">
-          {job.qualifications.map((q) => (
-            <li key={q} className="flex items-start gap-2">
-              <span style={{ color: MAROON, fontSize: "1rem", lineHeight: 1, flexShrink: 0, marginTop: "1px" }}>•</span>
-              <span style={{ color: "#4a4a4a", fontSize: "0.78rem", lineHeight: 1.5 }}>{q}</span>
-            </li>
-          ))}
-        </ul>
+
+      {/* ── Qualifications & Skills ───────────────────────────────────────── */}
+      <div className="px-6 pb-5 flex flex-col md:flex-row gap-6">
+        {/* Left Column: Education */}
+        <div className="flex-1">
+          <div className="jc-section-label mb-3">Educational Qualifications</div>
+          <ul className="flex flex-col gap-2">
+            {parseList(job.qualifications).map((q) => (
+              <li key={q} className="flex items-start gap-2">
+                <span className="jc-bullet-wrapper">
+                  <Check size={12} className="jc-bullet-check" />
+                </span>
+                <span className="jc-qual-text">{q}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Right Column: Skills Checklist */}
+        <div className="flex-1">
+          <div className="jc-section-label mb-3">Required Skills & Strengths</div>
+          <ul className="flex flex-col gap-2">
+            {parseList(job.skills || ["Strong Communication", "Classroom Management", "Team Collaboration"]).map((s) => (
+              <li key={s} className="flex items-start gap-2">
+                <span className="jc-bullet-wrapper">
+                  <Check size={12} className="jc-bullet-check" />
+                </span>
+                <span className="jc-qual-text">{s}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
-      <div className="mt-auto px-5 pb-5 flex gap-2">
+
+      {/* ── Actions ─────────────────────────────────────────────────────── */}
+      <div className="mt-auto px-6 pb-6 pt-2 flex gap-3 items-center">
         {applied ? (
-          <div style={{ flex: 1, background: "#d1fae5", color: "#065f46", fontWeight: 700, fontSize: "0.82rem", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", padding: "11px", gap: "6px", border: "1px solid #6ee7b7" }}>
-            ✓ Applied
+          <div className="jc-applied-badge">
+            <Check size={16} />
+            <span>Applied</span>
           </div>
         ) : (
-          <button
-            onClick={() => onApply(job)}
-            style={{ background: MAROON, color: "#fff", fontWeight: 600, fontSize: "0.85rem", display: "block", textAlign: "center", borderRadius: "6px", padding: "11px", letterSpacing: "0.03em", transition: "opacity 0.2s", flex: 1, border: "none", cursor: "pointer" }}
-            className="hover:opacity-90"
-          >
-            Apply Now
+          <button onClick={() => onApply(job)} className="jc-apply-btn flex items-center justify-center gap-2">
+            <span>Apply Now</span>
+            <ArrowRight size={15} className="jc-apply-arrow" />
           </button>
         )}
-        <button
-          onClick={handleShare}
-          style={{ border: `1.5px solid ${MAROON}`, color: MAROON, fontWeight: 600, fontSize: "0.78rem", borderRadius: "6px", padding: "11px 14px", background: "transparent", cursor: "pointer", transition: "all 0.2s", display: "flex", alignItems: "center", gap: "5px", flexShrink: 0 }}
-          className="hover:opacity-80"
-        >
-          Share
+        <button onClick={handleShare} className="jc-share-btn" title="Share Job">
+          <Share2 size={16} />
         </button>
       </div>
+
+      {/* ── "See More" blur overlay ──────────────────────────────────────── */}
       {showOverlay && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={{ position: "absolute", inset: 0, backdropFilter: "blur(5px)", WebkitBackdropFilter: "blur(5px)", background: "rgba(255,255,255,0.45)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", borderRadius: "10px" }}
-        >
+        <div className="jc-overlay" onClick={(e) => e.stopPropagation()}>
           <button
+            className="jc-see-more-btn"
             onClick={(e) => { e.stopPropagation(); onSeeMore(); }}
-            style={{ background: "#c9a84c", color: "#1a0a0a", fontWeight: 700, fontSize: "0.875rem", letterSpacing: "0.05em", border: "none", borderRadius: "999px", padding: "10px 24px", boxShadow: "0 4px 14px rgba(201,168,76,0.4)", cursor: "pointer" }}
           >
             + See More
           </button>
-          <span style={{ color: "#4a3a3a", fontSize: "0.78rem", fontWeight: 500 }}>More opportunities available</span>
+          <span className="jc-overlay-hint">More opportunities available</span>
         </div>
       )}
+
     </div>
   );
 }

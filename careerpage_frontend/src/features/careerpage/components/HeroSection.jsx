@@ -1,14 +1,14 @@
 import { motion } from "motion/react";
 import { Award, TrendingUp, Users, Heart } from "lucide-react";
-import { GOLD } from "../../../lib/constants";
-import { stats } from "../../../data/jobs";
+import { stats } from "../../../mockData/jobs";
 import campusImg from "../../../assets/campus.jpg";
+import "./css/HeroSection.css";
 
 const TRUST_INDICATORS = [
-  { icon: Award, text: "60+ Years of Excellence" },
-  { icon: TrendingUp, text: "Career Growth Opportunities" },
-  { icon: Users, text: "Inclusive Community" },
-  { icon: Heart, text: "Meaningful Impact" },
+  { icon: Award,      text: "60+ Years of Excellence"      },
+  { icon: TrendingUp, text: "Career Growth Opportunities"  },
+  { icon: Users,      text: "Inclusive Community"          },
+  { icon: Heart,      text: "Meaningful Impact"            },
 ];
 
 const scrollTo = (id) =>
@@ -16,101 +16,155 @@ const scrollTo = (id) =>
 
 export function HeroSection({ loggedInUser }) {
   return (
-    <section className="relative overflow-hidden" style={{ minHeight: "88vh" }}>
-      <img
+    <section className="hero-section relative overflow-hidden">
+      {/* ── Background campus image ───────────────────────────────────── */}
+      <motion.img
         src={campusImg}
         alt="South Point School Campus"
         className="absolute inset-0 w-full h-full object-cover"
+        initial={{ scale: 1.12, filter: "brightness(0.6)" }}
+        animate={{ scale: 1, filter: "brightness(1)" }}
+        transition={{ duration: 8, ease: [0.16, 1, 0.3, 1] }}
       />
-      <div
-        className="absolute inset-0"
-        style={{
-          background: `linear-gradient(to top, rgba(0,0,0,0.93) 0%, rgba(0,0,0,0.78) 30%, rgba(0,0,0,0.35) 75%, rgba(0,0,0,0.15) 100%)`,
-        }}
-      />
-      <div
-        className="relative max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center"
-        style={{ minHeight: "88vh" }}
-      >
+
+      {/* ── Gradient overlay ──────────────────────────────────────────── */}
+      <div className="hero-overlay absolute inset-0" />
+
+      {/* ── Content ───────────────────────────────────────────────────── */}
+      <div className="hero-content relative max-w-7xl mx-auto px-6 py-20 flex flex-col justify-center">
         <div className="grid md:grid-cols-2 gap-12 items-center">
-          {/* Left Column */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
-          >
-            <h1
-              style={{
-                fontFamily: "'Playfair Display', serif",
-                color: "#faf8f5",
-                fontSize: "clamp(2.2rem, 5vw, 3.8rem)",
-                lineHeight: 1.15,
-                fontWeight: 700,
+
+          {/* Left column */}
+          <div className="flex flex-col justify-center">
+            <h1 className="hero-heading">
+              <div className="overflow-hidden block py-1">
+                <motion.span
+                  className="block"
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1], delay: 0.05 }}
+                >
+                  Build Your Future.
+                </motion.span>
+              </div>
+              <div className="overflow-hidden block py-1">
+                <motion.span
+                  className="block hero-heading-accent"
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+                >
+                  Shape the Next Generation.
+                </motion.span>
+              </div>
+            </h1>
+
+            {/* Staggered container for subtext, buttons and trust tags */}
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: { opacity: 0 },
+                visible: {
+                  opacity: 1,
+                  transition: {
+                    staggerChildren: 0.1,
+                    delayChildren: 0.35
+                  }
+                }
               }}
             >
-              Build Your Future.
-              <br />
-              <span style={{ color: GOLD }}>Shape the Next Generation.</span>
-            </h1>
-            <p
-              style={{ color: "rgba(250,248,245,0.78)", fontSize: "1rem", lineHeight: 1.8 }}
-              className="mt-5 max-w-lg"
-            >
-              At South Point School, every role contributes to excellence in education and character building.
-              Join a community that inspires, supports, and empowers future generations.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <a
-                href="#opportunities"
-                onClick={(e) => {
-                  e.preventDefault();
-                  scrollTo("opportunities");
+              <motion.p
+                variants={{
+                  hidden: { opacity: 0, y: 15 },
+                  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
                 }}
-                style={{ background: GOLD, color: "#1a0a0a", fontWeight: 600, fontSize: "0.875rem", letterSpacing: "0.06em" }}
-                className="px-7 py-3 rounded-sm uppercase tracking-wider hover:opacity-90 transition-opacity cursor-pointer"
+                className="hero-subtext mt-5 max-w-lg"
               >
-                Explore Opportunities
-              </a>
-              {!loggedInUser && (
-                <button
-                  onClick={() => scrollTo("apply-anyway")}
-                  style={{ border: `1.5px solid rgba(250,248,245,0.45)`, color: "#faf8f5", fontWeight: 500, fontSize: "0.875rem", background: "transparent", cursor: "pointer" }}
-                  className="px-7 py-3 rounded-sm hover:border-white transition-colors"
-                >
-                  Submit Profile
-                </button>
-              )}
-            </div>
-            {/* Trust Indicators */}
-            <div className="mt-10 grid grid-cols-2 gap-3">
-              {TRUST_INDICATORS.map(({ icon: Icon, text }) => (
-                <div key={text} className="flex items-center gap-2">
-                  <Icon size={14} style={{ color: GOLD, flexShrink: 0 }} />
-                  <span style={{ color: "rgba(250,248,245,0.7)", fontSize: "0.78rem" }}>{text}</span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
+                At South Point School, every role contributes to excellence in education and character building.
+                Join a community that inspires, supports, and empowers future generations.
+              </motion.p>
 
-          {/* Right Column — Stats */}
+              {/* CTA buttons */}
+              <motion.div
+                variants={{
+                  hidden: { opacity: 0, y: 15 },
+                  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
+                }}
+                className="mt-8 flex flex-wrap gap-3"
+              >
+                <a
+                  href="#opportunities"
+                  onClick={(e) => { e.preventDefault(); scrollTo("opportunities"); }}
+                  className="hero-btn-primary px-7 py-3 transition-transform hover:scale-[1.03] active:scale-[0.98] duration-200"
+                >
+                  Explore Opportunities
+                </a>
+
+                {!loggedInUser && (
+                  <button
+                    onClick={() => scrollTo("apply-anyway")}
+                    className="hero-btn-outline px-7 py-3 transition-transform hover:scale-[1.03] active:scale-[0.98] duration-200"
+                  >
+                    Submit Profile
+                  </button>
+                )}
+              </motion.div>
+
+              {/* Trust indicators */}
+              <motion.div
+                variants={{
+                  hidden: { opacity: 0, y: 15 },
+                  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
+                }}
+                className="mt-10 grid grid-cols-2 gap-3"
+              >
+                {TRUST_INDICATORS.map(({ icon: Icon, text }) => (
+                  <div key={text} className="flex items-center gap-2">
+                    <Icon size={14} className="trust-icon" />
+                    <span className="trust-text">{text}</span>
+                  </div>
+                ))}
+              </motion.div>
+            </motion.div>
+          </div>
+
+          {/* Right column — Stats */}
           <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.7, delay: 0.2 }}
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.08,
+                  delayChildren: 0.5
+                }
+              }
+            }}
             className="flex flex-col justify-center gap-8"
           >
             {stats.map(({ value, label }) => (
-              <div key={label} style={{ borderLeft: `3px solid ${GOLD}`, paddingLeft: "20px" }}>
-                <div style={{ color: "#faf8f5", fontSize: "2.2rem", fontWeight: 700, lineHeight: 1 }}>{value}</div>
-                <div
-                  style={{ color: "rgba(250,248,245,0.6)", fontSize: "0.75rem", letterSpacing: "0.1em", fontWeight: 600 }}
-                  className="uppercase mt-1"
-                >
-                  {label}
-                </div>
-              </div>
+              <motion.div
+                key={label}
+                variants={{
+                  hidden: { opacity: 0, x: 40, scale: 0.95 },
+                  visible: { 
+                    opacity: 1, 
+                    x: 0, 
+                    scale: 1,
+                    transition: { type: "spring", stiffness: 75, damping: 14 } 
+                  }
+                }}
+                className="stat-item"
+              >
+                <div className="stat-value">{value}</div>
+                <div className="stat-label">{label}</div>
+              </motion.div>
             ))}
           </motion.div>
+
         </div>
       </div>
     </section>

@@ -1,0 +1,121 @@
+import React, { useState, useEffect } from "react";
+import { motion } from "motion/react";
+import { Video, Calendar, User, Link as LinkIcon } from "lucide-react";
+import { MAROON } from "../../../../lib/constants";
+import { fetchUpcomingInterviews } from "../../../careerpage/services/interviewsService";
+import "../css/sections/InterviewsSection.css";
+
+const getRoundOrdinal = (round) => {
+  if (round === 1) return "1st Round";
+  if (round === 2) return "2nd Round";
+  if (round === 3) return "3rd Round";
+  return `${round}th Round`;
+};
+
+export function InterviewsSection() {
+  const [interviews, setInterviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetchUpcomingInterviews()
+      .then((data) => { if (!cancelled) { setInterviews(data); setError(""); } })
+      .catch((err) => { if (!cancelled) setError(err.message || "Could not load your interviews."); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+    >
+      <h1 className="is-page-title">
+        Upcoming Interviews
+      </h1>
+      <p className="is-page-sub">
+        Your scheduled interviews and meeting links.
+      </p>
+
+      <div className="is-list">
+        {loading ? (
+          <div className="is-empty">
+            <Video size={32} className="is-empty-icon" />
+            <div className="is-empty-title">Loading your interviews…</div>
+          </div>
+        ) : error ? (
+          <div className="is-empty">
+            <Video size={32} className="is-empty-icon" />
+            <div className="is-empty-title">{error}</div>
+          </div>
+        ) : interviews.length === 0 ? (
+          <div className="is-empty">
+            <Video size={32} className="is-empty-icon" />
+            <div className="is-empty-title">No interviews scheduled yet.</div>
+          </div>
+        ) : (
+          interviews.map((iv) => (
+            <div
+              key={iv.id}
+              className="is-card"
+            >
+              <div className="is-card-top">
+                <div>
+                  <div className="is-role">
+                    {iv.role} {iv.round && `(${getRoundOrdinal(iv.round)})`}
+                  </div>
+                  <div className="is-meta-row">
+                    <span className="is-meta-item">
+                      <Calendar size={12} color={MAROON} />
+                      {iv.date} at {iv.time}
+                    </span>
+                  </div>
+                  <div className="is-mode-row">
+                    <span
+                      className={`is-mode-badge ${
+                        iv.mode === "Online" ? "is-mode-badge--online" : "is-mode-badge--inperson"
+                      }`}
+                    >
+                      {iv.mode}
+                    </span>
+                    {iv.platform && (
+                      <span className="is-platform">
+                        via {iv.platform}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <span className="is-status-badge">
+                  {iv.status}
+                </span>
+              </div>
+              {iv.link && (
+                <div className="is-link-box">
+                  <div className="is-link-inner">
+                    <LinkIcon size={14} color="#1e40af" />
+                    <span className="is-link-label">
+                      Meeting Link
+                    </span>
+                    <span className="is-link-url">
+                      {iv.link}
+                    </span>
+                  </div>
+                  <a
+                    href={iv.link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="is-join-btn"
+                  >
+                    <Video size={12} /> Join Interview
+                  </a>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </motion.div>
+  );
+}
