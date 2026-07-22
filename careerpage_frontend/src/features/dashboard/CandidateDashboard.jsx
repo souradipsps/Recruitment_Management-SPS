@@ -947,6 +947,7 @@ export function CandidateDashboard({
           selectedRoles: profile.roles, selectedSkills: profile.skills,
           linkedin: profile.linkedin, portfolio: profile.portfolio,
           extracurricular: profile.extracurricular, extracurricularOther: profile.extracurricularOther,
+          profilePicture: profilePic,
         },
         resumeFileObj,
       );
@@ -978,6 +979,7 @@ export function CandidateDashboard({
       portfolio: profile.portfolio || "",
       resumeFile: resumeFile || "",
       resumeUrl: resumeUrl || "",
+      profilePicture: profilePic,
     };
     onProfileUpdate?.(updatedData);
     setLastSavedProfile({
