@@ -40,6 +40,7 @@ export default function App() {
 
   // Persisted app data (each mirrors itself to localStorage).
   const [selectedPanelists] = usePersistentState("selectedPanelists", ["Dr. Roy", "Mr. Patel", "Ms. Nisha"]);
+  const [revisionRoleRequestData, setRevisionRoleRequestData] = useState(null);
 
   // Session-scoped auth/module selection.
   const [currentUser, setCurrentUser] = useSessionState("currentUser", null);
@@ -227,6 +228,7 @@ export default function App() {
     selectedPanelists,
     currentUser,
     dashboardStats,
+    revisionRoleRequestData, setRevisionRoleRequestData,
   };
 
   const sidebarBg = `linear-gradient(180deg, ${T.primary} 0%, ${T.primaryDark} 100%)`;

@@ -92,7 +92,7 @@ function SkillsMultiSelect({ options, selected, onChange, placeholder }) {
   );
 }
 
-export function ApplyModal({ onClose, signupData, onSubmitData, onFormSubmit, onFormError }) {
+export function ApplyModal({ onClose, signupData, onSubmitData, onFormSubmit, onFormError, existingRolesList = [] }) {
   const fileRef = useRef(null);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -338,7 +338,7 @@ export function ApplyModal({ onClose, signupData, onSubmitData, onFormSubmit, on
 
                 <div className="am-field-mt">
                   <label className="am-label">Roles Interested In <span className="am-required">*</span></label>
-                  <SkillsMultiSelect options={ALL_ROLES} selected={selectedRoles} onChange={setSelectedRoles} placeholder="Select one or more roles…" />
+                  <SkillsMultiSelect options={existingRolesList.length ? existingRolesList : ALL_ROLES} selected={selectedRoles} onChange={setSelectedRoles} placeholder="Select one or more roles…" />
                 </div>
                 <div className="am-field-mt">
                   <label className="am-label">Skills &amp; Strengths <span className="am-required">*</span></label>

@@ -71,10 +71,16 @@ class InterviewViewSet(viewsets.ModelViewSet):
         serializer = InterviewScoreSerializer(interview, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        candidate = None
         if interview.application:
+            candidate = interview.application.candidate
+        elif interview.general_application:
+            candidate = interview.general_application.candidate
+
+        if candidate:
             from notifications.tasks import create_notification_task
             create_notification_task.delay(
-                recipient_id=interview.application.candidate.id,
+                recipient_id=candidate.id,
                 notification_type="interview_scheduled",
                 title=f"Interview Update — {interview.role}",
                 message=f"Your Round {interview.round} interview status is now '{interview.status}'.",

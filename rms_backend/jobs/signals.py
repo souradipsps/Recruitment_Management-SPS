@@ -127,6 +127,12 @@ def create_approval_for_role_request(sender, instance, created, **kwargs):
             
             if existing:
                 existing.headcount += 1
+                # Maker-Checker sync: Update registry role parameters with the approved changes
+                existing.department = instance.department
+                existing.role = instance.role
+                existing.type = var.type or "Full-time"
+                existing.experience = var.experience or ""
+                existing.salary_range = var.salary_range or ""
                 existing.save()
                 if not instance.existing_role:
                     RoleRequest.objects.filter(pk=instance.pk).update(existing_role=existing)

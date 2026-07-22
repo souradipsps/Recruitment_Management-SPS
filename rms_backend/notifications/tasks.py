@@ -222,7 +222,7 @@ def send_interview_email_task(interview_id, is_reschedule=False):
         subject = f"Interview Scheduled: {interview.role} - Round {interview.round}"
 
     # 1. Email to Candidate
-    candidate = interview.application.candidate if interview.application else None
+    candidate = interview.application.candidate if interview.application else (interview.general_application.candidate if interview.general_application else None)
     if not candidate:
         from django.db.models import Value
         from django.db.models.functions import Concat
@@ -440,7 +440,7 @@ def send_interview_reminder_task(interview_id):
     subject = f"Reminder: Upcoming Interview for {interview.role} - Round {interview.round}"
 
     # 1. Email to Candidate
-    candidate = interview.application.candidate if interview.application else None
+    candidate = interview.application.candidate if interview.application else (interview.general_application.candidate if interview.general_application else None)
     if not candidate:
         from django.db.models import Value
         from django.db.models.functions import Concat
@@ -621,7 +621,7 @@ def send_interview_completed_email_task(interview_id):
     formatted_time = format_time_ampm(interview.time)
 
     # Find candidate
-    candidate = interview.application.candidate if interview.application else None
+    candidate = interview.application.candidate if interview.application else (interview.general_application.candidate if interview.general_application else None)
     if not candidate:
         from django.db.models import Value
         from django.db.models.functions import Concat

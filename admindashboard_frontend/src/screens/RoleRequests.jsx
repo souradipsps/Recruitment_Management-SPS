@@ -40,21 +40,66 @@ const emptyForm = () => ({
   comment: "",
 });
 
-export default function RoleRequests({ roleRequests, setRoleRequests, setApprovalRequests, existingRoles, setExistingRoles, onNavigateToExistingRoles, currentUser }) {
+export default function RoleRequests({ roleRequests, setRoleRequests, setApprovalRequests, existingRoles, setExistingRoles, onNavigateToExistingRoles, currentUser, revisionRoleRequestData, setRevisionRoleRequestData }) {
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
+
+  useEffect(() => {
+    if (revisionRoleRequestData) {
+      const data = revisionRoleRequestData;
+      setEditingId(null);
+      setRoleForms([
+        {
+          id: Date.now() + Math.random(),
+          dept: data.dept || "",
+          role: data.role || "",
+          existing_role: data.backendId || null,
+          variations: [
+            {
+              id: Date.now() + Math.random(),
+              type: data.type || "Full-time",
+              minExperience: data.experience ? String(data.experience).split("-")[0] || "" : "",
+              maxExperience: data.experience ? String(data.experience).split("-")[1] || "" : "",
+              minSalary: data.salaryRange ? String(data.salaryRange).split("-")[0] || "" : "",
+              maxSalary: data.salaryRange ? String(data.salaryRange).split("-")[1] || "" : "",
+            }
+          ],
+          just: `Request to revise parameter configurations for existing sanctioned role: ${data.role}.`,
+          date: new Date().toLocaleDateString(),
+          status: "Pending",
+          comment: "",
+        }
+      ]);
+      setSubmitError("");
+      setShowForm(true);
+      setRevisionRoleRequestData(null);
+    }
+  }, [revisionRoleRequestData]);
 
   const uniqueExistingRoles = Array.from(
     new Map((existingRoles || []).map((r) => [r.role.trim().toLowerCase(), r])).values()
   );
 
-  const selectOptions = [
-    ...uniqueExistingRoles.map((r) => ({
+  const getSelectOptions = (form) => {
+    const options = uniqueExistingRoles.map((r) => ({
       value: String(r.backendId),
       label: `Existing: ${r.role} (${r.dept})`,
-    })),
-    { value: "NEW_ROLE", label: "➕ Request New Role Name..." },
-  ];
+    }));
+    if (form.existing_role) {
+      const exists = options.some((opt) => opt.value === String(form.existing_role));
+      if (!exists) {
+        const matchingRole = existingRoles.find((r) => String(r.backendId) === String(form.existing_role));
+        if (matchingRole) {
+          options.unshift({
+            value: String(matchingRole.backendId),
+            label: `Existing: ${matchingRole.role} (${matchingRole.dept}) [${matchingRole.type}, ${matchingRole.experience} yrs]`,
+          });
+        }
+      }
+    }
+    options.push({ value: "NEW_ROLE", label: "➕ Request New Role Name..." });
+    return options;
+  };
 
   const handleSelectRoleOption = (index, val) => {
     if (val === "NEW_ROLE") {
@@ -716,7 +761,7 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                   <Select
                     value={form.existing_role ? String(form.existing_role) : (form.role ? "NEW_ROLE" : "")}
                     onChange={(e) => handleSelectRoleOption(index, e.target.value)}
-                    options={selectOptions}
+                    options={getSelectOptions(form)}
                     placeholder="Select an existing role / Request new title..."
                     style={formErrors[index]?.role ? { borderColor: T.red } : {}}
                   />

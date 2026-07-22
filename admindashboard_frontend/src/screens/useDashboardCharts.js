@@ -797,11 +797,30 @@ export default function useDashboardCharts({
   const getActivityLog = () => {
     const list = [];
 
+    const parseActivityDate = (dateVal) => {
+      if (!dateVal) return { date: new Date(), isDateOnly: false };
+      const dateStr = typeof dateVal === "string" ? dateVal.trim() : "";
+      const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(dateStr);
+      if (isDateOnly) {
+        const [year, month, day] = dateStr.split("-").map(Number);
+        return {
+          date: new Date(year, month - 1, day, 0, 0, 0, 0),
+          isDateOnly: true
+        };
+      }
+      return {
+        date: new Date(dateVal),
+        isDateOnly: false
+      };
+    };
+
     (jobApplications || []).forEach((app) => {
       if (app.applied) {
+        const { date, isDateOnly } = parseActivityDate(app.applied);
         list.push({
           id: app.id,
-          rawDate: new Date(app.applied),
+          rawDate: date,
+          isDateOnly,
           icon: "👤",
           title: "Job Application",
           detail: `${app.name} applied for ${app.role}`,
@@ -814,9 +833,11 @@ export default function useDashboardCharts({
 
     (generalApplications || []).forEach((app) => {
       if (app.applied) {
+        const { date, isDateOnly } = parseActivityDate(app.applied);
         list.push({
           id: app.id,
-          rawDate: new Date(app.applied),
+          rawDate: date,
+          isDateOnly,
           icon: "👤",
           title: "General Profile",
           detail: `${app.name} submitted a general profile`,
@@ -834,6 +855,7 @@ export default function useDashboardCharts({
         list.push({
           id: int.id,
           rawDate: parsedDate,
+          isDateOnly: false,
           icon: "🎙️",
           title: `Interview ${int.status}`,
           detail: `Round ${int.round} for ${int.candidate} (${int.role})`,
@@ -846,9 +868,11 @@ export default function useDashboardCharts({
 
     (offers || []).forEach((o) => {
       if (o.issued) {
+        const { date, isDateOnly } = parseActivityDate(o.issued);
         list.push({
           id: o.id,
-          rawDate: new Date(o.issued),
+          rawDate: date,
+          isDateOnly,
           icon: "📜",
           title: `Offer ${o.status}`,
           detail: `For ${o.candidate} (${o.role})`,
@@ -862,9 +886,11 @@ export default function useDashboardCharts({
     (approvalRequests || []).forEach((r) => {
       (r.history || []).forEach((h) => {
         if (h.date) {
+          const { date, isDateOnly } = parseActivityDate(h.date);
           list.push({
             id: r.id,
-            rawDate: new Date(h.date),
+            rawDate: date,
+            isDateOnly,
             icon: "🛡️",
             title: `Requisition ${h.act}`,
             detail: `${r.role} (${r.dept}) ${h.note ? `• ${h.note}` : `by ${h.by}`}`,
@@ -887,11 +913,20 @@ export default function useDashboardCharts({
       const hrs = Math.floor(mins / 60);
       const days = Math.floor(hrs / 24);
       let timeStr = "";
-      if (mins < 1) timeStr = "Just now";
-      else if (mins < 60) timeStr = `${mins}m ago`;
-      else if (hrs < 24) timeStr = `${hrs}h ago`;
-      else if (days === 1) timeStr = "Yesterday";
-      else timeStr = `${days} days ago`;
+      if (item.isDateOnly) {
+        if (diffDays === 0) timeStr = "Today";
+        else if (diffDays === 1) timeStr = "Yesterday";
+        else timeStr = `${diffDays} days ago`;
+      } else {
+        const diff = new Date() - item.rawDate;
+        const mins = Math.floor(diff / 60000);
+        const hrs = Math.floor(mins / 60);
+        if (mins < 1) timeStr = "Just now";
+        else if (mins < 60) timeStr = `${mins}m ago`;
+        else if (hrs < 24) timeStr = `${hrs}h ago`;
+        else if (diffDays === 1) timeStr = "Yesterday";
+        else timeStr = `${diffDays} days ago`;
+      }
 
       return {
         ...item,

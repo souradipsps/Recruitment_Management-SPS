@@ -2,7 +2,7 @@ import { T, font } from "../../theme";
 import { STATUS_COLORS } from "../../theme";
 import { Modal, ModalHeader, Btn } from "../../components/ui";
 
-export default function RoleDetailsModal({ sel, setSel, onClose, onStatusChange, onDelete, bp, roles = [] }) {
+export default function RoleDetailsModal({ sel, setSel, onClose, onStatusChange, onDelete, onRequestRevision, bp, roles = [] }) {
   if (!sel) return null;
   const sc = STATUS_COLORS[sel.currentStatus] || STATUS_COLORS.Active;
   const siblingRoles = roles.filter((r) => r.role === sel.role && r.dept === sel.dept);
@@ -117,7 +117,14 @@ export default function RoleDetailsModal({ sel, setSel, onClose, onStatusChange,
           </div>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 20, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
+          <Btn
+            label="Request Revision"
+            onClick={() => {
+              onRequestRevision?.(sel);
+              onClose();
+            }}
+          />
           <Btn
             label="Delete Role"
             variant="danger"

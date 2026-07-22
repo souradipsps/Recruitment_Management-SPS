@@ -101,7 +101,7 @@ function SkillsMultiSelect({ options, selected, onChange, placeholder, readOnly 
   );
 }
 
-const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileData, resumeFile, resumeUrl, draftData, savedProfileData, scrollToSection, onFormSubmit, onFormError }) => {
+const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileData, resumeFile, resumeUrl, draftData, savedProfileData, scrollToSection, onFormSubmit, onFormError, existingRolesList = [] }) => {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -300,7 +300,7 @@ const JobApplicationModal = ({ job, onClose, onSubmit, onEditProfile, profileDat
                   </div>
                   <div><label className="jm-label">Degree Name</label><input className="jm-input jm-input--readonly" placeholder="e.g. Sports Coach, Music Diploma" value={extracurricularOther} readOnly /></div>
                 </div>
-                <div className="jm-field-mt"><label className="jm-label">Roles Interested In</label><SkillsMultiSelect options={ALL_ROLES} selected={selectedRoles} onChange={setSelectedRoles} placeholder="Select one or more roles…" readOnly /></div>
+                <div className="jm-field-mt"><label className="jm-label">Roles Interested In</label><SkillsMultiSelect options={existingRolesList.length ? existingRolesList : ALL_ROLES} selected={selectedRoles} onChange={setSelectedRoles} placeholder="Select one or more roles…" readOnly /></div>
                 <div className="jm-field-mt"><label className="jm-label">Skills &amp; Strengths</label><SkillsMultiSelect options={ALL_SKILLS} selected={selectedSkills} onChange={setSelectedSkills} placeholder="Select your skills…" readOnly /></div>
                 <div className="jm-field-mt grid grid-cols-1 sm:grid-cols-2 gap-[14px]">
                   <div>

@@ -50,7 +50,7 @@ class JobCategoryViewSet(viewsets.ModelViewSet):
 class ExistingRoleViewSet(viewsets.ModelViewSet):
     queryset           = ExistingRole.objects.all()
     serializer_class   = ExistingRoleSerializer
-    permission_classes = [IsHRAdmin]
+    permission_classes = [IsHRAdminOrReadOnly]
     search_fields      = ["role", "department", "role_id"]
     filterset_fields   = ["department", "status", "type"]
     ordering_fields    = ["department", "role", "headcount", "filled"]

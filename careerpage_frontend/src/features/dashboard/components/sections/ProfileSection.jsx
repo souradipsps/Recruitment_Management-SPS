@@ -19,6 +19,7 @@ export function ProfileSection({
   personalSectionRef,
   professionalSectionRef,
   resumeSectionRef,
+  existingRolesList = [],
 }) {
   return (
     <motion.div
@@ -42,6 +43,7 @@ export function ProfileSection({
         profile={profile}
         setProfile={setProfile}
         sectionRef={professionalSectionRef}
+        existingRolesList={existingRolesList}
       />
 
 

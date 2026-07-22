@@ -1,6 +1,13 @@
 from django.db import models
 
 class Panelist(models.Model):
+    user = models.OneToOneField(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="panelist_profile",
+    )
     name       = models.CharField(max_length=200)
     email      = models.EmailField(unique=True)
     phone      = models.CharField(max_length=20, blank=True)
@@ -43,6 +50,10 @@ class Interview(models.Model):
     interview_id   = models.CharField(max_length=30, unique=True)
     application    = models.ForeignKey(
         "applications.JobApplication", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="interviews"
+    )
+    general_application = models.ForeignKey(
+        "applications.GeneralApplication", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="interviews"
     )
     candidate_name = models.CharField(max_length=200)
@@ -164,4 +175,8 @@ def sync_panelist_user_account(sender, instance, created, **kwargs):
         user.is_active = instance.is_active
         user.role = "admin"
         user.save()
+
+    # Update the OneToOne link if not set
+    if instance.user != user:
+        Panelist.objects.filter(pk=instance.pk).update(user=user)
 

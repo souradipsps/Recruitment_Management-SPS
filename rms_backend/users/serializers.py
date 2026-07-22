@@ -17,6 +17,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             "first_name": {"required": True},
             "last_name":  {"required": True},
             "email":      {"required": True},
+            "phone":      {"required": True, "allow_blank": False},
         }
 
     def validate(self, attrs):
@@ -27,6 +28,13 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError("An account with this email already exists.")
+        return value
+
+    def validate_phone(self, value):
+        if value:
+            clean_val = str(value).strip()
+            if User.objects.filter(phone=clean_val).exists():
+                raise serializers.ValidationError("An account with this phone number already exists.")
         return value
 
     def create(self, validated_data):

@@ -55,6 +55,7 @@ class OfferSerializer(serializers.ModelSerializer):
                 app = JobApplication.objects.filter(candidate__first_name__iexact=candidate_name.split()[0]).first()
             if app and app.candidate:
                 attrs["candidate"] = app.candidate
+                attrs["job_application"] = app
             else:
                 app2 = None
                 if role_name:
@@ -63,12 +64,26 @@ class OfferSerializer(serializers.ModelSerializer):
                     app2 = GeneralApplication.objects.filter(candidate__first_name__iexact=candidate_name.split()[0]).first()
                 if app2 and app2.candidate:
                     attrs["candidate"] = app2.candidate
+                    attrs["general_application"] = app2
                 else:
                     user = get_user_model().objects.annotate(
                         full_name=Concat('first_name', Value(' '), 'last_name')
                     ).filter(full_name__iexact=candidate_name).first()
                     if user:
                         attrs["candidate"] = user
+        
+        # If candidate is resolved or provided, resolve the application reference as well
+        candidate = attrs.get("candidate")
+        if candidate and role_name:
+            from applications.models import JobApplication, GeneralApplication
+            if "job_application" not in attrs:
+                app = JobApplication.objects.filter(candidate=candidate, role__iexact=role_name).first()
+                if app:
+                    attrs["job_application"] = app
+            if "general_application" not in attrs and "job_application" not in attrs:
+                app2 = GeneralApplication.objects.filter(candidate=candidate, preferred_role__icontains=role_name).first()
+                if app2:
+                    attrs["general_application"] = app2
         return attrs
 
     def create(self, validated_data):

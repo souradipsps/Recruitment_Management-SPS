@@ -107,6 +107,7 @@ class CandidateProfile(models.Model):
     salary_expectation  = models.CharField(max_length=100, blank=True)
     linkedin_profile    = models.URLField(blank=True)
     portfolio_link      = models.URLField(blank=True)
+    profile_picture     = models.TextField(blank=True)
     resume = models.FileField(
         upload_to="resumes/%Y/%m/",
         blank=True,
@@ -142,6 +143,7 @@ class CandidateProfile(models.Model):
                 ResumeFile.objects.update_or_create(
                     filename=filename,
                     defaults={
+                        "user": self.user,
                         "content_type": content_type,
                         "data": file_content,
                     }
@@ -151,6 +153,13 @@ class CandidateProfile(models.Model):
 
 
 class ResumeFile(models.Model):
+    user = models.ForeignKey(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="resume_files",
+        null=True,
+        blank=True,
+    )
     filename     = models.CharField(max_length=255, unique=True)
     content_type = models.CharField(max_length=100)
     data         = models.BinaryField()

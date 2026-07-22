@@ -56,6 +56,7 @@ export function CandidateDashboard({
   initialLoading = false,
   dashboardLoadedOnce = false,
   setDashboardLoadedOnce = () => { },
+  existingRolesList = [],
 }) {
   // Navigation & UI state — the active tab is the URL (/dashboard/:tab), so
   // switching tabs is a real navigation: deep-linkable, refresh-safe, and the
@@ -114,7 +115,7 @@ export function CandidateDashboard({
     portfolio: initialProfileData?.portfolio ?? "",
   });
 
-  const [profilePic, setProfilePic] = useState(null);
+  const [profilePic, setProfilePic] = useState(initialProfileData?.profilePicture || null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -225,6 +226,45 @@ export function CandidateDashboard({
   const [jobApplications, setJobApplications] = useState([]);
   const [liveJobs, setLiveJobs] = useState([]);
   const [interviews, setInterviews] = useState([]);
+
+  // Synchronize dynamic profile data asynchronously loaded from the backend
+  useEffect(() => {
+    if (initialProfileData) {
+      const mappedProfile = {
+        name: initialProfileData.fullName ? initialProfileData.fullName.trim().split(" ")[0] : (signupData?.name || userName),
+        lastName: initialProfileData.fullName ? initialProfileData.fullName.trim().split(" ").slice(1).join(" ") : (signupData?.lastName || ""),
+        email: initialProfileData.email || signupData?.email || "",
+        phone: initialProfileData.phone || (signupData?.phone || ""),
+        location: initialProfileData.location || "Guwahati, Assam",
+        highestEducation: initialProfileData.education || "",
+        degreeName: initialProfileData.degreeName || "",
+        professionalQualification: initialProfileData.professionalQualification || "",
+        professionalQualificationOther: initialProfileData.professionalQualificationOther || "",
+        experience: initialProfileData.experience || "",
+        salary: initialProfileData.salary || "",
+        extracurricular: initialProfileData.extracurricular || "",
+        extracurricularOther: initialProfileData.extracurricularOther || "",
+        roles: initialProfileData.selectedRoles || [],
+        skills: initialProfileData.selectedSkills || [],
+        linkedin: initialProfileData.linkedin || "",
+        portfolio: initialProfileData.portfolio || "",
+      };
+
+      const hasUnsaved = hasUnsavedChanges();
+      const isInitial = !lastSavedProfile.email;
+
+      if (isInitial || !hasUnsaved) {
+        setProfile(mappedProfile);
+        setLastSavedProfile({
+          ...mappedProfile,
+          resumeFile: initialProfileData.resumeFile || null,
+        });
+        setResumeFile(initialProfileData.resumeFile || null);
+        setResumeUrl(initialProfileData.resumeUrl || null);
+        setProfilePic(initialProfileData.profilePicture || null);
+      }
+    }
+  }, [initialProfileData, signupData, userName]);
 
   useEffect(() => {
     let cancelled = false;
@@ -617,12 +657,33 @@ export function CandidateDashboard({
     }
   };
 
+  const syncProfilePicToBackend = async (dataUrl) => {
+    try {
+      await updateUserProfile({
+        ...initialProfileData,
+        profilePicture: dataUrl,
+      });
+      onProfileUpdate?.({
+        ...initialProfileData,
+        profilePicture: dataUrl,
+      });
+    } catch (err) {
+      console.error("Failed to sync profile picture to backend:", err);
+    }
+  };
+
   // Profile picture camera/file triggers
   const handlePhotoUpload = (e) => {
     const f = e.target.files?.[0];
     if (f) {
-      setProfilePic(URL.createObjectURL(f));
-      setShowPhotoPopup(false);
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const dataUrl = event.target.result;
+        setProfilePic(dataUrl);
+        setShowPhotoPopup(false);
+        await syncProfilePicToBackend(dataUrl);
+      };
+      reader.readAsDataURL(f);
     }
   };
 
@@ -887,6 +948,7 @@ export function CandidateDashboard({
           selectedRoles: profile.roles, selectedSkills: profile.skills,
           linkedin: profile.linkedin, portfolio: profile.portfolio,
           extracurricular: profile.extracurricular, extracurricularOther: profile.extracurricularOther,
+          profilePicture: profilePic,
         },
         resumeFileObj,
       );
@@ -918,6 +980,7 @@ export function CandidateDashboard({
       portfolio: profile.portfolio || "",
       resumeFile: resumeFile || "",
       resumeUrl: resumeUrl || "",
+      profilePicture: profilePic,
     };
     onProfileUpdate?.(updatedData);
     setLastSavedProfile({
@@ -1033,7 +1096,7 @@ export function CandidateDashboard({
   };
 
   // Photo captured callback from CameraModal
-  const handlePhotoCapture = (dataUrl, targetKey) => {
+  const handlePhotoCapture = async (dataUrl, targetKey) => {
     if (targetKey) {
       const filename = `Captured_${targetKey}.jpg`;
       setDocs((prev) => ({ ...prev, [targetKey]: filename }));
@@ -1041,6 +1104,7 @@ export function CandidateDashboard({
       setDocFiles((prev) => ({ ...prev, [targetKey]: dataUrlToFile(dataUrl, filename) }));
     } else {
       setProfilePic(dataUrl);
+      await syncProfilePicToBackend(dataUrl);
     }
   };
 
@@ -1460,6 +1524,7 @@ export function CandidateDashboard({
                   personalSectionRef={personalSectionRef}
                   professionalSectionRef={professionalSectionRef}
                   resumeSectionRef={resumeSectionRef}
+                  existingRolesList={existingRolesList}
                 />
               )}
 
