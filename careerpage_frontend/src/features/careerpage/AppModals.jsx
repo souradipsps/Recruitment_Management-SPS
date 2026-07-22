@@ -99,13 +99,6 @@ export default function AppModals({ app }) {
                 })
                 .catch(() => {});
             }}
-            tab={loginTab}
-            onClose={() => navigate(routes.home)}
-            onLoginSuccess={(userName, tokenData) => {
-              setLoggedInUser(userName);
-              reloadWithLoader(tokenData);
-            }}
-            applyAfterSignup={applyAfterSignup}
             onSignupSuccess={(data) => {
               setLoggedInUser(data.name);
               setSignupData(data);
@@ -120,10 +113,11 @@ export default function AppModals({ app }) {
         {deferredView === "dashboard" && (
           <CandidateDashboard
             onClose={(section) => {
-              if (cameFromApply) {
-                navigate(routes.jobApply(selectedJob?.id));
-              } else if (section) {
+              if (typeof section === "string") {
                 navigate(routes.dashboardTab(section));
+              } else if (cameFromApply && !section && selectedJob) {
+                navigate(routes.jobApply(selectedJob?.id));
+                setCameFromApply(false);
               } else {
                 setCameFromApply(false);
                 setCameFromSection(undefined);

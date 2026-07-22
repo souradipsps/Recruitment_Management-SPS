@@ -435,12 +435,16 @@ export const Modal = ({
 }) => {
   const bp = useBreakpoint();
   if (!open) return null;
+  const isCompact = bp === "mobile" || bp === "tablet";
   return ReactDOM.createPortal(
     <div
       className="modal-backdrop"
       style={{
         position: "fixed",
-        inset: 0,
+        top: "60px",
+        left: isCompact ? "0px" : "240px",
+        right: "0px",
+        bottom: "0px",
         background: "rgba(0,0,0,.45)",
         display: "flex",
         justifyContent: "center",

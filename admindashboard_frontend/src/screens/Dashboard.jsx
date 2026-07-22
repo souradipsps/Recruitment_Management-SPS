@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -57,6 +58,9 @@ export default function Dashboard({
   const [selectedBudgetDept, setSelectedBudgetDept] = useState("all");
   const [selectedBudgetEmpType, setSelectedBudgetEmpType] = useState("all"); // "all" | "Full-time" | "Part-time"
   const [selectedBudgetExp, setSelectedBudgetExp] = useState("all"); // "all" | "1-2" | "2-4" | "3-5"
+  const [showAllActivityModal, setShowAllActivityModal] = useState(false);
+  const [activityModalFilter, setActivityModalFilter] = useState("All");
+  const [activityModalSearch, setActivityModalSearch] = useState("");
 
   const exportToCSV = () => {
     const data = [
@@ -270,6 +274,7 @@ export default function Dashboard({
     funnelStages,
     funnelDoughnutData,
     funnelDoughnutOptions,
+    centerTextPlugin,
     shortlistedCount,
     selectedCount,
     safeOffersCount,
@@ -286,6 +291,7 @@ export default function Dashboard({
     budgetChartData,
     budgetChartOptions,
     activity,
+    allActivity,
   } = useDashboardCharts({
     approvalRequests,
     jobPostings,
@@ -677,26 +683,7 @@ export default function Dashboard({
 
             {funnelView === "doughnut" ? (
               <div style={{ height: 240, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Doughnut data={funnelDoughnutData} options={funnelDoughnutOptions} />
-
-                {/* Center Overlay Text - Perfectly Centered */}
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "42%",
-                    left: "50%",
-                    transform: "translate(-50%, -50%)",
-                    textAlign: "center",
-                    pointerEvents: "none",
-                  }}
-                >
-                  <div style={{ fontSize: font['2xl'], fontWeight: font.black, color: T.ink, fontFamily: font.heading, lineHeight: 1 }}>
-                    {totalAppsCount}
-                  </div>
-                  <div style={{ fontSize: font.xs, color: T.inkFaint, fontWeight: font.bold, marginTop: 3 }}>
-                    Total Applications
-                  </div>
-                </div>
+                <Doughnut data={funnelDoughnutData} options={funnelDoughnutOptions} plugins={[centerTextPlugin]} />
               </div>
             ) : (
               /* Funnel Stage Horizontal Progression Bars */
@@ -1047,10 +1034,10 @@ export default function Dashboard({
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
             <div>
               <div style={{ fontSize: font.base, fontWeight: font.extrabold, color: T.ink, fontFamily: font.heading, letterSpacing: "-0.01em" }}>
-                💰 Role & Experience Recruitment Budget Analytics
+                💰 Role Recruitment Budget Analytics
               </div>
               <div style={{ fontSize: font.xs, color: T.inkFaint, marginTop: 2 }}>
-                Financial breakdown of allocated hiring budget vs actual cost by role, experience & employment type
+                Financial breakdown of allocated hiring budget vs actual cost by role, department & employment type
               </div>
             </div>
 
@@ -1078,26 +1065,6 @@ export default function Dashboard({
 
               <button
                 type="button"
-                onClick={() => setBudgetView("expBreakdown")}
-                title="Group budget by experience level"
-                style={{
-                  padding: "4px 9px",
-                  borderRadius: radius.sm,
-                  fontSize: font.xs,
-                  fontWeight: font.bold,
-                  border: "none",
-                  cursor: "pointer",
-                  background: budgetView === "expBreakdown" ? "#ffffff" : "transparent",
-                  color: budgetView === "expBreakdown" ? T.primary : T.inkLight,
-                  boxShadow: budgetView === "expBreakdown" ? shadow.sm : "none",
-                  transition: transition.fast,
-                }}
-              >
-                ⏳ By Experience
-              </button>
-
-              <button
-                type="button"
                 onClick={() => setBudgetView("empTypeBreakdown")}
                 title="Group budget by employment type"
                 style={{
@@ -1113,7 +1080,7 @@ export default function Dashboard({
                   transition: transition.fast,
                 }}
               >
-                💼 By Type (FT/PT)
+                💼 By Type
               </button>
 
               <button
@@ -1139,7 +1106,7 @@ export default function Dashboard({
           </div>
 
           {/* Filter Controls Bar */}
-          {budgetView !== "deptSummary" && budgetView !== "expBreakdown" && budgetView !== "empTypeBreakdown" && (
+          {budgetView !== "deptSummary" && budgetView !== "empTypeBreakdown" && (
             <div style={{ display: "flex", gap: 14, marginBottom: 14, flexWrap: "wrap", alignItems: "center", background: T.canvas, padding: "8px 12px", borderRadius: radius.md, border: `1px solid ${T.border}` }}>
               {/* Department Filter */}
               <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap" }}>
@@ -1192,33 +1159,6 @@ export default function Dashboard({
                   </button>
                 ))}
               </div>
-
-              <div style={{ width: 1, height: 16, background: T.border }} />
-
-              {/* Experience Filter */}
-              <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap" }}>
-                <span style={{ fontSize: font.xs, fontWeight: font.bold, color: T.inkFaint }}>Exp:</span>
-                {availableExps.map((exp) => (
-                  <button
-                    key={exp}
-                    type="button"
-                    onClick={() => setSelectedBudgetExp(exp)}
-                    style={{
-                      padding: "2px 9px",
-                      borderRadius: radius.full,
-                      fontSize: font.xs,
-                      fontWeight: font.bold,
-                      border: selectedBudgetExp === exp ? `1.5px solid ${T.accentDark}` : `1px solid ${T.border}`,
-                      background: selectedBudgetExp === exp ? T.accentLight : "#ffffff",
-                      color: selectedBudgetExp === exp ? T.accentDark : T.inkMid,
-                      cursor: "pointer",
-                      transition: transition.fast,
-                    }}
-                  >
-                    {exp === "all" ? "All Exp" : `${exp} yrs`}
-                  </button>
-                ))}
-              </div>
             </div>
           )}
 
@@ -1238,18 +1178,18 @@ export default function Dashboard({
               </div>
             </div>
 
-            <div style={{ overflowX: "auto" }}>
+            <div style={{ overflowX: "auto", borderRadius: radius.lg, border: `1px solid ${T.border}`, boxShadow: shadow.sm }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: font.xs + 1 }}>
                 <thead>
                   <tr style={{ background: T.canvas, borderBottom: `1px solid ${T.border}` }}>
-                    <th style={{ textAlign: "left", padding: "10px 12px", color: T.inkMid, fontWeight: font.bold, width: "24%" }}>Job Role Title</th>
-                    <th style={{ textAlign: "left", padding: "10px 8px", color: T.inkMid, fontWeight: font.bold, width: "11%" }}>Dept</th>
-                    <th style={{ textAlign: "left", padding: "10px 8px", color: T.inkMid, fontWeight: font.bold, width: "11%" }}>Type</th>
-                    <th style={{ textAlign: "center", padding: "10px 8px", color: T.inkMid, fontWeight: font.bold, width: "12%" }}>Required Exp</th>
-                    <th style={{ textAlign: "center", padding: "10px 8px", color: T.inkMid, fontWeight: font.bold, width: "10%" }}>Target Hires</th>
-                    <th style={{ textAlign: "right", padding: "10px 8px", color: T.inkMid, fontWeight: font.bold, width: "15%" }}>Allocated Budget</th>
-                    <th style={{ textAlign: "right", padding: "10px 8px", color: T.inkMid, fontWeight: font.bold, width: "12%" }}>Actual Spend</th>
-                    <th style={{ textAlign: "center", padding: "10px 8px 10px 54px", color: T.inkMid, fontWeight: font.bold, width: "16%" }}>Status</th>
+                    <th style={{ textAlign: "left", padding: "11px 14px", color: T.inkMid, fontWeight: font.bold, width: "24%", borderTopLeftRadius: radius.lg }}>Job Role Title</th>
+                    <th style={{ textAlign: "left", padding: "11px 8px", color: T.inkMid, fontWeight: font.bold, width: "11%" }}>Dept</th>
+                    <th style={{ textAlign: "left", padding: "11px 8px", color: T.inkMid, fontWeight: font.bold, width: "11%" }}>Type</th>
+                    <th style={{ textAlign: "center", padding: "11px 8px", color: T.inkMid, fontWeight: font.bold, width: "12%" }}>Required Exp</th>
+                    <th style={{ textAlign: "center", padding: "11px 8px", color: T.inkMid, fontWeight: font.bold, width: "10%" }}>Target Hires</th>
+                    <th style={{ textAlign: "right", padding: "11px 8px", color: T.inkMid, fontWeight: font.bold, width: "15%" }}>Allocated Budget</th>
+                    <th style={{ textAlign: "right", padding: "11px 8px", color: T.inkMid, fontWeight: font.bold, width: "12%" }}>Actual Spend</th>
+                    <th style={{ textAlign: "center", padding: "11px 8px 11px 40px", color: T.inkMid, fontWeight: font.bold, width: "16%", borderTopRightRadius: radius.lg }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1271,12 +1211,12 @@ export default function Dashboard({
                           cursor: "pointer",
                         }}
                       >
-                        <td style={{ padding: "10px 12px", fontWeight: font.bold, color: T.ink }}>
+                        <td style={{ padding: "10px 14px", fontWeight: font.bold, color: T.ink }}>
                           <div>{item.role}</div>
                           <div style={{ fontSize: font.xs - 1, color: T.inkFaint, fontWeight: font.medium, marginTop: 1 }}>{item.id} • {item.category}</div>
                         </td>
                         <td style={{ padding: "10px 8px", color: T.inkLight }}>
-                          <span style={{ background: T.canvas, padding: "2px 7px", borderRadius: radius.sm, fontSize: font.xs - 1, border: `1px solid ${T.border}`, fontWeight: font.bold }}>
+                          <span style={{ background: T.canvas, padding: "2px 8px", borderRadius: radius.md, fontSize: font.xs - 1, border: `1px solid ${T.border}`, fontWeight: font.bold }}>
                             {item.dept}
                           </span>
                         </td>
@@ -1284,8 +1224,8 @@ export default function Dashboard({
                           <span style={{
                             background: badgeBg,
                             color: badgeColor,
-                            padding: "2px 8px",
-                            borderRadius: radius.sm,
+                            padding: "2px 9px",
+                            borderRadius: radius.md,
                             fontSize: font.xs - 1,
                             fontWeight: font.bold,
                             whiteSpace: "nowrap",
@@ -1305,8 +1245,8 @@ export default function Dashboard({
                         <td style={{ textAlign: "right", padding: "10px 8px", fontWeight: font.extrabold, color: T.teal }}>
                           ₹{item.spent.toLocaleString("en-IN")}
                         </td>
-                        <td style={{ textAlign: "center", padding: "10px 8px 10px 54px" }}>
-                          <span style={{ fontSize: 10, fontWeight: font.bold, color: T.green, background: T.greenLight, padding: "1px 6px", borderRadius: radius.full, border: `1px solid ${T.green}30`, whiteSpace: "nowrap", display: "inline-block" }}>
+                        <td style={{ textAlign: "center", padding: "10px 8px 10px 40px" }}>
+                          <span style={{ fontSize: 10, fontWeight: font.bold, color: T.green, background: T.greenLight, padding: "2px 8px", borderRadius: radius.full, border: `1px solid ${T.green}30`, whiteSpace: "nowrap", display: "inline-block" }}>
                             Under Budget
                           </span>
                         </td>
@@ -1318,28 +1258,27 @@ export default function Dashboard({
                   <tr
                     style={{
                       background: T.canvas,
-                      borderTop: `2px solid ${T.primary}40`,
-                      borderBottom: `2px solid ${T.primary}40`,
+                      borderTop: `2px solid ${T.primary}30`,
                       fontSize: font.xs + 1,
                     }}
                   >
-                    <td style={{ padding: "12px", fontWeight: font.black, color: T.primary, fontFamily: font.heading }}>
+                    <td style={{ padding: "13px 14px", fontWeight: font.black, color: T.primary, fontFamily: font.heading, borderBottomLeftRadius: radius.lg }}>
                       Total ({filteredRoleBudgetData.length} Roles)
                     </td>
-                    <td style={{ padding: "12px 8px" }} />
-                    <td style={{ padding: "12px 8px" }} />
-                    <td style={{ padding: "12px 8px" }} />
-                    <td style={{ textAlign: "center", padding: "12px 8px", fontWeight: font.black, color: T.teal }}>
+                    <td style={{ padding: "13px 8px" }} />
+                    <td style={{ padding: "13px 8px" }} />
+                    <td style={{ padding: "13px 8px" }} />
+                    <td style={{ textAlign: "center", padding: "13px 8px", fontWeight: font.black, color: T.teal }}>
                       {totalFilledHires} / {totalTargetHires}
                     </td>
-                    <td style={{ textAlign: "right", padding: "12px 8px", fontWeight: font.black, color: T.primary, fontSize: font.base }}>
+                    <td style={{ textAlign: "right", padding: "13px 8px", fontWeight: font.black, color: T.primary, fontSize: font.base }}>
                       ₹{totalAllocatedBudget.toLocaleString("en-IN")}
                     </td>
-                    <td style={{ textAlign: "right", padding: "12px 8px", fontWeight: font.black, color: T.teal, fontSize: font.base }}>
+                    <td style={{ textAlign: "right", padding: "13px 8px", fontWeight: font.black, color: T.teal, fontSize: font.base }}>
                       ₹{totalActualSpend.toLocaleString("en-IN")}
                     </td>
-                    <td style={{ textAlign: "center", padding: "12px 8px 12px 54px" }}>
-                      <span style={{ fontSize: 9.5, fontWeight: font.bold, color: T.green, background: T.greenLight, padding: "1px 5px", borderRadius: radius.full, border: `1px solid ${T.green}40`, whiteSpace: "nowrap", display: "inline-block" }}>
+                    <td style={{ textAlign: "center", padding: "13px 8px 13px 40px", borderBottomRightRadius: radius.lg }}>
+                      <span style={{ fontSize: 10, fontWeight: font.bold, color: T.green, background: T.greenLight, padding: "3px 10px", borderRadius: radius.full, border: `1px solid ${T.green}40`, whiteSpace: "nowrap", display: "inline-block", boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
                         ₹{(totalAllocatedBudget - totalActualSpend).toLocaleString("en-IN")} Surplus
                       </span>
                     </td>
@@ -1380,11 +1319,33 @@ export default function Dashboard({
               </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: T.greenLight, color: T.green, padding: "3px 10px", borderRadius: radius.full, fontSize: font.xs, fontWeight: font.bold, border: `1px solid ${T.green}30` }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.green, boxShadow: `0 0 0 3px ${T.green}30` }} />
-                Live Feed
+                Recent 6 Hours
               </span>
+
+              <button
+                type="button"
+                onClick={() => setShowAllActivityModal(true)}
+                style={{
+                  background: T.primary,
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: radius.md,
+                  padding: "5px 12px",
+                  fontSize: font.xs,
+                  fontWeight: font.bold,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  boxShadow: shadow.sm,
+                  transition: transition.fast,
+                }}
+              >
+                👁️ View All Activity ({allActivity ? allActivity.length : 0})
+              </button>
             </div>
           </div>
 
@@ -1392,8 +1353,27 @@ export default function Dashboard({
             {activity.length === 0 ? (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", color: T.inkFaint, textAlign: "center" }}>
                 <span style={{ fontSize: 32, marginBottom: 8 }}>⚡</span>
-                <div style={{ fontSize: font.sm, fontWeight: font.bold, color: T.inkMid }}>No Recent Activity</div>
-                <div style={{ fontSize: font.xs, marginTop: 4 }}>System actions and audits will appear here.</div>
+                <div style={{ fontSize: font.sm, fontWeight: font.bold, color: T.inkMid }}>No Recent Activity (Last 6 Hours)</div>
+                <div style={{ fontSize: font.xs, marginTop: 4 }}>System actions and audits from the last 6 hours will appear here.</div>
+                {allActivity && allActivity.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllActivityModal(true)}
+                    style={{
+                      marginTop: 12,
+                      background: T.primary,
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: radius.md,
+                      padding: "6px 14px",
+                      fontSize: font.xs,
+                      fontWeight: font.bold,
+                      cursor: "pointer",
+                    }}
+                  >
+                    View All {allActivity.length} System Activities →
+                  </button>
+                )}
               </div>
             ) : (
               activity.map((a, i) => {
@@ -1487,8 +1467,268 @@ export default function Dashboard({
             );
           }))}
           </div>
+
+          {allActivity && allActivity.length > activity.length && (
+            <div style={{ display: "flex", justifyContent: "center", marginTop: 14, paddingTop: 10, borderTop: `1px dashed ${T.border}` }}>
+              <button
+                type="button"
+                onClick={() => setShowAllActivityModal(true)}
+                style={{
+                  background: T.canvas,
+                  color: T.primary,
+                  border: `1px solid ${T.primary}40`,
+                  borderRadius: radius.md,
+                  padding: "7px 18px",
+                  fontSize: font.xs,
+                  fontWeight: font.bold,
+                  cursor: "pointer",
+                  transition: transition.fast,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                Show All {allActivity.length} System Activities →
+              </button>
+            </div>
+          )}
         </Card>
       </div>
+
+      {/* ── ALL ACTIVITY LOG MODAL ─────────────────────────────────────── */}
+      {showAllActivityModal && createPortal(
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 99999,
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+          }}
+          onClick={() => setShowAllActivityModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#ffffff",
+              borderRadius: radius.lg,
+              width: "100%",
+              maxWidth: 760,
+              maxHeight: "85vh",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: shadow.xl,
+              border: `1px solid ${T.border}`,
+              overflow: "hidden",
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{ padding: "18px 22px", background: T.canvas, borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: font.base + 2, fontWeight: font.extrabold, color: T.ink, fontFamily: font.heading, display: "flex", alignItems: "center", gap: 8 }}>
+                  ⚡ System Recruitment Activity Log
+                </div>
+                <div style={{ fontSize: font.xs, color: T.inkFaint, marginTop: 2 }}>
+                  Complete audit trail of system actions, applications, interviews & offer approvals
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAllActivityModal(false)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  fontSize: 22,
+                  cursor: "pointer",
+                  color: T.inkLight,
+                  padding: 4,
+                  lineHeight: 1,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Filter Controls */}
+            <div style={{ padding: "12px 22px", borderBottom: `1px solid ${T.border}`, background: "#ffffff", display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+              <input
+                type="text"
+                placeholder="Search activity by name, ID, or title..."
+                value={activityModalSearch}
+                onChange={(e) => setActivityModalSearch(e.target.value)}
+                style={{
+                  flex: 1,
+                  minWidth: 200,
+                  padding: "7px 12px",
+                  borderRadius: radius.md,
+                  border: `1px solid ${T.border}`,
+                  fontSize: font.xs,
+                  outline: "none",
+                }}
+              />
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                {["All", "Application", "Interview", "Offer", "Approval"].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setActivityModalFilter(t)}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: radius.full,
+                      fontSize: font.xs,
+                      fontWeight: font.bold,
+                      border: activityModalFilter === t ? `1.5px solid ${T.primary}` : `1px solid ${T.border}`,
+                      background: activityModalFilter === t ? T.primaryLight : "transparent",
+                      color: activityModalFilter === t ? T.primary : T.inkMid,
+                      cursor: "pointer",
+                      transition: transition.fast,
+                    }}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Body List */}
+            <div style={{ flex: 1, overflowY: "auto", padding: 22, display: "flex", flexDirection: "column", gap: 10 }}>
+              {(() => {
+                const filtered = (allActivity || []).filter((a) => {
+                  const matchesFilter = activityModalFilter === "All" || a.type === activityModalFilter;
+                  const q = activityModalSearch.toLowerCase();
+                  const matchesSearch = !q || (a.id && a.id.toLowerCase().includes(q)) || (a.title && a.title.toLowerCase().includes(q)) || (a.detail && a.detail.toLowerCase().includes(q));
+                  return matchesFilter && matchesSearch;
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div style={{ padding: 40, textAlign: "center", color: T.inkFaint }}>
+                      No activity logs match your filter criteria.
+                    </div>
+                  );
+                }
+
+                return filtered.map((a, i) => {
+                  const navTarget =
+                    a.type === "Offer" ? "offer-management" :
+                    a.type === "Application" ? "applications" :
+                    a.type === "Approval" ? "approval-requests" :
+                    a.type === "Interview" ? "interview-panel" : "dashboard";
+
+                  return (
+                    <div
+                      key={i}
+                      onClick={() => {
+                        setShowAllActivityModal(false);
+                        if (navigate) navigate(navTarget);
+                      }}
+                      className="card-hover"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 14,
+                        padding: "12px 16px",
+                        borderRadius: radius.md,
+                        background: "#FAFAFA",
+                        border: `1px solid ${T.border}70`,
+                        cursor: "pointer",
+                        boxShadow: shadow.sm,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: radius.md,
+                          background: a.bg,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 17,
+                          flexShrink: 0,
+                          border: `1px solid ${a.dot}30`,
+                        }}
+                      >
+                        {a.icon}
+                      </div>
+
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 2 }}>
+                          <span style={{
+                            fontFamily: "monospace",
+                            fontSize: font.xs - 1,
+                            fontWeight: font.extrabold,
+                            background: T.canvas,
+                            color: T.ink,
+                            padding: "1px 6px",
+                            borderRadius: radius.sm,
+                            border: `1px solid ${T.border}`,
+                          }}>
+                            {a.id}
+                          </span>
+                          <span style={{ fontSize: font.xs + 1, fontWeight: font.extrabold, color: T.ink }}>
+                            {a.title}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: font.xs + 1, color: T.inkMid }}>
+                          {a.detail}
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+                        <span
+                          style={{
+                            fontSize: font.xs - 1,
+                            fontWeight: font.bold,
+                            background: a.bg,
+                            color: a.dot,
+                            padding: "2px 9px",
+                            borderRadius: radius.full,
+                            border: `1px solid ${a.dot}30`,
+                          }}
+                        >
+                          {a.type}
+                        </span>
+                        <span style={{ fontSize: font.xs - 1, color: T.inkFaint, fontWeight: font.medium }}>
+                          🕒 {a.time}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ padding: "12px 22px", background: T.canvas, borderTop: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: font.xs, color: T.inkFaint }}>
+                Total system audit logs: <strong>{allActivity ? allActivity.length : 0}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowAllActivityModal(false)}
+                style={{
+                  padding: "6px 16px",
+                  borderRadius: radius.md,
+                  border: `1px solid ${T.border}`,
+                  background: "#ffffff",
+                  fontSize: font.xs,
+                  fontWeight: font.bold,
+                  color: T.inkMid,
+                  cursor: "pointer",
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
     </div>
   );

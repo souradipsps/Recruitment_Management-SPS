@@ -192,7 +192,7 @@ export default function useDashboardCharts({
         },
         {
           type: "bar",
-          label: "Hires Made (Bar Graph)",
+          label: "Hires Made",
           data: hiresData,
           backgroundColor: "rgba(0, 139, 139, 0.9)",
           borderColor: T.teal,
@@ -279,15 +279,27 @@ export default function useDashboardCharts({
 
   // ── 2. Candidate Funnel Doughnut Chart & Funnel Stages ────────────────────
 
-  const shortlistedCount = Math.min(18, Math.max(1, Math.round(totalAppsCount * 0.38)));
-  const selectedCount = Math.min(4, Math.max(1, Math.round(totalAppsCount * 0.15)));
-  const safeOffersCount = Math.min(offersCount, Math.max(1, Math.round(totalAppsCount * 0.10)));
+  const finalAppliedCount = (stats && stats.pipeline && stats.pipeline.applied > 0)
+    ? stats.pipeline.applied
+    : (totalAppsCount || 1);
+
+  const finalShortlistedCount = (stats && stats.pipeline && stats.pipeline.shortlisted != null)
+    ? stats.pipeline.shortlisted
+    : Math.min(18, Math.max(1, Math.round(finalAppliedCount * 0.38)));
+
+  const finalInterviewedCount = (stats && stats.pipeline && (stats.pipeline.interviewed != null || stats.pipeline.interviews != null))
+    ? (stats.pipeline.interviewed ?? stats.pipeline.interviews)
+    : Math.min(6, Math.max(1, (interviews || []).length || Math.round(finalAppliedCount * 0.25)));
+
+  const finalOfferedCount = (stats && stats.pipeline && stats.pipeline.offered != null)
+    ? stats.pipeline.offered
+    : (offersCount || Math.min(offersCount, Math.max(1, Math.round(finalAppliedCount * 0.10))));
 
   const funnelStages = [
-    { label: "Applied", count: stats ? stats.pipeline.applied : totalAppsCount, color: "#0284C7", bg: T.skyLight },
-    { label: "Shortlisted", count: stats ? stats.pipeline.shortlisted : shortlistedCount, color: "#7C3AED", bg: T.violetLight },
-    { label: "Selected", count: stats ? stats.pipeline.selected : selectedCount, color: "#0D9488", bg: T.tealLight },
-    { label: "Offered", count: stats ? stats.pipeline.offered : safeOffersCount, color: "#059669", bg: T.greenLight },
+    { label: "Applied", count: finalAppliedCount, color: "#0284C7", bg: T.skyLight },
+    { label: "Shortlisted", count: finalShortlistedCount, color: "#7C3AED", bg: T.violetLight },
+    { label: "Interviewed", count: finalInterviewedCount, color: "#0D9488", bg: T.tealLight },
+    { label: "Offered", count: finalOfferedCount, color: "#059669", bg: T.greenLight },
   ];
 
   const funnelDoughnutData = {
@@ -335,6 +347,32 @@ export default function useDashboardCharts({
           },
         },
       },
+    },
+  };
+
+  const centerTextPlugin = {
+    id: "centerTextPlugin",
+    beforeDraw(chart) {
+      const { ctx, chartArea } = chart;
+      if (!chartArea) return;
+      ctx.save();
+      const centerX = (chartArea.left + chartArea.right) / 2;
+      const centerY = (chartArea.top + chartArea.bottom) / 2;
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      // 1. Total Count Number
+      ctx.font = "900 24px 'Outfit', sans-serif";
+      ctx.fillStyle = T.ink;
+      ctx.fillText(totalAppsCount.toString(), centerX, centerY - 6);
+
+      // 2. Subtitle Label
+      ctx.font = "700 11px 'Inter', sans-serif";
+      ctx.fillStyle = T.inkFaint;
+      ctx.fillText("Total Applications", centerX, centerY + 14);
+
+      ctx.restore();
     },
   };
 
@@ -531,7 +569,8 @@ export default function useDashboardCharts({
     const labels = filteredRoleBudgetData.map((r) => [r.role, `${r.type} • ${r.experience}`]);
 
     if (budgetView === "empTypeBreakdown") {
-      const types = ["Full-time", "Part-time"];
+      let types = [...new Set(roleBudgetData.map((r) => r.type))].filter(Boolean);
+      if (types.length === 0) types = ["Full-time", "Part-time", "Contract", "Internship"];
       const typeAlloc = types.map((t) => roleBudgetData.filter((r) => r.type === t).reduce((acc, curr) => acc + curr.allocated, 0));
       const typeSpent = types.map((t) => roleBudgetData.filter((r) => r.type === t).reduce((acc, curr) => acc + curr.spent, 0));
 
@@ -865,14 +904,14 @@ export default function useDashboardCharts({
 
     list.sort((a, b) => b.rawDate - a.rawDate);
 
-    const today = new Date();
-    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const nowMs = new Date().getTime();
+    const sixHoursMs = 6 * 60 * 60 * 1000;
 
-    return list.slice(0, 4).map((item) => {
-      const itemDateOnly = new Date(item.rawDate.getFullYear(), item.rawDate.getMonth(), item.rawDate.getDate());
-      const diffMs = todayDate - itemDateOnly;
-      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-
+    const allList = list.map((item) => {
+      const diffMs = Math.max(0, nowMs - item.rawDate.getTime());
+      const mins = Math.floor(diffMs / 60000);
+      const hrs = Math.floor(mins / 60);
+      const days = Math.floor(hrs / 24);
       let timeStr = "";
       if (item.isDateOnly) {
         if (diffDays === 0) timeStr = "Today";
@@ -892,9 +931,22 @@ export default function useDashboardCharts({
       return {
         ...item,
         time: timeStr,
+        diffMs,
+        hrs,
+        days,
       };
     });
+
+    const recent6Hours = allList.filter((item) => item.hrs <= 6 || item.diffMs <= sixHoursMs);
+    const recentList = recent6Hours.length > 0 ? recent6Hours : allList.slice(0, 4);
+
+    return {
+      recentList,
+      allList,
+    };
   };
+
+  const activityLogs = getActivityLog();
 
   return {
     monthlyChartData: getMonthlyChartData(),
@@ -902,9 +954,10 @@ export default function useDashboardCharts({
     funnelStages,
     funnelDoughnutData,
     funnelDoughnutOptions,
-    shortlistedCount,
-    selectedCount,
-    safeOffersCount,
+    centerTextPlugin,
+    shortlistedCount: finalShortlistedCount,
+    interviewedCount: finalInterviewedCount,
+    safeOffersCount: finalOfferedCount,
     deptChartData: getDeptChartData(),
     deptChartOptions: getDeptChartOptions(),
     roleBudgetData,
@@ -918,6 +971,7 @@ export default function useDashboardCharts({
     totalActualSpend,
     budgetChartData: getBudgetChartData(),
     budgetChartOptions: getBudgetChartOptions(),
-    activity: getActivityLog(),
+    activity: activityLogs.recentList,
+    allActivity: activityLogs.allList,
   };
 }

@@ -1253,7 +1253,7 @@ export function CandidateDashboard({
                 onClose(true);
               }
             }}
-            className="hidden sm:flex"
+            className="flex"
             style={{
               background: "rgba(255,255,255,0.12)",
               border: "1px solid rgba(255,255,255,0.25)",

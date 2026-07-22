@@ -14,6 +14,7 @@ export const NAV = [
 },
   { id: "offer-management", label: "Offer Management", icon: "◑" },
   { id: "onboarding", label: "Onboarding", icon: "◒" },
+  { id: "feedback", label: "Feedback", icon: "💬" },
 ];
 
 export const EXISTING_ROLES = [
