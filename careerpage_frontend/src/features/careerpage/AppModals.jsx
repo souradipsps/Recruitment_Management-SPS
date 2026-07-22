@@ -32,6 +32,7 @@ export default function AppModals({ app }) {
     savedProfileData,
     applicationDraft,
     mergedProfileData,
+    existingRolesList,
     reloadWithLoader,
     handleLogout,
     setApplyAfterSignup,
@@ -133,6 +134,7 @@ export default function AppModals({ app }) {
             userName={loggedInUser}
             signupData={signupData}
             initialProfileData={mergedProfileData}
+            existingRolesList={existingRolesList}
             initialSection={cameFromSection}
             onProfileUpdate={(updatedData) => {
               setSavedProfileData(updatedData);
@@ -189,6 +191,7 @@ export default function AppModals({ app }) {
             draftData={applicationDraft}
             savedProfileData={savedProfileData}
             scrollToSection={cameFromSection}
+            existingRolesList={existingRolesList}
           />
         )}
       </AnimatePresence>
@@ -203,6 +206,7 @@ export default function AppModals({ app }) {
             onSubmitData={(data) => {
               setSavedProfileData(data);
             }}
+            existingRolesList={existingRolesList}
           />
         )}
       </AnimatePresence>

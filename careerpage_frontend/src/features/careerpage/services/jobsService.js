@@ -87,3 +87,24 @@ export async function fetchPublicJobs() {
     .filter((raw) => (raw.status ? raw.status === "Published" : true))
     .map(normalizeJob);
 }
+
+/**
+ * Fetch all active/existing roles from the registry.
+ * @returns {Promise<Array>} list of raw existing role objects
+ */
+export async function fetchExistingRoles() {
+  const token = localStorage.getItem("accessToken");
+  const headers = { Accept: "application/json" };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  const res = await fetch(`${BASE_URL}/roles/`, { headers });
+
+  if (!res.ok) {
+    throw new Error(`Failed to load roles (HTTP ${res.status}).`);
+  }
+
+  const data = await res.json();
+  const list = Array.isArray(data) ? data : data?.results ?? [];
+  return list;
+}

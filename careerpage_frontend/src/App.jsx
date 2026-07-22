@@ -10,7 +10,7 @@ import { LottieLoader } from "./components/common/LottieLoader";
 import { CareerPage } from "./features/careerpage/CareerPage";
 import AppModals from "./features/careerpage/AppModals";
 import { fetchUserProfile, mapUserResponseToSavedProfile, fetchMyJobApplications } from "./features/careerpage/services/applicationsService";
-import { fetchPublicJobs } from "./features/careerpage/services/jobsService";
+import { fetchPublicJobs, fetchExistingRoles } from "./features/careerpage/services/jobsService";
 import { routes } from "./routes";
 
 // App shell: owns the cross-cutting auth / apply / dashboard state and wires
@@ -45,6 +45,7 @@ export default function App() {
   const [cameFromSection, setCameFromSection] = useState(undefined);
   const [applicationDraft, setApplicationDraft] = useState(null);
   const [selectedJob, setSelectedJob] = useState(null);
+  const [existingRolesList, setExistingRolesList] = useState([]);
 
   const loaderTimerRef = useRef(null);
   const dashboardLoadedOnceRef = useRef(false);
@@ -145,6 +146,19 @@ export default function App() {
         setAppliedJobIds(apps.map((a) => a.posting).filter((id) => id != null));
       })
       .catch(() => {});
+  }, []);
+
+  // Fetch existing roles list from backend registry on mount
+  useEffect(() => {
+    fetchExistingRoles()
+      .then((roles) => {
+        const names = roles.map(r => r.role).filter(Boolean);
+        const uniqueNames = Array.from(new Set(names)).sort();
+        setExistingRolesList(uniqueNames);
+      })
+      .catch((err) => {
+        console.error("Failed to load existing roles registry dynamically:", err);
+      });
   }, []);
 
   // Guard the login-gated routes: a direct/bookmarked/stale link to any of
@@ -267,6 +281,7 @@ export default function App() {
     savedProfileData,
     applicationDraft,
     mergedProfileData,
+    existingRolesList,
     reloadWithLoader,
     handleLogout,
     setApplyAfterSignup,

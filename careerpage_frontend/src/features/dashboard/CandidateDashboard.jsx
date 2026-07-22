@@ -56,6 +56,7 @@ export function CandidateDashboard({
   initialLoading = false,
   dashboardLoadedOnce = false,
   setDashboardLoadedOnce = () => { },
+  existingRolesList = [],
 }) {
   // Navigation & UI state — the active tab is the URL (/dashboard/:tab), so
   // switching tabs is a real navigation: deep-linkable, refresh-safe, and the
@@ -1523,6 +1524,7 @@ export function CandidateDashboard({
                   personalSectionRef={personalSectionRef}
                   professionalSectionRef={professionalSectionRef}
                   resumeSectionRef={resumeSectionRef}
+                  existingRolesList={existingRolesList}
                 />
               )}
 

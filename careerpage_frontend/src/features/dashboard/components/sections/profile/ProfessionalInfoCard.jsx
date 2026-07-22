@@ -3,7 +3,7 @@ import { SkillsMultiSelect } from "./SkillsMultiSelect";
 import { ALL_ROLES, ALL_SKILLS } from "../../../../../mockData/dashboardMockData";
 import "../../css/sections/profile/ProfessionalInfoCard.css";
 
-export function ProfessionalInfoCard({ profile, setProfile, sectionRef }) {
+export function ProfessionalInfoCard({ profile, setProfile, sectionRef, existingRolesList = [] }) {
   return (
     <div
       ref={sectionRef}
@@ -147,7 +147,7 @@ export function ProfessionalInfoCard({ profile, setProfile, sectionRef }) {
           Roles Interested In
         </label>
         <SkillsMultiSelect
-          options={ALL_ROLES}
+          options={existingRolesList.length ? existingRolesList : ALL_ROLES}
           selected={profile.roles}
           onChange={(v) => setProfile({ ...profile, roles: v })}
           placeholder="Select or add roles interested in…"
