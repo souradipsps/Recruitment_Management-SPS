@@ -19,6 +19,10 @@ class JobApplication(models.Model):
         "jobs.JobPosting", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="job_applications"
     )
+    existing_role   = models.ForeignKey(
+        "jobs.ExistingRole", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="job_applications"
+    )
     role            = models.CharField(max_length=200)
     experience      = models.CharField(max_length=50, blank=True)
     qualification   = models.CharField(max_length=200, blank=True)

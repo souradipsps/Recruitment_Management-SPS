@@ -48,7 +48,7 @@ class JobCategoryViewSet(viewsets.ModelViewSet):
 
 
 class ExistingRoleViewSet(viewsets.ModelViewSet):
-    queryset           = ExistingRole.objects.all()
+    queryset           = ExistingRole.objects.select_related("category").all()
     serializer_class   = ExistingRoleSerializer
     permission_classes = [IsHRAdminOrReadOnly]
     search_fields      = ["role", "department", "role_id"]
@@ -121,8 +121,9 @@ class JobRequestViewSet(viewsets.ModelViewSet):
 class ApprovalRequestViewSet(viewsets.ModelViewSet):
     queryset           = ApprovalRequest.objects.select_related(
                              "job_request", "job_request__category", "job_request__existing_role",
-                             "role_request", "role_request__created_by", "role_request__existing_role"
-                         ).prefetch_related("history").all()
+                             "role_request", "role_request__created_by", "role_request__existing_role",
+                             "submitted_by_user"
+                         ).prefetch_related("history", "history__acted_by_user").all()
     serializer_class   = ApprovalRequestSerializer
     permission_classes = [IsHRAdmin]
     search_fields      = ["request_id", "title", "submitted_by"]
@@ -224,6 +225,7 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
             approval=approval,
             action=raw_action,
             acted_by=acted_by,
+            acted_by_user=request.user,
             note=note,
         )
 

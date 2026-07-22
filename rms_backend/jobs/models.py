@@ -39,6 +39,13 @@ class ExistingRole(models.Model):
     role_id      = models.CharField(max_length=30, unique=True)
     department   = models.CharField(max_length=100)
     role         = models.CharField(max_length=200)
+    category     = models.ForeignKey(
+        "JobCategory",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="existing_roles"
+    )
     type         = models.CharField(max_length=50, choices=TYPE_CHOICES, default="Full-time")
     headcount    = models.PositiveIntegerField(default=1)
     filled       = models.PositiveIntegerField(default=0)
@@ -219,6 +226,13 @@ class ApprovalRequest(models.Model):
     title        = models.CharField(max_length=200)
     department   = models.CharField(max_length=100, blank=True)
     submitted_by = models.CharField(max_length=200, blank=True)
+    submitted_by_user = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="approval_requests_submitted"
+    )
     date         = models.DateField(auto_now_add=True)
     status       = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Pending")
     job_request  = models.ForeignKey(
@@ -244,6 +258,13 @@ class ApprovalHistory(models.Model):
     )
     action   = models.CharField(max_length=50)
     acted_by = models.CharField(max_length=200)
+    acted_by_user = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="approval_history_actions"
+    )
     date     = models.DateField(auto_now_add=True)
     note     = models.TextField(blank=True)
 

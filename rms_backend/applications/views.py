@@ -25,8 +25,8 @@ class JobApplicationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.role == "candidate":
-            return JobApplication.objects.filter(candidate=user).select_related("posting", "posting__existing_role", "candidate", "candidate__profile")
-        return JobApplication.objects.all().select_related("posting", "posting__existing_role", "candidate", "candidate__profile")
+            return JobApplication.objects.filter(candidate=user).select_related("posting", "posting__existing_role", "candidate", "candidate__profile", "existing_role")
+        return JobApplication.objects.all().select_related("posting", "posting__existing_role", "candidate", "candidate__profile", "existing_role")
 
     def get_permissions(self):
         if self.action == "create":
@@ -37,7 +37,7 @@ class JobApplicationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
     def mine(self, request):
-        apps = JobApplication.objects.filter(candidate=request.user).select_related("posting", "posting__existing_role", "candidate", "candidate__profile")
+        apps = JobApplication.objects.filter(candidate=request.user).select_related("posting", "posting__existing_role", "candidate", "candidate__profile", "existing_role")
         serializer = JobApplicationSerializer(apps, many=True, context={"request": request})
         return Response(serializer.data)
 
@@ -58,6 +58,8 @@ class JobApplicationViewSet(viewsets.ModelViewSet):
                      f"Your application for {instance.role} has been updated to "
                      f"'{instance.status}'."
                 ),
+                target_model="jobapplication",
+                target_id=instance.id,
             )
         return Response(JobApplicationSerializer(instance, context={"request": request}).data)
 

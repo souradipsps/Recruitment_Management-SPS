@@ -15,8 +15,12 @@ class OfferViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.role == "candidate":
-            return Offer.objects.filter(candidate=user).select_related("candidate", "onboarding", "existing_role")
-        return Offer.objects.all().select_related("candidate", "onboarding", "existing_role")
+            return Offer.objects.filter(candidate=user).select_related(
+                "candidate", "onboarding", "existing_role", "job_application", "general_application"
+            )
+        return Offer.objects.all().select_related(
+            "candidate", "onboarding", "existing_role", "job_application", "general_application"
+        )
 
     def get_permissions(self):
         if self.action in ["list", "retrieve", "accept", "decline"]:
@@ -43,6 +47,8 @@ class OfferViewSet(viewsets.ModelViewSet):
                 notification_type="offer_received",
                 title="Offer Letter Issued",
                 message=f"You have received an offer letter for the position of {offer.role}. Please review and respond.",
+                target_model="offer",
+                target_id=offer.id,
             )
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
@@ -68,6 +74,8 @@ class OfferViewSet(viewsets.ModelViewSet):
             notification_type="offer_accepted",
             title="Offer Accepted",
             message=f"You have accepted the offer for {offer.role}. Onboarding has been initiated.",
+            target_model="offer",
+            target_id=offer.id,
         )
         return Response(OfferSerializer(offer).data)
 
@@ -102,9 +110,9 @@ class OnboardingViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         if self.request.user.role == "candidate":
-            qs = OnboardingRecord.objects.filter(candidate=self.request.user).select_related("offer", "candidate", "candidate__profile", "existing_role")
+            qs = OnboardingRecord.objects.filter(candidate=self.request.user).select_related("offer", "candidate", "candidate__profile", "existing_role", "assigned_hr")
         else:
-            qs = OnboardingRecord.objects.all().select_related("offer", "candidate", "candidate__profile", "existing_role")
+            qs = OnboardingRecord.objects.all().select_related("offer", "candidate", "candidate__profile", "existing_role", "assigned_hr")
 
         for record in qs:
             needs_save = False

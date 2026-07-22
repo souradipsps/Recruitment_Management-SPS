@@ -152,6 +152,7 @@ class JobApplicationSerializer(serializers.ModelSerializer):
         validated_data["candidate"] = user
         if validated_data.get("posting"):
             validated_data["role"] = validated_data["posting"].role
+            validated_data["existing_role"] = validated_data["posting"].existing_role
 
         # If experience or qualification are not provided, populate from profile
         profile = getattr(user, "profile", None)

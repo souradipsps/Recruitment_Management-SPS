@@ -72,6 +72,10 @@ class OnboardingRecord(models.Model):
         "users.User", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="onboarding_records"
     )
+    assigned_hr = models.ForeignKey(
+        "users.User", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="assigned_onboarding_records"
+    )
     task_profile     = models.BooleanField(default=False, verbose_name="Profile Completed")
     task_offer       = models.BooleanField(default=False, verbose_name="Offer Accepted")
     task_docs_upload = models.BooleanField(default=False, verbose_name="Documents Uploaded")

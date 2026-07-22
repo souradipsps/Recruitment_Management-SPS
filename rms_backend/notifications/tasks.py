@@ -184,7 +184,7 @@ def get_interview_email_html(title, name, round_num, role, candidate_name, date,
 
 
 @shared_task
-def create_notification_task(recipient_id, notification_type, title, message):
+def create_notification_task(recipient_id, notification_type, title, message, target_model=None, target_id=None, sender_id=None):
     """
     Asynchronously creates a notification database record.
     Decoupled from request-response flow to optimize response times.
@@ -192,11 +192,30 @@ def create_notification_task(recipient_id, notification_type, title, message):
     User = get_user_model()
     try:
         recipient = User.objects.get(id=recipient_id)
+        
+        sender = None
+        if sender_id:
+            try:
+                sender = User.objects.get(id=sender_id)
+            except User.DoesNotExist:
+                pass
+
+        content_type = None
+        if target_model and target_id:
+            try:
+                from django.contrib.contenttypes.models import ContentType
+                content_type = ContentType.objects.get(model=target_model.lower())
+            except Exception as e:
+                print("Error resolving ContentType for model:", target_model, e)
+
         notification = Notification.objects.create(
             recipient=recipient,
+            sender=sender,
             type=notification_type,
             title=title,
-            message=message
+            message=message,
+            content_type=content_type,
+            object_id=target_id if content_type else None
         )
         return f"Notification {notification.id} created for {recipient.email}"
     except User.DoesNotExist:

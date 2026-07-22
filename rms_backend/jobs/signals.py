@@ -59,6 +59,7 @@ def create_approval_for_role_request(sender, instance, created, **kwargs):
             title=instance.role,
             department=instance.department,
             submitted_by=instance.created_by.get_full_name() if instance.created_by else instance.submitted_by,
+            submitted_by_user=instance.created_by,
             status="Pending",
             role_request=instance,
         )
@@ -66,6 +67,7 @@ def create_approval_for_role_request(sender, instance, created, **kwargs):
             approval=apr,
             action="Submitted",
             acted_by=apr.submitted_by or "Requester",
+            acted_by_user=instance.created_by,
             note=instance.justification or ""
         )
     else:
@@ -87,6 +89,7 @@ def create_approval_for_role_request(sender, instance, created, **kwargs):
                     title=instance.role,
                     department=instance.department,
                     submitted_by=instance.created_by.get_full_name() if instance.created_by else instance.submitted_by,
+                    submitted_by_user=instance.created_by,
                     status="Pending",
                     role_request=instance,
                 )
@@ -94,6 +97,7 @@ def create_approval_for_role_request(sender, instance, created, **kwargs):
                     approval=apr,
                     action="Resubmitted",
                     acted_by=apr.submitted_by or "Requester",
+                    acted_by_user=instance.created_by,
                     note=instance.justification or ""
                 )
 
@@ -167,6 +171,7 @@ def create_approval_for_job_request(sender, instance, created, **kwargs):
             title=instance.role,
             department=instance.department or "",
             submitted_by=instance.created_by.get_full_name() if instance.created_by else instance.submitted_by,
+            submitted_by_user=instance.created_by,
             status="Pending",
             job_request=instance,
         )
@@ -174,6 +179,7 @@ def create_approval_for_job_request(sender, instance, created, **kwargs):
             approval=apr,
             action="Submitted",
             acted_by=apr.submitted_by or "Requester",
+            acted_by_user=instance.created_by,
             note=instance.justification or instance.description or ""
         )
     else:
@@ -195,6 +201,7 @@ def create_approval_for_job_request(sender, instance, created, **kwargs):
                     title=instance.role,
                     department=instance.department or "",
                     submitted_by=instance.created_by.get_full_name() if instance.created_by else instance.submitted_by,
+                    submitted_by_user=instance.created_by,
                     status="Pending",
                     job_request=instance,
                 )
@@ -202,6 +209,7 @@ def create_approval_for_job_request(sender, instance, created, **kwargs):
                     approval=apr,
                     action="Resubmitted",
                     acted_by=apr.submitted_by or "Requester",
+                    acted_by_user=instance.created_by,
                     note=instance.justification or instance.description or ""
                 )
 

@@ -84,6 +84,8 @@ class InterviewViewSet(viewsets.ModelViewSet):
                 notification_type="interview_scheduled",
                 title=f"Interview Update — {interview.role}",
                 message=f"Your Round {interview.round} interview status is now '{interview.status}'.",
+                target_model="interview",
+                target_id=interview.id,
             )
         return Response(InterviewSerializer(interview).data)
 

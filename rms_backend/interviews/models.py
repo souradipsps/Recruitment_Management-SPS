@@ -12,6 +12,11 @@ class Panelist(models.Model):
     email      = models.EmailField(unique=True)
     phone      = models.CharField(max_length=20, blank=True)
     department = models.CharField(max_length=100, blank=True)
+    specialties = models.ManyToManyField(
+        "jobs.ExistingRole",
+        blank=True,
+        related_name="qualified_panelists"
+    )
     is_active  = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
