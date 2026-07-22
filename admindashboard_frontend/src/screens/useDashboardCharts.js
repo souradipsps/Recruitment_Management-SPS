@@ -338,6 +338,32 @@ export default function useDashboardCharts({
     },
   };
 
+  const centerTextPlugin = {
+    id: "centerTextPlugin",
+    beforeDraw(chart) {
+      const { ctx, chartArea } = chart;
+      if (!chartArea) return;
+      ctx.save();
+      const centerX = (chartArea.left + chartArea.right) / 2;
+      const centerY = (chartArea.top + chartArea.bottom) / 2;
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      // 1. Total Count Number
+      ctx.font = "900 24px 'Outfit', sans-serif";
+      ctx.fillStyle = T.ink;
+      ctx.fillText(totalAppsCount.toString(), centerX, centerY - 6);
+
+      // 2. Subtitle Label
+      ctx.font = "700 11px 'Inter', sans-serif";
+      ctx.fillStyle = T.inkFaint;
+      ctx.fillText("Total Applications", centerX, centerY + 14);
+
+      ctx.restore();
+    },
+  };
+
   // ── 3. Department Hiring Progress Horizontal Bar Chart ────────────────────
 
   const getDeptChartData = () => {
@@ -531,7 +557,8 @@ export default function useDashboardCharts({
     const labels = filteredRoleBudgetData.map((r) => [r.role, `${r.type} • ${r.experience}`]);
 
     if (budgetView === "empTypeBreakdown") {
-      const types = ["Full-time", "Part-time"];
+      let types = [...new Set(roleBudgetData.map((r) => r.type))].filter(Boolean);
+      if (types.length === 0) types = ["Full-time", "Part-time", "Contract", "Internship"];
       const typeAlloc = types.map((t) => roleBudgetData.filter((r) => r.type === t).reduce((acc, curr) => acc + curr.allocated, 0));
       const typeSpent = types.map((t) => roleBudgetData.filter((r) => r.type === t).reduce((acc, curr) => acc + curr.spent, 0));
 
@@ -839,9 +866,12 @@ export default function useDashboardCharts({
 
     list.sort((a, b) => b.rawDate - a.rawDate);
 
-    return list.slice(0, 4).map((item) => {
-      const diff = new Date() - item.rawDate;
-      const mins = Math.floor(diff / 60000);
+    const nowMs = new Date().getTime();
+    const sixHoursMs = 6 * 60 * 60 * 1000;
+
+    const allList = list.map((item) => {
+      const diffMs = Math.max(0, nowMs - item.rawDate.getTime());
+      const mins = Math.floor(diffMs / 60000);
       const hrs = Math.floor(mins / 60);
       const days = Math.floor(hrs / 24);
       let timeStr = "";
@@ -854,9 +884,22 @@ export default function useDashboardCharts({
       return {
         ...item,
         time: timeStr,
+        diffMs,
+        hrs,
+        days,
       };
     });
+
+    const recent6Hours = allList.filter((item) => item.hrs <= 6 || item.diffMs <= sixHoursMs);
+    const recentList = recent6Hours.length > 0 ? recent6Hours : allList.slice(0, 4);
+
+    return {
+      recentList,
+      allList,
+    };
   };
+
+  const activityLogs = getActivityLog();
 
   return {
     monthlyChartData: getMonthlyChartData(),
@@ -864,6 +907,7 @@ export default function useDashboardCharts({
     funnelStages,
     funnelDoughnutData,
     funnelDoughnutOptions,
+    centerTextPlugin,
     shortlistedCount,
     selectedCount,
     safeOffersCount,
@@ -880,6 +924,7 @@ export default function useDashboardCharts({
     totalActualSpend,
     budgetChartData: getBudgetChartData(),
     budgetChartOptions: getBudgetChartOptions(),
-    activity: getActivityLog(),
+    activity: activityLogs.recentList,
+    allActivity: activityLogs.allList,
   };
 }
