@@ -40,13 +40,15 @@ const emptyForm = () => ({
   comment: "",
 });
 
-export default function RoleRequests({ roleRequests, setRoleRequests, setApprovalRequests, existingRoles, setExistingRoles, onNavigateToExistingRoles, currentUser, revisionRoleRequestData, setRevisionRoleRequestData }) {
+export default function RoleRequests({ roleRequests, setRoleRequests, setApprovalRequests, setExistingRoles, onNavigateToExistingRoles, currentUser, revisionRoleRequestData, setRevisionRoleRequestData }) {
   const bp = useBreakpoint();
   const isMobile = bp === "mobile";
 
   useEffect(() => {
     if (revisionRoleRequestData) {
-      const data = revisionRoleRequestData;
+      const items = Array.isArray(revisionRoleRequestData) ? revisionRoleRequestData : [revisionRoleRequestData];
+      if (items.length === 0) return;
+      const data = items[0];
       setEditingId(null);
       setRoleForms([
         {
@@ -54,17 +56,17 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
           dept: data.dept || "",
           role: data.role || "",
           existing_role: data.backendId || null,
-          variations: [
-            {
-              id: Date.now() + Math.random(),
-              type: data.type || "Full-time",
-              minExperience: data.experience ? String(data.experience).split("-")[0] || "" : "",
-              maxExperience: data.experience ? String(data.experience).split("-")[1] || "" : "",
-              minSalary: data.salaryRange ? String(data.salaryRange).split("-")[0] || "" : "",
-              maxSalary: data.salaryRange ? String(data.salaryRange).split("-")[1] || "" : "",
-            }
-          ],
-          just: `Request to revise parameter configurations for existing sanctioned role: ${data.role}.`,
+          variations: items.map((item, idx) => ({
+            id: Date.now() + Math.random() + idx,
+            type: item.type || (data.isNewVariation ? "" : "Full-time"),
+            minExperience: item.experience ? String(item.experience).split("-")[0] || "" : "",
+            maxExperience: item.experience ? String(item.experience).split("-")[1] || "" : "",
+            minSalary: item.salaryRange ? String(item.salaryRange).split("-")[0] || "" : "",
+            maxSalary: item.salaryRange ? String(item.salaryRange).split("-")[1] || "" : "",
+          })),
+          just: data.isNewVariation
+            ? `Request to add a new variation for existing sanctioned role: ${data.role}.`
+            : `Request to revise parameter configurations for existing sanctioned role: ${data.role}.`,
           date: new Date().toLocaleDateString(),
           status: "Pending",
           comment: "",
@@ -75,45 +77,6 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
       setRevisionRoleRequestData(null);
     }
   }, [revisionRoleRequestData]);
-
-  const uniqueExistingRoles = Array.from(
-    new Map((existingRoles || []).map((r) => [r.role.trim().toLowerCase(), r])).values()
-  );
-
-  const getSelectOptions = (form) => {
-    const options = uniqueExistingRoles.map((r) => ({
-      value: String(r.backendId),
-      label: `Existing: ${r.role} (${r.dept})`,
-    }));
-    if (form.existing_role) {
-      const exists = options.some((opt) => opt.value === String(form.existing_role));
-      if (!exists) {
-        const matchingRole = existingRoles.find((r) => String(r.backendId) === String(form.existing_role));
-        if (matchingRole) {
-          options.unshift({
-            value: String(matchingRole.backendId),
-            label: `Existing: ${matchingRole.role} (${matchingRole.dept}) [${matchingRole.type}, ${matchingRole.experience} yrs]`,
-          });
-        }
-      }
-    }
-    options.push({ value: "NEW_ROLE", label: "➕ Request New Role Name..." });
-    return options;
-  };
-
-  const handleSelectRoleOption = (index, val) => {
-    if (val === "NEW_ROLE") {
-      updateForm(index, "existing_role", null);
-      updateForm(index, "role", "");
-    } else {
-      const selected = existingRoles.find((r) => String(r.backendId) === String(val));
-      if (selected) {
-        updateForm(index, "existing_role", selected.backendId);
-        updateForm(index, "role", selected.role);
-        updateForm(index, "dept", selected.dept);
-      }
-    }
-  };
 
   const [showForm, setShowForm] = useState(false);
   const [roleForms, setRoleForms] = useState([emptyForm()]);
@@ -758,14 +721,14 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
 
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14, marginBottom: 14 }}>
                 <FormField label="Job Position / Title" required>
-                  <Select
-                    value={form.existing_role ? String(form.existing_role) : (form.role ? "NEW_ROLE" : "")}
-                    onChange={(e) => handleSelectRoleOption(index, e.target.value)}
-                    options={getSelectOptions(form)}
-                    placeholder="Select an existing role / Request new title..."
+                  <Input
+                    placeholder="Type the job position / title"
+                    value={form.role}
+                    onChange={(e) => updateForm(index, "role", e.target.value)}
+                    disabled={!!form.existing_role}
                     style={formErrors[index]?.role ? { borderColor: T.red } : {}}
                   />
-                  {formErrors[index]?.role && !form.role && (
+                  {formErrors[index]?.role && (
                     <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
                       {formErrors[index].role}
                     </div>
@@ -787,24 +750,6 @@ export default function RoleRequests({ roleRequests, setRoleRequests, setApprova
                   )}
                 </FormField>
               </div>
-
-              {(form.role && !form.existing_role || !form.existing_role) && (
-                <div style={{ marginBottom: 14 }}>
-                  <FormField label="New Job Role Title Name" required>
-                    <Input
-                      placeholder="Type the name of the new role"
-                      value={form.role}
-                      onChange={(e) => updateForm(index, "role", e.target.value)}
-                      style={formErrors[index]?.role ? { borderColor: T.red } : {}}
-                    />
-                    {formErrors[index]?.role && (
-                      <div style={{ color: T.red, fontSize: 11, marginTop: 4, fontWeight: 600 }}>
-                        {formErrors[index].role}
-                      </div>
-                    )}
-                  </FormField>
-                </div>
-              )}
 
               {/* Variations Container */}
               <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 14 }}>

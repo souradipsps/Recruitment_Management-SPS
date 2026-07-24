@@ -23,6 +23,11 @@ export default function ExistingRoles({ roles, setRoles, setRevisionRoleRequestD
     navigate("role-requests");
   };
 
+  const handleAddVariation = (roleData) => {
+    setRevisionRoleRequestData({ ...roleData, isNewVariation: true });
+    navigate("role-requests");
+  };
+
   useEffect(() => {
     setCurrentPage(1);
   }, [deptFilter, statusFilter, search]);
@@ -158,6 +163,7 @@ export default function ExistingRoles({ roles, setRoles, setRevisionRoleRequestD
           onStatusChange={handleStatusChange}
           onDelete={handleDeleteRole}
           onRequestRevision={handleRequestRevision}
+          onAddVariation={handleAddVariation}
           bp={bp}
         />
 
