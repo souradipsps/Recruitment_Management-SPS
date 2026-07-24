@@ -1,11 +1,47 @@
+import { useState } from "react";
 import { T, font } from "../../theme";
 import { STATUS_COLORS } from "../../theme";
 import { Modal, ModalHeader, Btn } from "../../components/ui";
 
-export default function RoleDetailsModal({ sel, setSel, onClose, onStatusChange, onDelete, onRequestRevision, bp, roles = [] }) {
+export default function RoleDetailsModal({ sel, setSel, onClose, onStatusChange, onDelete, onRequestRevision, onAddVariation, bp, roles = [] }) {
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const currentSelId = sel?.id ?? null;
+  const [lastSelId, setLastSelId] = useState(currentSelId);
+
+  if (currentSelId !== lastSelId) {
+    setLastSelId(currentSelId);
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }
+
   if (!sel) return null;
   const sc = STATUS_COLORS[sel.currentStatus] || STATUS_COLORS.Active;
   const siblingRoles = roles.filter((r) => r.role === sel.role && r.dept === sel.dept);
+
+  const toggleSelected = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleRequestRevisionClick = () => {
+    if (selectMode && selectedIds.size > 0) {
+      const chosen = siblingRoles.filter((r) => selectedIds.has(r.id));
+      onRequestRevision?.(chosen);
+    } else {
+      onRequestRevision?.(sel);
+    }
+    onClose();
+  };
+
+  const handleAddVariationClick = () => {
+    onAddVariation?.({ dept: sel.dept, role: sel.role, backendId: sel.backendId });
+    onClose();
+  };
 
   return (
     <Modal open={!!sel} onClose={onClose} maxWidth={520}>
@@ -64,19 +100,64 @@ export default function RoleDetailsModal({ sel, setSel, onClose, onStatusChange,
           padding: 14, background: T.canvas, border: `1px solid ${T.border}`,
           borderRadius: 8, display: "flex", flexDirection: "column", gap: 10, marginBottom: 12
         }}>
-          <span style={{ fontSize: 9.5, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            Variations (Type, Experience, Salary)
-          </span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 9.5, fontWeight: 700, color: T.inkFaint, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Variations (Type, Experience, Salary)
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {!selectMode && (
+                <button
+                  onClick={handleAddVariationClick}
+                  style={{
+                    background: "transparent",
+                    color: T.primary,
+                    border: `1.5px solid ${T.primary}`,
+                    borderRadius: 6, padding: "3px 10px", fontSize: 11, fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  + Add Variation
+                </button>
+              )}
+              {siblingRoles.length > 1 && (
+                <button
+                  onClick={() => {
+                    setSelectMode((prev) => !prev);
+                    setSelectedIds(new Set());
+                  }}
+                  style={{
+                    background: selectMode ? T.primary : "transparent",
+                    color: selectMode ? "#fff" : T.primary,
+                    border: `1.5px solid ${T.primary}`,
+                    borderRadius: 6, padding: "3px 10px", fontSize: 11, fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  {selectMode ? "Cancel" : "Select"}
+                </button>
+              )}
+            </div>
+          </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {siblingRoles.map((r, idx) => (
               <div key={r.id || idx} style={{
                 fontSize: 12.5, fontWeight: 600, color: T.ink,
-                padding: "10px 14px", background: T.surface, borderRadius: 8,
-                border: `1px solid ${T.border}`,
+                padding: "10px 14px", background: selectMode && selectedIds.has(r.id) ? T.canvas : T.surface, borderRadius: 8,
+                border: `1px solid ${selectMode && selectedIds.has(r.id) ? T.primary : T.border}`,
                 display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap"
               }}>
-                <div style={{ flex: 1, minWidth: 150 }}>
-                  • <strong>{r.type || "Full-time"}</strong> ({r.experience ? `${r.experience} yrs` : "—"}) : {r.salaryRange ? `₹${r.salaryRange}` : "—"}
+                <div style={{ flex: 1, minWidth: 150, display: "flex", alignItems: "center", gap: 10 }}>
+                  {selectMode && (
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(r.id)}
+                      onChange={() => toggleSelected(r.id)}
+                      style={{ width: 15, height: 15, cursor: "pointer", flexShrink: 0 }}
+                    />
+                  )}
+                  <span>
+                    • <strong>{r.type || "Full-time"}</strong> ({r.experience ? `${r.experience} yrs` : "—"}) : {r.salaryRange ? `₹${r.salaryRange}` : "—"}
+                  </span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <select
@@ -117,13 +198,17 @@ export default function RoleDetailsModal({ sel, setSel, onClose, onStatusChange,
           </div>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10, marginTop: 20, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
+          {selectMode && (
+            <span style={{ fontSize: 11.5, fontWeight: 600, color: T.inkFaint, marginRight: "auto" }}>
+              {selectedIds.size > 0
+                ? `${selectedIds.size} variation${selectedIds.size !== 1 ? "s" : ""} selected`
+                : "Select variations to update together"}
+            </span>
+          )}
           <Btn
             label="Request Revision"
-            onClick={() => {
-              onRequestRevision?.(sel);
-              onClose();
-            }}
+            onClick={handleRequestRevisionClick}
           />
           <Btn
             label="Delete Role"
